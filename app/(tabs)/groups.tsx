@@ -2,16 +2,17 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function HomeScreen() {
+export default function GroupsScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>Home</ThemedText>
-      <ThemedText style={styles.subtitle}>Dashboard & Stats</ThemedText>
+      <ThemedText type="title" style={styles.title}>Groups</ThemedText>
+      <ThemedText style={styles.subtitle}>Community & Social</ThemedText>
       <View style={styles.placeholder}>
-        <ThemedText>📊 Stats cards coming soon</ThemedText>
-        <ThemedText>🚴 Start Ride button</ThemedText>
-        <ThemedText>🏆 Recent badges</ThemedText>
-        <ThemedText>🎯 Goals progress</ThemedText>
+        <ThemedText>👥 My groups (horizontal scroll)</ThemedText>
+        <ThemedText>📱 Activity feed</ThemedText>
+        <ThemedText>💬 Posts, likes, comments</ThemedText>
+        <ThemedText>🏆 Leaderboards</ThemedText>
+        <ThemedText>🔍 Discover groups</ThemedText>
       </View>
     </ThemedView>
   );

@@ -2,16 +2,16 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function HomeScreen() {
+export default function MapsScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>Home</ThemedText>
-      <ThemedText style={styles.subtitle}>Dashboard & Stats</ThemedText>
+      <ThemedText type="title" style={styles.title}>Maps</ThemedText>
+      <ThemedText style={styles.subtitle}>Tracking & Routes</ThemedText>
       <View style={styles.placeholder}>
-        <ThemedText>📊 Stats cards coming soon</ThemedText>
-        <ThemedText>🚴 Start Ride button</ThemedText>
-        <ThemedText>🏆 Recent badges</ThemedText>
-        <ThemedText>🎯 Goals progress</ThemedText>
+        <ThemedText>🗺️ Map view with toggles</ThemedText>
+        <ThemedText>📍 Track / History / Feedback / Heatmap</ThemedText>
+        <ThemedText>▶️ Start Ride FAB</ThemedText>
+        <ThemedText>📝 Recent trips list</ThemedText>
       </View>
     </ThemedView>
   );

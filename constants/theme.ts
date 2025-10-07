@@ -1,29 +1,42 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Cycle Confident color theme
+ * Primary: Red (#ED2536), Accent: Gold (#F4C542), Secondary: Dark Blue (#232244)
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Cycle Confident brand colors
+const primaryRed = '#ED2536';
+const accentGold = '#F4C542';
+const secondaryBlue = '#232244';
+const successGreen = '#4CAF50';
 
 export const Colors = {
   light: {
     text: '#11181C',
     background: '#fff',
-    tint: tintColorLight,
+    tint: primaryRed,
     icon: '#687076',
     tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    tabIconSelected: primaryRed,
+    primary: primaryRed,
+    accent: accentGold,
+    secondary: secondaryBlue,
+    success: successGreen,
+    card: '#f5f5f5',
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
-    tint: tintColorDark,
+    tint: primaryRed,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: accentGold,
+    primary: primaryRed,
+    accent: accentGold,
+    secondary: secondaryBlue,
+    success: successGreen,
+    card: '#1f1f1f',
   },
 };
 

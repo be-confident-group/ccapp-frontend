@@ -2,16 +2,19 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function HomeScreen() {
+export default function YouScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>Home</ThemedText>
-      <ThemedText style={styles.subtitle}>Dashboard & Stats</ThemedText>
+      <ThemedText type="title" style={styles.title}>You</ThemedText>
+      <ThemedText style={styles.subtitle}>Profile & Settings</ThemedText>
       <View style={styles.placeholder}>
-        <ThemedText>📊 Stats cards coming soon</ThemedText>
-        <ThemedText>🚴 Start Ride button</ThemedText>
-        <ThemedText>🏆 Recent badges</ThemedText>
-        <ThemedText>🎯 Goals progress</ThemedText>
+        <ThemedText>👤 Profile header</ThemedText>
+        <ThemedText>📊 Personal stats</ThemedText>
+        <ThemedText>🏆 Achievements</ThemedText>
+        <ThemedText>🚴 My trips</ThemedText>
+        <ThemedText>⚙️ Settings</ThemedText>
+        <ThemedText>🔔 Notifications</ThemedText>
+        <ThemedText>🔒 Privacy</ThemedText>
       </View>
     </ThemedView>
   );
