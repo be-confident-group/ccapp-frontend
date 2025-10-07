@@ -1,12 +1,20 @@
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import { Card } from '@/components/ui';
 
 export default function YouScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>You</ThemedText>
       <ThemedText style={styles.subtitle}>Profile & Settings</ThemedText>
+
+      <View style={styles.section}>
+        <ThemedText type="subtitle" style={styles.sectionTitle}>Theme</ThemedText>
+        <ThemeToggle />
+      </View>
+
       <View style={styles.placeholder}>
         <ThemedText>👤 Profile header</ThemedText>
         <ThemedText>📊 Personal stats</ThemedText>
@@ -32,6 +40,12 @@ const styles = StyleSheet.create({
   subtitle: {
     opacity: 0.7,
     marginBottom: 32,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    marginBottom: 16,
   },
   placeholder: {
     gap: 16,

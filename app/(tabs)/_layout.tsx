@@ -4,16 +4,15 @@ import { View, StyleSheet } from 'react-native';
 import { HomeIcon, MapIcon, PlusCircleIcon, UserGroupIcon, UserIcon } from 'react-native-heroicons/solid';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: colors.tint,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
@@ -48,7 +47,7 @@ export default function TabLayout() {
             <View style={styles.plusButton}>
               <PlusCircleIcon
                 size={56}
-                color={focused ? Colors[colorScheme ?? 'light'].primary : color}
+                color={focused ? colors.primary : color}
               />
             </View>
           ),
