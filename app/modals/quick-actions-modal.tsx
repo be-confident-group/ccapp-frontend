@@ -2,12 +2,20 @@ import { StyleSheet, TouchableOpacity, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  RocketLaunchIcon,
+  PencilSquareIcon,
+  MegaphoneIcon,
+  CameraIcon,
+  UserGroupIcon,
+  LinkIcon,
+  XMarkIcon,
+} from 'react-native-heroicons/solid';
 
 type ActionItem = {
-  icon: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
   title: string;
   onPress: () => void;
 };
@@ -18,7 +26,7 @@ export default function QuickActionsModal() {
 
   const actions: ActionItem[] = [
     {
-      icon: 'bicycle',
+      icon: RocketLaunchIcon,
       title: 'Start a Ride',
       onPress: () => {
         router.back();
@@ -26,7 +34,7 @@ export default function QuickActionsModal() {
       },
     },
     {
-      icon: 'pencil',
+      icon: PencilSquareIcon,
       title: 'Log Ride Manually',
       onPress: () => {
         router.back();
@@ -34,7 +42,7 @@ export default function QuickActionsModal() {
       },
     },
     {
-      icon: 'megaphone.fill',
+      icon: MegaphoneIcon,
       title: 'Share Update',
       onPress: () => {
         router.back();
@@ -42,7 +50,7 @@ export default function QuickActionsModal() {
       },
     },
     {
-      icon: 'camera.fill',
+      icon: CameraIcon,
       title: 'Share Photo',
       onPress: () => {
         router.back();
@@ -50,7 +58,7 @@ export default function QuickActionsModal() {
       },
     },
     {
-      icon: 'person.3.fill',
+      icon: UserGroupIcon,
       title: 'Create Group',
       onPress: () => {
         router.back();
@@ -58,7 +66,7 @@ export default function QuickActionsModal() {
       },
     },
     {
-      icon: 'link',
+      icon: LinkIcon,
       title: 'Join Group',
       onPress: () => {
         router.back();
@@ -77,25 +85,28 @@ export default function QuickActionsModal() {
         <View style={styles.handle} />
 
         <View style={styles.content}>
-          {actions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: colorScheme === 'dark' ? colors.card : '#fff',
-                  borderColor: colors.card,
-                }
-              ]}
-              onPress={action.onPress}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-                <IconSymbol name={action.icon as any} size={24} color="#fff" />
-              </View>
-              <ThemedText style={styles.actionText}>{action.title}</ThemedText>
-            </TouchableOpacity>
-          ))}
+          {actions.map((action, index) => {
+            const IconComponent = action.icon;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? colors.card : '#fff',
+                    borderColor: colors.card,
+                  }
+                ]}
+                onPress={action.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+                  <IconComponent size={28} color="#fff" />
+                </View>
+                <ThemedText style={styles.actionText}>{action.title}</ThemedText>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <TouchableOpacity
@@ -103,7 +114,7 @@ export default function QuickActionsModal() {
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <IconSymbol name="xmark" size={28} color="#fff" />
+          <XMarkIcon size={32} color="#fff" />
         </TouchableOpacity>
       </ThemedView>
     </View>
@@ -150,9 +161,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
