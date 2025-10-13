@@ -62,6 +62,23 @@ export interface ProfileUpdateRequest {
 // Auth API functions
 export const authApi = {
   /**
+   * Check if email exists in the system
+   */
+  async checkEmail(email: string): Promise<{ exists: boolean; email: string }> {
+    try {
+      const response = await apiClient.post<{ exists: boolean; email: string }>(
+        '/api/email-check/',
+        { email },
+        { requiresAuth: false }
+      );
+      return response;
+    } catch (error) {
+      // If endpoint doesn't exist, fall back to attempting login
+      return { exists: true, email };
+    }
+  },
+
+  /**
    * Login with email and password
    */
   async login(data: LoginRequest): Promise<AuthResponse> {

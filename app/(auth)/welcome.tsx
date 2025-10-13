@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,18 @@ import {
   Animated,
   TouchableOpacity,
   PanResponder,
+  TextInput,
+  Platform,
+  Keyboard,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ChevronDownIcon, UserIcon, GlobeAltIcon, DevicePhoneMobileIcon, EnvelopeIcon } from 'react-native-heroicons/outline';
+import { ChevronDownIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
+import { authApi } from '@/lib/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,8 +38,43 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        Animated.timing(keyboardOffset, {
+          toValue: e.endCoordinates.height,
+          duration: e.duration || 250,
+          useNativeDriver: true,
+        }).start();
+      }
+    );
+
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        Animated.timing(keyboardOffset, {
+          toValue: 0,
+          duration: e.duration || 250,
+          useNativeDriver: true,
+        }).start();
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, [keyboardOffset]);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -57,8 +98,78 @@ export default function WelcomeScreen() {
     }).start();
   };
 
+  const handleEmailButtonPress = () => {
+    setShowEmailInput(true);
+  };
+
+  const handleEmailSubmit = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await authApi.checkEmail(email.trim());
+
+      if (response.exists) {
+        // User exists, show password input
+        setShowPasswordInput(true);
+      } else {
+        // User doesn't exist, navigate to signup
+        router.push({
+          pathname: '/(auth)/signup',
+          params: { email: email.trim() }
+        });
+      }
+    } catch (error) {
+      console.error('Email check error:', error);
+      Alert.alert('Error', 'Failed to verify email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter your password');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authApi.login({
+        email: email.trim(),
+        password: password,
+      });
+
+      // Navigate to main app
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Login failed. Please check your credentials.';
+      Alert.alert('Login Failed', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCollapsePress = () => {
     setIsExpanded(false);
+    setShowEmailInput(false);
+    setShowPasswordInput(false);
+    setEmail('');
+    setPassword('');
     Animated.spring(slideAnim, {
       toValue: 0,
       useNativeDriver: true,
@@ -134,7 +245,10 @@ export default function WelcomeScreen() {
         style={[
           styles.cardContainer,
           {
-            transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+            transform: [
+              { translateY: Animated.add(cardTranslateY, Animated.multiply(keyboardOffset, -0.7)) },
+              { scale: cardScale }
+            ],
           },
         ]}
         {...(isExpanded ? panResponder.panHandlers : {})}
@@ -195,49 +309,129 @@ export default function WelcomeScreen() {
 
       {/* Auth Content (shown when expanded) */}
       <Animated.View
-        style={[styles.authContent, { opacity: authContentOpacity }]}
+        style={[
+          styles.authContent,
+          {
+            opacity: authContentOpacity,
+            transform: [{
+              translateY: Animated.multiply(keyboardOffset, -1.2),
+            }],
+          },
+        ]}
         pointerEvents={isExpanded ? 'auto' : 'none'}
       >
-        <Text style={[styles.authTitle, { color: colors.text }]}>Let's get started</Text>
-        <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
-          Sign in to start tracking your rides and walks, visulase your activities, provide feedback on routes and help local authorities improve infrastructure.
-        </Text>
+          {!showEmailInput ? (
+            <>
+              <Text style={[styles.authTitle, { color: colors.text }]}>Let's get started</Text>
+              <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
+                Sign in to get things done - your tasks, notes, and meetings all in one place.
+              </Text>
 
-        <View style={styles.authButtons}>
-          {/* Google Button */}
-          <TouchableOpacity
-            style={[styles.authButton, styles.googleButton]}
-            onPress={() => console.log('Google')}
-          >
-            <View style={styles.authButtonContent}>
-              <FontAwesome name="google" size={20} color="#FFFFFF" />
-              <Text style={styles.authButtonTextWhite}>Continue with Google</Text>
-            </View>
-          </TouchableOpacity>
+              <View style={styles.authButtons}>
+                {/* Google Button */}
+                <TouchableOpacity
+                  style={[styles.authButton, styles.googleButton]}
+                  onPress={() => console.log('Google')}
+                >
+                  <View style={styles.authButtonContent}>
+                    <FontAwesome name="google" size={20} color="#FFFFFF" />
+                    <Text style={styles.authButtonTextWhite}>Continue with Google</Text>
+                  </View>
+                </TouchableOpacity>
 
-          {/* Apple Button */}
-          <TouchableOpacity
-            style={[styles.authButton, styles.appleButton]}
-            onPress={() => console.log('Apple')}
-          >
-            <View style={styles.authButtonContent}>
-              <FontAwesome name="apple" size={20} color="#FFFFFF" />
-              <Text style={styles.authButtonTextWhite}>Continue with Apple</Text>
-            </View>
-          </TouchableOpacity>
+                {/* Apple Button */}
+                <TouchableOpacity
+                  style={[styles.authButton, styles.appleButton]}
+                  onPress={() => console.log('Apple')}
+                >
+                  <View style={styles.authButtonContent}>
+                    <FontAwesome name="apple" size={20} color="#FFFFFF" />
+                    <Text style={styles.authButtonTextWhite}>Continue with Apple</Text>
+                  </View>
+                </TouchableOpacity>
 
-          {/* Email Button */}
-          <TouchableOpacity
-            style={[styles.authButton, styles.emailButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => router.push('/(auth)/login')}
-          >
-            <View style={styles.authButtonContent}>
-              <EnvelopeIcon color={colors.text} size={20} />
-              <Text style={[styles.authButtonTextDark, { color: colors.text }]}>Continue with email</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+                {/* Email Button */}
+                <TouchableOpacity
+                  style={[styles.authButton, styles.emailButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={handleEmailButtonPress}
+                >
+                  <View style={styles.authButtonContent}>
+                    <EnvelopeIcon color={colors.text} size={20} />
+                    <Text style={[styles.authButtonTextDark, { color: colors.text }]}>Continue with email</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : !showPasswordInput ? (
+            <>
+              <Text style={[styles.authTitle, { color: colors.text }]}>Enter your email address</Text>
+
+              <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <EnvelopeIcon color={colors.textSecondary} size={20} />
+                <TextInput
+                  style={[styles.textInput, { color: colors.text }]}
+                  placeholder="Type your email"
+                  placeholderTextColor={colors.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoFocus={showEmailInput}
+                  editable={!loading}
+                  onSubmitEditing={handleEmailSubmit}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: colors.primary, opacity: loading || !email.trim() ? 0.5 : 1 }]}
+                onPress={handleEmailSubmit}
+                disabled={loading || !email.trim()}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.authTitle, { color: colors.text }]}>Enter your password</Text>
+
+              <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <LockClosedIcon color={colors.textSecondary} size={20} />
+                <TextInput
+                  style={[styles.textInput, { color: colors.text }]}
+                  placeholder="Type your password"
+                  placeholderTextColor={colors.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  autoFocus={showPasswordInput}
+                  editable={!loading}
+                  onSubmitEditing={handlePasswordSubmit}
+                  returnKeyType="done"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: colors.primary, opacity: loading || !password.trim() ? 0.5 : 1 }]}
+                onPress={handlePasswordSubmit}
+                disabled={loading || !password.trim()}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </Animated.View>
     </SafeAreaView>
   );
 }
@@ -261,7 +455,7 @@ const styles = StyleSheet.create({
   },
   imageSlide: {
     width: SCREEN_WIDTH - 40,
-    height: SCREEN_HEIGHT * 0.75,
+    height: SCREEN_HEIGHT * 0.68,
     paddingHorizontal: 4,
   },
   imageWrapper: {
@@ -329,15 +523,47 @@ const styles = StyleSheet.create({
   },
   authContent: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 60,
     left: 20,
     right: 20,
+    paddingBottom: 20,
   },
   authTitle: {
-    fontSize: 48,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 24,
     textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    gap: 12,
+    marginBottom: 16,
+    height: 52,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '400',
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
+  sendButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   authSubtitle: {
     fontSize: 16,
@@ -356,8 +582,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   googleButton: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: '#1a1a1a',
+    borderColor: '#1a1a1a',
   },
   appleButton: {
     backgroundColor: '#000000',
