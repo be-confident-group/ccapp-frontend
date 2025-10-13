@@ -6,7 +6,8 @@ import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  // Start with auth flow - will be changed to (tabs) after login
+  initialRouteName: '(auth)',
 };
 
 function RootLayoutNav() {
@@ -14,7 +15,8 @@ function RootLayoutNav() {
 
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen
