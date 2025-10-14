@@ -10,9 +10,12 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  password2: string;
+  password2?: string;
   first_name?: string;
   last_name?: string;
+  // Backend requires these at registration
+  date_of_birth?: string; // YYYY-MM-DD
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
 }
 
 export interface SocialLoginRequest {
@@ -20,10 +23,12 @@ export interface SocialLoginRequest {
   token: string;
 }
 
+// Normalized auth response used by the app
 export interface AuthResponse {
-  access: string;
-  refresh: string;
-  user: User;
+  access?: string; // JWT access token (if backend uses JWT)
+  refresh?: string; // JWT refresh token (if backend uses JWT)
+  token?: string; // DRF token (our backend returns this on login)
+  user?: User;
 }
 
 export interface User {
@@ -66,12 +71,14 @@ export const authApi = {
    */
   async checkEmail(email: string): Promise<{ exists: boolean; email: string }> {
     try {
-      const response = await apiClient.post<{ exists: boolean; email: string }>(
+      const response = await apiClient.post<any>(
         '/api/email-check/',
         { email },
         { requiresAuth: false }
       );
-      return response;
+      // Backend returns { email_exists: boolean }
+      const exists = Boolean((response && (response.email_exists ?? response.exists)) || false);
+      return { exists, email };
     } catch (error) {
       // If endpoint doesn't exist, fall back to attempting login
       return { exists: true, email };
@@ -82,34 +89,50 @@ export const authApi = {
    * Login with email and password
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/login/', data, {
+    const response = await apiClient.post<any>('/api/login/', data, {
       requiresAuth: false,
     });
 
-    // Store tokens
-    if (response.access) {
-      await AsyncStorage.setItem('authToken', response.access);
-      await AsyncStorage.setItem('refreshToken', response.refresh);
+    // Normalize and store token (backend returns { token })
+    const token = response?.access || response?.token || '';
+    if (token) {
+      await AsyncStorage.setItem('authToken', token);
     }
 
-    return response;
+    return { token } as AuthResponse;
   },
 
   /**
    * Register a new user
    */
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/register/', data, {
-      requiresAuth: false,
-    });
+    // Map frontend fields to backend expected payload
+    const payload: Record<string, any> = {
+      email: data.email,
+      password: data.password,
+      name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+    };
 
-    // Store tokens
-    if (response.access) {
-      await AsyncStorage.setItem('authToken', response.access);
-      await AsyncStorage.setItem('refreshToken', response.refresh);
+    if (data.date_of_birth) payload['date_of_birth'] = data.date_of_birth; // YYYY-MM-DD
+    
+    // Map gender to backend format (backend expects 'M', 'F', 'O' or 'Male', 'Female', 'Other')
+    if (data.gender) {
+      const genderMap: Record<string, string> = {
+        'male': 'M',
+        'female': 'F',
+        'other': 'O',
+        'prefer_not_to_say': 'O', // Map to 'Other' since backend doesn't have prefer_not_to_say
+      };
+      payload['gender'] = genderMap[data.gender] || data.gender;
     }
 
-    return response;
+    // Create user (backend returns user data without token)
+    await apiClient.post<any>('/api/register/', payload, { requiresAuth: false });
+
+    // Immediately log in to obtain token
+    const loginResult = await authApi.login({ email: data.email, password: data.password });
+    return loginResult;
   },
 
   /**
@@ -123,6 +146,8 @@ export const authApi = {
     // Store tokens
     if (response.access) {
       await AsyncStorage.setItem('authToken', response.access);
+    }
+    if (response.refresh) {
       await AsyncStorage.setItem('refreshToken', response.refresh);
     }
 

@@ -34,9 +34,9 @@ class ApiClient {
 
     const url = `${this.baseURL}${endpoint}`;
 
-    const requestHeaders: HeadersInit = {
+    const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...headers,
+      ...(headers as Record<string, string>),
     };
 
     // Add auth token if required
@@ -44,6 +44,8 @@ class ApiClient {
       const token = await this.getAuthToken();
       if (token) {
         requestHeaders['Authorization'] = `Bearer ${token}`;
+      } else {
+        // no token available
       }
     }
 
@@ -55,10 +57,38 @@ class ApiClient {
 
       // Handle non-2xx responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          message: response.statusText,
-        }));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          
+          // Handle different error response formats
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (typeof errorData === 'object') {
+            // Handle validation errors (field-specific errors)
+            const errors: string[] = [];
+            for (const [field, messages] of Object.entries(errorData)) {
+              if (Array.isArray(messages)) {
+                errors.push(`${field}: ${messages.join(', ')}`);
+              } else if (typeof messages === 'string') {
+                errors.push(`${field}: ${messages}`);
+              }
+            }
+            if (errors.length > 0) {
+              errorMessage = errors.join('\n');
+            }
+          }
+        } catch (e) {
+          // If JSON parsing fails, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Handle empty responses

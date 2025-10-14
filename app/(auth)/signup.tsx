@@ -7,9 +7,11 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, TextInput } from '@/components/ui';
 import {
@@ -20,6 +22,7 @@ import {
   ChevronLeftIcon,
 } from 'react-native-heroicons/outline';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { authApi } from '@/lib/api';
 
 type SignupStep = 'email' | 'password' | 'name' | 'dob' | 'gender';
 
@@ -36,6 +39,7 @@ interface SignupData {
 export default function SignupScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { signIn } = useAuth();
   const [currentStep, setCurrentStep] = useState<SignupStep>('email');
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -59,14 +63,16 @@ export default function SignupScreen() {
   });
 
   const validateEmail = () => {
-    if (!formData.email) {
+    if (!formData.email.trim()) {
       setErrors({ ...errors, email: 'Email is required' });
       return false;
     }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setErrors({ ...errors, email: 'Email is invalid' });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setErrors({ ...errors, email: 'Please enter a valid email address' });
       return false;
     }
+    setErrors({ ...errors, email: '' });
     return true;
   };
 
@@ -77,8 +83,11 @@ export default function SignupScreen() {
     if (!formData.password) {
       newErrors.password = 'Password is required';
       valid = false;
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      valid = false;
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, and numbers';
       valid = false;
     }
 
@@ -98,17 +107,56 @@ export default function SignupScreen() {
     const newErrors = { ...errors };
     let valid = true;
 
-    if (!formData.firstName) {
+    if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
       valid = false;
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = 'First name must be at least 2 characters';
+      valid = false;
+    } else if (!/^[a-zA-Z\s'-]+$/.test(formData.firstName.trim())) {
+      newErrors.firstName = 'First name contains invalid characters';
+      valid = false;
     }
-    if (!formData.lastName) {
+
+    if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
+      valid = false;
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = 'Last name must be at least 2 characters';
+      valid = false;
+    } else if (!/^[a-zA-Z\s'-]+$/.test(formData.lastName.trim())) {
+      newErrors.lastName = 'Last name contains invalid characters';
       valid = false;
     }
 
     setErrors(newErrors);
     return valid;
+  };
+
+  const validateDateOfBirth = () => {
+    const today = new Date();
+    const birthDate = new Date(formData.dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 18) {
+      Alert.alert('Age Requirement', 'You must be at least 18 years old to create an account');
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateGender = () => {
+    if (!formData.gender) {
+      Alert.alert('Selection Required', 'Please select your gender identity');
+      return false;
+    }
+    return true;
   };
 
   const handleNext = () => {
@@ -123,10 +171,10 @@ export default function SignupScreen() {
         if (validateName()) setCurrentStep('dob');
         break;
       case 'dob':
-        setCurrentStep('gender');
+        if (validateDateOfBirth()) setCurrentStep('gender');
         break;
       case 'gender':
-        handleSignup();
+        if (validateGender()) handleSignup();
         break;
     }
   };
@@ -150,14 +198,46 @@ export default function SignupScreen() {
 
   const handleSignup = async () => {
     setLoading(true);
-    // TODO: Implement actual signup API call
-    console.log('Signup data:', formData);
-    setTimeout(() => {
+
+    try {
+      // Call the backend API to register the user
+      await authApi.register({
+        email: formData.email.trim(),
+        password: formData.password,
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
+        date_of_birth: formData.dateOfBirth.toISOString().slice(0, 10), // YYYY-MM-DD
+        gender: formData.gender === '' ? undefined : (formData.gender as any),
+      });
+
+      // Success! Set loading to false
       setLoading(false);
-      // Navigate to onboarding for new users
-      // For now, navigate to tabs
-      router.replace('/(tabs)');
-    }, 1500);
+
+      // Update auth state - this will trigger navigation via AuthContext
+      signIn();
+    } catch (error) {
+      console.error('Signup error:', error);
+      setLoading(false);
+
+      // Handle specific error cases
+      let errorMessage = 'Failed to create account. Please try again.';
+
+      if (error instanceof Error) {
+        // Use the full error message from the backend
+        errorMessage = error.message || errorMessage;
+
+        // Check for common error patterns and provide helpful messages
+        if (error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('already')) {
+          errorMessage = 'This email is already registered. Please try logging in instead.';
+        } else if (error.message.toLowerCase().includes('password') && error.message.toLowerCase().includes('least')) {
+          errorMessage = 'Password must be at least 8 characters long.';
+        } else if (error.message.toLowerCase().includes('age') || error.message.toLowerCase().includes('18')) {
+          errorMessage = 'You must be at least 18 years old to create an account.';
+        }
+      }
+
+      Alert.alert('Signup Failed', errorMessage);
+    }
   };
 
   const getStepProgress = () => {
@@ -206,7 +286,7 @@ export default function SignupScreen() {
             </View>
             <TextInput
               label="Password"
-              placeholder="At least 6 characters"
+              placeholder="Min 8 chars, uppercase, lowercase, numbers"
               value={formData.password}
               onChangeText={(text) => {
                 setFormData({ ...formData, password: text });
@@ -285,7 +365,7 @@ export default function SignupScreen() {
             <TouchableOpacity
               style={[
                 styles.dateButton,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                { backgroundColor: colors.inputBackground, borderColor: colors.border },
               ]}
               onPress={() => setShowDatePicker(true)}
             >
@@ -311,7 +391,8 @@ export default function SignupScreen() {
                 }}
                 maximumDate={new Date()}
               />
-            )}
+            )
+            }
           </>
         );
 
@@ -336,7 +417,7 @@ export default function SignupScreen() {
                   style={[
                     styles.genderOption,
                     {
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.inputBackground,
                       borderColor:
                         formData.gender === option.value ? colors.primary : colors.border,
                       borderWidth: formData.gender === option.value ? 2 : 2,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, TextInput } from '@/components/ui';
 import { EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
@@ -9,7 +9,7 @@ import { authApi } from '@/lib/api';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '' });
@@ -50,12 +50,14 @@ export default function LoginScreen() {
         password: password,
       });
 
-      console.log('Login successful:', response.user);
+      // Set loading to false
+      setLoading(false);
 
-      // Navigate to main app (tabs)
-      router.replace('/(tabs)');
+      // Update auth state - this will trigger navigation via AuthContext
+      signIn();
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
 
       const errorMessage = error instanceof Error
         ? error.message
@@ -66,8 +68,6 @@ export default function LoginScreen() {
         errorMessage,
         [{ text: 'OK' }]
       );
-    } finally {
-      setLoading(false);
     }
   };
 

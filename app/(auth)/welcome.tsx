@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter, useNavigation } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDownIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { authApi } from '@/lib/api';
 
@@ -35,6 +36,7 @@ export default function WelcomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const navigation = useNavigation();
+  const { signIn } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
@@ -78,18 +80,23 @@ export default function WelcomeScreen() {
     return () => backHandler.remove();
   }, [isExpanded, showEmailInput, showPasswordInput]);
 
-  // iOS: Prevent swipe-back gesture when auth states are active
+  // iOS: Prevent swipe-back gesture when auth states are active, but allow programmatic navigation (replace/push)
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      // Allow programmatic navigation (e.g., replace to /(tabs))
+      const actionType = e?.data?.action?.type;
+      if (actionType && actionType !== 'POP' && actionType !== 'GO_BACK') {
+        return;
+      }
+
       // If no auth states are active, allow navigation
       if (!isExpanded && !showEmailInput && !showPasswordInput) {
         return;
       }
 
-      // Prevent default navigation behavior
+      // Prevent default back behavior and collapse auth UI instead
       e.preventDefault();
 
-      // Handle the back action manually
       if (showPasswordInput) {
         setShowPasswordInput(false);
         setPassword('');
@@ -179,16 +186,19 @@ export default function WelcomeScreen() {
         password: password,
       });
 
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Set loading to false
+      setLoading(false);
+
+      // Update auth state - this will trigger navigation via AuthContext
+      signIn();
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
+
       const errorMessage = error instanceof Error
         ? error.message
         : 'Login failed. Please check your credentials.';
       Alert.alert('Login Failed', errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 

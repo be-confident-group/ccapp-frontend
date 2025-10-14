@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { useProtectedRoute } from '@/contexts/useProtectedRoute';
 
 export const unstable_settings = {
   // Start with auth flow - will be changed to (tabs) after login
@@ -12,6 +14,7 @@ export const unstable_settings = {
 
 function RootLayoutNav() {
   const { colorScheme } = useTheme();
+  useProtectedRoute();
 
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -36,7 +39,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <RootLayoutNav />
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
