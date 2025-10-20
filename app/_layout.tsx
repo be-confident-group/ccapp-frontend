@@ -6,6 +6,10 @@ import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useProtectedRoute } from '@/contexts/useProtectedRoute';
+import { initializeMapbox } from '@/config/mapbox';
+
+// Initialize Mapbox
+initializeMapbox();
 
 export const unstable_settings = {
   // Start with auth flow - will be changed to (tabs) after login

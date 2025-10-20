@@ -6,13 +6,25 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}"
+      }
     }
   },
   "submit": {
