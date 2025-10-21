@@ -11,6 +11,10 @@ export default {
     ios: {
       bundleIdentifier: "com.beactive.app",
       supportsTablet: true,
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription: "BeActive needs your location to track your activities and show your position on the map.",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "BeActive needs your location to track your activities in the background.",
+      },
     },
     android: {
       package: "com.beactive.app",
@@ -20,6 +24,10 @@ export default {
         backgroundImage: "./assets/images/android-icon-background.png",
         monochromeImage: "./assets/images/android-icon-monochrome.png",
       },
+      permissions: [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
@@ -45,7 +53,7 @@ export default {
         "@rnmapbox/maps",
         {
           RNMapboxMapsImpl: "mapbox",
-          RNMapboxMapsVersion: "11.7.1",
+          RNMapboxMapsVersion: "11.14.0",
         },
       ],
     ],

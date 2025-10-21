@@ -34,12 +34,26 @@ export function initializeMapbox(): void {
 
 /**
  * Default map styles
+ *
+ * Available Mapbox styles:
+ * - streets-v12: Standard street map with labels
+ * - outdoors-v12: Topographic style with terrain, perfect for cycling/walking
+ * - light-v11: Minimal light style, clean and modern
+ * - dark-v11: Dark theme for night mode
+ * - satellite-v9: Satellite imagery only
+ * - satellite-streets-v12: Satellite with street overlay
+ * - navigation-day-v1: Optimized for navigation (day)
+ * - navigation-night-v1: Optimized for navigation (night)
  */
 export const MapStyles = {
-  LIGHT: 'mapbox://styles/mapbox/streets-v12',
-  DARK: 'mapbox://styles/mapbox/dark-v11',
-  SATELLITE: 'mapbox://styles/mapbox/satellite-streets-v12',
+  STREETS: 'mapbox://styles/mapbox/streets-v12',
   OUTDOORS: 'mapbox://styles/mapbox/outdoors-v12',
+  LIGHT: 'mapbox://styles/mapbox/light-v11',
+  DARK: 'mapbox://styles/mapbox/dark-v11',
+  SATELLITE: 'mapbox://styles/mapbox/satellite-v9',
+  SATELLITE_STREETS: 'mapbox://styles/mapbox/satellite-streets-v12',
+  NAVIGATION_DAY: 'mapbox://styles/mapbox/navigation-day-v1',
+  NAVIGATION_NIGHT: 'mapbox://styles/mapbox/navigation-night-v1',
 } as const;
 
 /**
@@ -83,8 +97,12 @@ export const MapConfig = {
 };
 
 /**
- * Get map style based on theme
+ * Get map style based on theme and user preference
  */
-export function getMapStyle(isDark: boolean): string {
+export function getMapStyle(isDark: boolean, style?: keyof typeof MapStyles): string {
+  if (style) {
+    return MapStyles[style];
+  }
+  // Use light/dark styles that match app theme
   return isDark ? MapStyles.DARK : MapStyles.LIGHT;
 }
