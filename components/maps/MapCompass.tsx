@@ -3,6 +3,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -11,9 +12,10 @@ import Animated, {
 interface MapCompassProps {
   heading?: number; // Compass heading in degrees (0 = North)
   onPress?: () => void; // Optional callback to reset to north
+  fadeWhenNorth?: boolean; // Fade out when facing north (default: true)
 }
 
-export function MapCompass({ heading = 0, onPress }: MapCompassProps) {
+export function MapCompass({ heading = 0, onPress, fadeWhenNorth = true }: MapCompassProps) {
   const { colors } = useTheme();
   const rotation = useSharedValue(0);
 
@@ -25,8 +27,25 @@ export function MapCompass({ heading = 0, onPress }: MapCompassProps) {
   }, [heading]);
 
   const animatedStyle = useAnimatedStyle(() => {
+    // Calculate opacity based on how close to north (0 degrees)
+    // When heading is 0, opacity should be low (0.3)
+    // When heading is far from 0, opacity should be 1
+    let opacity = 1;
+    if (fadeWhenNorth) {
+      const headingAbs = Math.abs(rotation.value % 360);
+      const distanceFromNorth = Math.min(headingAbs, 360 - headingAbs);
+      // Fade out when within 15 degrees of north
+      opacity = interpolate(
+        distanceFromNorth,
+        [0, 15], // 0-15 degrees from north
+        [0.3, 1], // fade to 30% opacity
+        'clamp'
+      );
+    }
+
     return {
       transform: [{ rotate: `${rotation.value}deg` }],
+      opacity,
     };
   });
 

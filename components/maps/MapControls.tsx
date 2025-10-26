@@ -20,8 +20,6 @@ interface MapControlsProps {
   onFindLocation: () => void;
   on3DToggle: () => void;
   is3DEnabled?: boolean;
-  compassHeading?: number;
-  onCompassPress?: () => void;
 }
 
 export function MapControls({
@@ -36,15 +34,13 @@ export function MapControls({
   onFindLocation,
   on3DToggle,
   is3DEnabled = false,
-  compassHeading = 0,
-  onCompassPress,
 }: MapControlsProps) {
   const insets = useSafeAreaInsets();
 
   const [showLayerSelector, setShowLayerSelector] = React.useState(false);
 
-  // Position buttons much lower (just above bottom sheet)
-  const bottomPosition = insets.bottom + 110;
+  // Position buttons just above bottom sheet
+  const bottomPosition = insets.bottom + 152;
 
   return (
     <>
@@ -55,8 +51,8 @@ export function MapControls({
 
       {/* Bottom Right Controls - Always visible, z-index handles layering */}
       <>
-        {/* Vertical Sub-mode toggle - Above compass with matching spacing */}
-        <View style={[styles.subModeContainer, { bottom: bottomPosition + 168 }]} pointerEvents="box-none">
+        {/* Vertical Sub-mode toggle - Above buttons with matching spacing */}
+        <View style={[styles.subModeContainer, { bottom: bottomPosition + 112 }]} pointerEvents="box-none">
           <MapSubModeToggle
             mode={viewMode}
             activeSubMode={viewMode === 'heatmap' ? heatmapMode : feedbackMode}
@@ -70,7 +66,7 @@ export function MapControls({
           />
         </View>
 
-        {/* Action Buttons with Compass */}
+        {/* Action Buttons */}
         <View
           style={[styles.actionButtonsContainer, { bottom: bottomPosition }]}
           pointerEvents="box-none"
@@ -78,8 +74,6 @@ export function MapControls({
           <MapActionButtons
             onLayersPress={() => setShowLayerSelector(true)}
             onFindLocation={onFindLocation}
-            compassHeading={compassHeading}
-            onCompassPress={onCompassPress}
           />
         </View>
       </>

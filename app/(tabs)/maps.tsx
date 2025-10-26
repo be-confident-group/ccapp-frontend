@@ -32,7 +32,6 @@ export default function MapsScreen() {
 
   // Layer selector state - default to theme-appropriate style
   const [selectedLayer, setSelectedLayer] = useState<MapLayer>('streets');
-  const [compassHeading, setCompassHeading] = useState(0);
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const mapViewRef = React.useRef<any>(null);
 
@@ -79,12 +78,6 @@ export default function MapsScreen() {
     }
   };
 
-  const handleCompassPress = () => {
-    if (mapViewRef.current) {
-      mapViewRef.current.resetNorth();
-    }
-  };
-
   return (
     <GestureHandlerRootView style={styles.container}>
       <MapContainer>
@@ -99,7 +92,6 @@ export default function MapsScreen() {
           showUserLocation
           followUserLocation={false}
           selectedLayer={selectedLayer}
-          onHeadingChange={setCompassHeading}
         >
           {/* Render trip routes based on selected mode */}
           {tripsToDisplay.map((trip) => (
@@ -120,8 +112,6 @@ export default function MapsScreen() {
           onFindLocation={handleFindLocation}
           on3DToggle={() => {}}
           is3DEnabled={false}
-          compassHeading={compassHeading}
-          onCompassPress={handleCompassPress}
         />
 
         {/* Bottom sheet for additional options */}

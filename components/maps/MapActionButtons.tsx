@@ -3,20 +3,15 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { MapCompass } from './MapCompass';
 
 interface MapActionButtonsProps {
   onLayersPress: () => void;
   onFindLocation: () => void;
-  compassHeading?: number;
-  onCompassPress?: () => void;
 }
 
 export function MapActionButtons({
   onLayersPress,
   onFindLocation,
-  compassHeading = 0,
-  onCompassPress,
 }: MapActionButtonsProps) {
   const { colors } = useTheme();
 
@@ -27,9 +22,6 @@ export function MapActionButtons({
 
   return (
     <View style={styles.container}>
-      {/* Compass - Top */}
-      <MapCompass heading={compassHeading} onPress={onCompassPress} />
-
       {/* Layers Button */}
       <Pressable
         style={[styles.button, buttonStyle]}
