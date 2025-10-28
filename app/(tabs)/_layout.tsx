@@ -1,6 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { HomeIcon, MapIcon, PlusCircleIcon, UserGroupIcon, UserIcon } from 'react-native-heroicons/solid';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -51,6 +51,12 @@ export default function TabLayout() {
               />
             </View>
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/modals/quick-actions-modal');
+          },
         }}
       />
       <Tabs.Screen

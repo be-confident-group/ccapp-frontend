@@ -1,18 +1,23 @@
-import { StyleSheet, TouchableOpacity, View, Pressable } from 'react-native';
-import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/ThemeContext';
+import { router } from 'expo-router';
+import { useCallback } from 'react';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
-  RocketLaunchIcon,
-  PencilSquareIcon,
-  MegaphoneIcon,
   CameraIcon,
-  UserGroupIcon,
   LinkIcon,
-  XMarkIcon,
+  MegaphoneIcon,
+  PencilSquareIcon,
+  RocketLaunchIcon,
+  UserGroupIcon,
 } from 'react-native-heroicons/solid';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 type ActionItem = {
   icon: React.ComponentType<{ size?: number; color?: string }>;
@@ -21,15 +26,47 @@ type ActionItem = {
 };
 
 export default function QuickActionsModal() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors, isDark } = useTheme();
+  
+  const translateY = useSharedValue(0);
+  const startY = useSharedValue(0);
+
+  const handleClose = useCallback(() => {
+    router.back();
+  }, []);
+
+  const gesture = Gesture.Pan()
+    .onStart(() => {
+      startY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      // Only allow dragging down (positive values)
+      const newValue = startY.value + event.translationY;
+      translateY.value = Math.max(0, newValue);
+    })
+    .onEnd((event) => {
+      // Close if dragged down more than 150px or with fast velocity
+      if (translateY.value > 150 || event.velocityY > 800) {
+        runOnJS(handleClose)();
+      } else {
+        // Spring back to original position
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 300,
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const actions: ActionItem[] = [
     {
       icon: RocketLaunchIcon,
       title: 'Start a Ride',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Navigate to tracking screen
       },
     },
@@ -37,7 +74,7 @@ export default function QuickActionsModal() {
       icon: PencilSquareIcon,
       title: 'Log Ride Manually',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Navigate to manual entry
       },
     },
@@ -45,7 +82,7 @@ export default function QuickActionsModal() {
       icon: MegaphoneIcon,
       title: 'Share Update',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Navigate to create post
       },
     },
@@ -53,7 +90,7 @@ export default function QuickActionsModal() {
       icon: CameraIcon,
       title: 'Share Photo',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Navigate to photo picker
       },
     },
@@ -61,7 +98,7 @@ export default function QuickActionsModal() {
       icon: UserGroupIcon,
       title: 'Create Group',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Navigate to create group
       },
     },
@@ -69,55 +106,56 @@ export default function QuickActionsModal() {
       icon: LinkIcon,
       title: 'Join Group',
       onPress: () => {
-        router.back();
+        handleClose();
         // TODO: Show join group dialog
       },
     },
   ];
 
   return (
-    <View style={styles.container}>
-      <Pressable
-        style={styles.backdrop}
-        onPress={() => router.back()}
-      />
-      <ThemedView style={[styles.sheet, { backgroundColor: colors.background }]}>
-        <View style={styles.handle} />
-
-        <View style={styles.content}>
-          {actions.map((action, index) => {
-            const IconComponent = action.icon;
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.actionButton,
-                  {
-                    backgroundColor: colorScheme === 'dark' ? colors.card : '#fff',
-                    borderColor: colors.card,
-                  }
-                ]}
-                onPress={action.onPress}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-                  <IconComponent size={28} color="#fff" />
-                </View>
-                <ThemedText style={styles.actionText}>{action.title}</ThemedText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
+    <GestureHandlerRootView style={styles.container}>
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={handleClose} />
+      
+      <GestureDetector gesture={gesture}>
+        <Animated.View
+          style={[
+            styles.sheet,
+            { backgroundColor: colors.background },
+            animatedStyle,
+          ]}
         >
-          <XMarkIcon size={32} color="#fff" />
-        </TouchableOpacity>
-      </ThemedView>
-    </View>
+          {/* Drag Handle */}
+          <View style={styles.handleContainer}>
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          </View>
+
+          <View style={styles.content}>
+            {actions.map((action, index) => {
+              const IconComponent = action.icon;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={action.onPress}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+                    <IconComponent size={22} color="#fff" />
+                  </View>
+                  <ThemedText style={styles.actionText}>{action.title}</ThemedText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 }
 
@@ -133,52 +171,45 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
+    maxHeight: '60%',
+    paddingBottom: 24,
     paddingHorizontal: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#ccc',
     borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
   },
   content: {
-    gap: 12,
+    gap: 8,
+    paddingBottom: 4,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
   },
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   actionText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-  },
-  closeButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 24,
   },
 });
