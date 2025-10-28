@@ -14,7 +14,7 @@ import { useMapMode } from '@/lib/hooks/useMapMode';
 import { mockCommunityTrips, mockPersonalTrips, mockUserLocation } from '@/lib/utils/mockMapData';
 import type { Trip } from '@/types';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -31,9 +31,25 @@ export default function MapsScreen() {
   } = useMapMode();
 
   // Layer selector state - default to theme-appropriate style
-  const [selectedLayer, setSelectedLayer] = useState<MapLayer>('streets');
+  const [selectedLayer, setSelectedLayer] = useState<MapLayer>(isDark ? 'dark' : 'light');
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
-  const mapViewRef = React.useRef<any>(null);
+  const mapViewRef = useRef<any>(null);
+  
+  // Track if user has manually changed the layer
+  const hasUserChangedLayer = useRef(false);
+
+  // Auto-update layer based on theme, but only if user hasn't manually changed it
+  useEffect(() => {
+    if (!hasUserChangedLayer.current) {
+      setSelectedLayer(isDark ? 'dark' : 'light');
+    }
+  }, [isDark]);
+
+  // Handle layer change from user interaction
+  const handleLayerChange = (layer: MapLayer) => {
+    hasUserChangedLayer.current = true;
+    setSelectedLayer(layer);
+  };
 
   // Show permission prompt if not granted
   if (permissionStatus !== 'granted') {
@@ -108,7 +124,7 @@ export default function MapsScreen() {
           onViewModeChange={setViewMode}
           onHeatmapModeChange={setHeatmapMode}
           onFeedbackModeChange={setFeedbackMode}
-          onLayerChange={setSelectedLayer}
+          onLayerChange={handleLayerChange}
           onFindLocation={handleFindLocation}
           on3DToggle={() => {}}
           is3DEnabled={false}

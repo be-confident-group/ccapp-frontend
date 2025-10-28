@@ -63,8 +63,8 @@ export function MapSubModeToggle({ mode, activeSubMode, onSubModeChange }: MapSu
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
-    borderRadius: 24,
-    padding: 4,
+    borderRadius: 20,
+    padding: 3,
     gap: 2,
     borderWidth: 1,
     shadowColor: '#000',
@@ -74,9 +74,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   button: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },

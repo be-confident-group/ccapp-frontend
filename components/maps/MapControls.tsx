@@ -41,6 +41,14 @@ export function MapControls({
 
   // Position buttons just above bottom sheet
   const bottomPosition = insets.bottom + 152;
+  
+  // Consistent spacing between all buttons
+  const buttonGap = Spacing.sm; // 8px gap between all buttons
+  
+  // Calculate positions with consistent spacing
+  // Action buttons container has 2 buttons (40px each) + 1 gap (8px) = 88px total height
+  const actionButtonsHeight = 88;
+  const subModeToggleHeight = 76; // 2 buttons (34px each) + gap (2px) + padding (6px) = 76px
 
   return (
     <>
@@ -52,7 +60,7 @@ export function MapControls({
       {/* Bottom Right Controls - Always visible, z-index handles layering */}
       <>
         {/* Vertical Sub-mode toggle - Above buttons with matching spacing */}
-        <View style={[styles.subModeContainer, { bottom: bottomPosition + 112 }]} pointerEvents="box-none">
+        <View style={[styles.subModeContainer, { bottom: bottomPosition + actionButtonsHeight + buttonGap }]} pointerEvents="box-none">
           <MapSubModeToggle
             mode={viewMode}
             activeSubMode={viewMode === 'heatmap' ? heatmapMode : feedbackMode}

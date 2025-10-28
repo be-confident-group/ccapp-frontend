@@ -68,7 +68,7 @@ export function MapCompass({ heading = 0, onPress, fadeWhenNorth = true }: MapCo
       android_ripple={{ color: colors.primary + '20' }}
     >
       <Animated.View style={animatedStyle}>
-        <MaterialIcons name="explore" size={28} color={colors.primary} />
+        <MaterialIcons name="explore" size={24} color={colors.primary} />
       </Animated.View>
     </Pressable>
   );
@@ -76,9 +76,9 @@ export function MapCompass({ heading = 0, onPress, fadeWhenNorth = true }: MapCo
 
 const styles = StyleSheet.create({
   container: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
