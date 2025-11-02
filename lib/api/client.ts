@@ -60,27 +60,31 @@ class ApiClient {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
         try {
-          const errorData = await response.json();
+          const text = await response.text();
           
-          // Handle different error response formats
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          } else if (errorData.detail) {
-            errorMessage = errorData.detail;
-          } else if (typeof errorData === 'object') {
-            // Handle validation errors (field-specific errors)
-            const errors: string[] = [];
-            for (const [field, messages] of Object.entries(errorData)) {
-              if (Array.isArray(messages)) {
-                errors.push(`${field}: ${messages.join(', ')}`);
-              } else if (typeof messages === 'string') {
-                errors.push(`${field}: ${messages}`);
+          if (text) {
+            const errorData = JSON.parse(text);
+            
+            // Handle different error response formats
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            } else if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.detail) {
+              errorMessage = errorData.detail;
+            } else if (typeof errorData === 'object') {
+              // Handle validation errors (field-specific errors)
+              const errors: string[] = [];
+              for (const [field, messages] of Object.entries(errorData)) {
+                if (Array.isArray(messages)) {
+                  errors.push(`${field}: ${messages.join(', ')}`);
+                } else if (typeof messages === 'string') {
+                  errors.push(`${field}: ${messages}`);
+                }
               }
-            }
-            if (errors.length > 0) {
-              errorMessage = errors.join('\n');
+              if (errors.length > 0) {
+                errorMessage = errors.join('\n');
+              }
             }
           }
         } catch (e) {
@@ -100,6 +104,10 @@ class ApiClient {
       return await response.json();
     } catch (error) {
       if (error instanceof Error) {
+        // Check if it's a network error
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('Network error: Unable to reach the server. Please check your connection.');
+        }
         throw error;
       }
       throw new Error('An unexpected error occurred');

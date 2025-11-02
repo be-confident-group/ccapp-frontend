@@ -45,18 +45,14 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await authApi.login({
+      await authApi.login({
         email: email.trim(),
         password: password,
       });
 
-      // Set loading to false
       setLoading(false);
-
-      // Update auth state - this will trigger navigation via AuthContext
       signIn();
     } catch (error) {
-      console.error('Login error:', error);
       setLoading(false);
 
       const errorMessage = error instanceof Error
