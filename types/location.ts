@@ -1,5 +1,5 @@
 /**
- * Location and coordinate types for BeActive app
+ * Location and coordinate types for Radzi app
  */
 
 /**

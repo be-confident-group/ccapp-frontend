@@ -46,9 +46,9 @@ export function MapControls({
   const buttonGap = Spacing.sm; // 8px gap between all buttons
   
   // Calculate positions with consistent spacing
-  // Action buttons container has 2 buttons (40px each) + 1 gap (8px) = 88px total height
-  const actionButtonsHeight = 88;
-  const subModeToggleHeight = 76; // 2 buttons (34px each) + gap (2px) + padding (6px) = 76px
+  // Action buttons container has 2 buttons (44px each) + 1 gap (8px) = 96px total height
+  const actionButtonsHeight = 96;
+  const subModeToggleHeight = 86; // 2 buttons (36px each) + gap (6px) + padding (8px) = 86px
 
   return (
     <>

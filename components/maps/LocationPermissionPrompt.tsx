@@ -38,7 +38,7 @@ export function LocationPermissionPrompt({
         </Text>
 
         <Text style={[styles.description, { color: colors.textSecondary }]}>
-          BeActive needs access to your location to show your position on the map and track your rides.
+          Radzi needs access to your location to show your position on the map and track your rides.
         </Text>
 
         <View style={styles.buttons}>
@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   content: {
+    width: '100%',
     maxWidth: 400,
     alignItems: 'center',
   },
@@ -92,10 +93,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
     marginBottom: 32,
+    paddingHorizontal: 16,
   },
   buttons: {
     width: '100%',
     gap: 16,
+    alignItems: 'center',
   },
   button: {
     width: '100%',

@@ -11,6 +11,9 @@ interface MapModeToggleProps {
 
 export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) {
   const { colors, isDark } = useTheme();
+  const containerBackground = isDark ? colors.card : '#F5F5F5';
+  const inactiveTextColor = isDark ? colors.textSecondary : '#4A4A4A';
+  const pressedBackground = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
 
   const modes: Array<{ key: MapViewMode; label: string }> = [
     { key: 'heatmap', label: MAP_MODE_LABELS.viewMode.heatmap },
@@ -22,7 +25,7 @@ export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) 
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? colors.card : '#F5F5F5',
+          backgroundColor: containerBackground,
           borderColor: colors.border,
         },
       ]}
@@ -33,20 +36,28 @@ export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) 
         return (
           <Pressable
             key={mode.key}
-            style={[
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={`${mode.label} mode`}
+            onPress={() => onModeChange(mode.key)}
+            android_ripple={{ color: colors.primary + '20', borderless: false }}
+            style={({ pressed }) => [
               styles.button,
-              isActive && {
-                backgroundColor: colors.primary,
+              {
+                backgroundColor: isActive
+                  ? colors.primary
+                  : pressed
+                  ? pressedBackground
+                  : 'transparent',
+                borderColor: isActive ? colors.primary : 'transparent',
               },
             ]}
-            onPress={() => onModeChange(mode.key)}
-            android_ripple={{ color: colors.primary + '20' }}
           >
             <Text
               style={[
                 styles.label,
                 {
-                  color: isActive ? '#FFFFFF' : isDark ? colors.text : '#666666',
+                  color: isActive ? '#FFFFFF' : inactiveTextColor,
                 },
               ]}
             >
@@ -62,21 +73,23 @@ export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: 23,
-    padding: 3.5,
+    borderRadius: 24,
+    padding: 4,
     alignSelf: 'flex-start',
     borderWidth: 1,
+    gap: 4,
   },
   button: {
-    paddingVertical: 9,
-    paddingHorizontal: 23,
-    borderRadius: 20,
-    minWidth: 92,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 18,
+    minWidth: 105,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MapViewMode, HeatmapMode, FeedbackMode, MapModeState } from '@/types/mapMode';
 
-const MAP_MODE_STORAGE_KEY = '@beactive:map_mode';
+const MAP_MODE_STORAGE_KEY = '@radzi:map_mode';
 
 const DEFAULT_MAP_MODE: MapModeState = {
   viewMode: 'heatmap',

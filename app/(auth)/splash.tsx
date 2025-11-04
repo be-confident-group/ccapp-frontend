@@ -41,7 +41,7 @@ export default function SplashScreen() {
         <View style={styles.iconWrapper}>
           <MapPinIcon color="#FFFFFF" size={80} />
         </View>
-        <Text style={styles.appName}>BeActive</Text>
+        <Text style={styles.appName}>Radzi</Text>
         <Text style={styles.tagline}>Track Your Journey</Text>
       </View>
     </View>

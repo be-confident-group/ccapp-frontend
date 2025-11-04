@@ -53,9 +53,10 @@ export default {
         "@rnmapbox/maps",
         {
           RNMapboxMapsImpl: "mapbox",
-          RNMapboxMapsVersion: "11.14.0",
+          RNMapboxMapsVersion: "11.16.0",
         },
       ],
+      "expo-web-browser",
     ],
     experiments: {
       typedRoutes: true,
