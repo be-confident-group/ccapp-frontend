@@ -171,25 +171,9 @@ export default function YouScreen() {
                   icon={<SunIcon size={22} color={colors.text} />}
                   title={t('profile:preferences.theme')}
                   subtitle={isDark ? t('profile:preferences.themeDark') : t('profile:preferences.themeLight')}
-                  onPress={toggleTheme}
+                  toggleValue={isDark}
+                  onToggleChange={toggleTheme}
                   showChevron={false}
-                  rightElement={
-                    <TouchableOpacity
-                      onPress={toggleTheme}
-                      style={[
-                        styles.themeBadge,
-                        {
-                          backgroundColor: isDark
-                            ? colors.primary + '20'
-                            : colors.backgroundSecondary,
-                        },
-                      ]}
-                    >
-                      <ThemedText style={[styles.themeBadgeText, { color: colors.primary }]}>
-                        {isDark ? t('profile:preferences.themeLabelDark') : t('profile:preferences.themeLabelLight')}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  }
                   isFirst
                 />
                 <SettingsItem

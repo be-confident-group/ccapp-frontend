@@ -9,11 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Animated,
 } from 'react-native';
-import { XMarkIcon } from 'react-native-heroicons/outline';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { XMarkIcon, ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TextInput } from '@/components/ui';
-import { Button } from '@/components/ui';
 import { ProfileAvatar } from './ProfileAvatar';
 
 interface UserProfile {
@@ -32,6 +33,13 @@ interface EditProfileModalProps {
   onSave: (profile: UserProfile) => void;
 }
 
+const GENDER_OPTIONS = [
+  { value: 'M', label: 'Male' },
+  { value: 'F', label: 'Female' },
+  { value: 'O', label: 'Other' },
+  { value: '', label: 'Prefer not to say' },
+];
+
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   visible,
   onClose,
@@ -41,11 +49,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const { colors, isDark } = useTheme();
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
-
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    profile.dateOfBirth ? new Date(profile.dateOfBirth) : new Date()
+  );
   useEffect(() => {
     if (visible) {
       setFormData(profile);
       setErrors({});
+      if (profile.dateOfBirth) {
+        setSelectedDate(new Date(profile.dateOfBirth));
+      }
     }
   }, [visible, profile]);
 
@@ -60,11 +75,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
-    }
-
-    // Validate date of birth format (YYYY-MM-DD)
-    if (formData.dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(formData.dateOfBirth)) {
-      newErrors.dateOfBirth = 'Invalid date format (use YYYY-MM-DD)';
     }
 
     setErrors(newErrors);
@@ -82,6 +92,37 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     setFormData({ ...formData, profilePicture: uri });
   };
 
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (date) {
+      setSelectedDate(date);
+      const dateString = date.toISOString().split('T')[0];
+      setFormData({ ...formData, dateOfBirth: dateString });
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getGenderLabel = (value?: string) => {
+    return GENDER_OPTIONS.find((opt) => opt.value === value)?.label || 'Select gender';
+  };
+
+  const handleGenderSelect = (value: string) => {
+    setFormData({ ...formData, gender: value as any });
+    setShowGenderPicker(false);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -95,10 +136,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerLeft} />
+          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <XMarkIcon size={24} color={colors.text} />
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
           </TouchableOpacity>
         </View>
 
@@ -151,80 +194,139 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               autoCapitalize="none"
             />
 
-            <TextInput
-              label="Date of Birth"
-              value={formData.dateOfBirth || ''}
-              onChangeText={(text) => setFormData({ ...formData, dateOfBirth: text })}
-              error={errors.dateOfBirth}
-              placeholder="YYYY-MM-DD"
-            />
+            {/* Date of Birth Picker */}
+            <View>
+              <Text style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <CalendarIcon size={20} color={colors.textSecondary} />
+                <Text
+                  style={[
+                    styles.pickerText,
+                    { color: formData.dateOfBirth ? colors.text : colors.textSecondary },
+                  ]}
+                >
+                  {formatDate(formData.dateOfBirth) || 'Select date of birth'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            {/* Gender Selector */}
-            <View style={styles.genderSection}>
-              <Text style={[styles.genderLabel, { color: colors.text }]}>Gender</Text>
-              <View style={styles.genderButtons}>
-                {[
-                  { value: 'M', label: 'Male' },
-                  { value: 'F', label: 'Female' },
-                  { value: 'O', label: 'Other' },
-                  { value: '', label: 'Prefer not to say' },
-                ].map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => setFormData({ ...formData, gender: option.value as any })}
-                    style={[
-                      styles.genderButton,
-                      {
-                        backgroundColor:
-                          formData.gender === option.value
-                            ? colors.primary + '20'
-                            : colors.card,
-                        borderColor:
-                          formData.gender === option.value ? colors.primary : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.genderButtonText,
-                        {
-                          color:
-                            formData.gender === option.value
-                              ? colors.primary
-                              : colors.textSecondary,
-                          fontWeight: formData.gender === option.value ? '600' : '400',
-                        },
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            {/* Gender Picker */}
+            <View>
+              <Text style={[styles.label, { color: colors.text }]}>Gender</Text>
+              <TouchableOpacity
+                onPress={() => setShowGenderPicker(true)}
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pickerText,
+                    { color: formData.gender ? colors.text : colors.textSecondary },
+                  ]}
+                >
+                  {getGenderLabel(formData.gender)}
+                </Text>
+                <ChevronDownIcon size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
 
-        {/* Footer Buttons */}
-        <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
-          <View style={styles.buttonRow}>
-            <Button
-              title="Cancel"
-              onPress={onClose}
-              variant="outline"
-              size="large"
-              style={styles.button}
+        {/* Date Picker Overlay for iOS */}
+        {Platform.OS === 'ios' && showDatePicker && (
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowDatePicker(false)}
             />
-            <View style={styles.buttonSpacer} />
-            <Button
-              title="Save Changes"
-              onPress={handleSave}
-              variant="primary"
-              size="large"
-              style={styles.button}
+            <View style={[styles.pickerModal, { backgroundColor: colors.background }]}>
+              <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={[styles.pickerDone, { color: colors.primary }]}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+                minimumDate={new Date(1900, 0, 1)}
+                textColor={colors.text}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Date Picker for Android */}
+        {Platform.OS === 'android' && showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+            minimumDate={new Date(1900, 0, 1)}
+          />
+        )}
+
+        {/* Gender Picker Overlay */}
+        {showGenderPicker && (
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowGenderPicker(false)}
             />
+            <View style={[styles.pickerModal, { backgroundColor: colors.background }]}>
+            <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>Select Gender</Text>
+              <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
+                <Text style={[styles.pickerDone, { color: colors.primary }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => handleGenderSelect(option.value)}
+                  style={[
+                    styles.pickerItem,
+                    { borderBottomColor: colors.border },
+                    formData.gender === option.value && {
+                      backgroundColor: colors.primary + '10',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pickerItemText,
+                      {
+                        color:
+                          formData.gender === option.value
+                            ? colors.primary
+                            : colors.text,
+                        fontWeight: formData.gender === option.value ? '600' : '400',
+                      },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
+        )}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -242,69 +344,107 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  headerLeft: {
-    width: 40,
+  cancelButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  cancelText: {
+    fontSize: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
   },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+  saveButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 24,
+    paddingBottom: 40,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
   avatarHint: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 6,
+    fontSize: 13,
   },
   formSection: {
-    gap: 16,
+    gap: 12,
   },
-  genderSection: {
-    marginTop: 8,
-  },
-  genderLabel: {
-    fontSize: 16,
+  label: {
+    fontSize: 15,
     fontWeight: '500',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  genderButtons: {
+  pickerButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
   },
-  genderButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-  },
-  genderButtonText: {
-    fontSize: 14,
-  },
-  footer: {
-    borderTopWidth: 1,
-    padding: 16,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-  },
-  button: {
+  pickerText: {
     flex: 1,
+    fontSize: 16,
   },
-  buttonSpacer: {
-    width: 12,
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    zIndex: 1000,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  pickerModal: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '50%',
+    paddingBottom: 20,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  pickerDone: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pickerList: {
+    maxHeight: 300,
+  },
+  pickerItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  pickerItemText: {
+    fontSize: 16,
   },
 });
