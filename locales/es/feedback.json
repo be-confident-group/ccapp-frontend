@@ -1,0 +1,28 @@
+{
+  "title": "Enviar Comentarios",
+  "subtitle": "¡Nos encantaría saber de ti!",
+  "categories": {
+    "label": "Categoría",
+    "bugReport": "Reporte de Error",
+    "featureRequest": "Solicitud de Función",
+    "generalFeedback": "Comentarios Generales",
+    "other": "Otro"
+  },
+  "message": {
+    "label": "Mensaje",
+    "placeholder": "Cuéntanos qué estás pensando..."
+  },
+  "contact": {
+    "label": "Correo Electrónico (opcional)",
+    "placeholder": "tu.correo@ejemplo.com"
+  },
+  "submit": "Enviar Comentarios",
+  "success": {
+    "title": "¡Gracias!",
+    "message": "Tus comentarios han sido enviados exitosamente."
+  },
+  "error": {
+    "title": "Error",
+    "message": "No se pudieron enviar los comentarios. Por favor, inténtalo de nuevo."
+  }
+}

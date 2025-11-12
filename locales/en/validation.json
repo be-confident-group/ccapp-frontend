@@ -1,0 +1,34 @@
+{
+  "required": "{{field}} is required",
+  "email": {
+    "invalid": "Please enter a valid email address",
+    "required": "Email is required"
+  },
+  "password": {
+    "required": "Password is required",
+    "min": "Password must be at least {{min}} characters",
+    "match": "Passwords must match",
+    "weak": "Password is too weak. Use at least 8 characters with letters and numbers"
+  },
+  "firstName": {
+    "required": "First name is required",
+    "min": "First name must be at least {{min}} characters"
+  },
+  "lastName": {
+    "required": "Last name is required",
+    "min": "Last name must be at least {{min}} characters"
+  },
+  "dateOfBirth": {
+    "required": "Date of birth is required",
+    "invalid": "Please enter a valid date",
+    "age": "You must be at least {{age}} years old"
+  },
+  "gender": {
+    "required": "Please select a gender"
+  },
+  "feedback": {
+    "categoryRequired": "Please select a category",
+    "messageRequired": "Message is required",
+    "messageMin": "Message must be at least {{min}} characters"
+  }
+}

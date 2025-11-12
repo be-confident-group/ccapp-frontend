@@ -1,0 +1,50 @@
+{
+  "header": {
+    "date": "Today, {{date}}",
+    "greeting": "Hello, {{name}}!",
+    "tracking": {
+      "on": "Tracking on",
+      "off": "Tracking off",
+      "subtitle": "Rides & walks"
+    }
+  },
+  "stats": {
+    "walked": "km walked",
+    "ride": "km ride",
+    "rides": "rides",
+    "co2": "kg CO₂",
+    "distance": "Distance",
+    "duration": "Duration",
+    "speed": "Speed",
+    "calories": "Calories"
+  },
+  "streak": {
+    "title_one": "You are on {{count}} day streak!",
+    "title_other": "You are on {{count}} days streak!",
+    "cta": "Keep moving! Every journey counts.",
+    "noStreak": "Start your streak today!"
+  },
+  "messages": {
+    "greatProgress": "Great progress this week!",
+    "keepGoing": "Keep it up!",
+    "almostThere": "Almost there!",
+    "goalAchieved": "Goal achieved! 🎉"
+  },
+  "buttons": {
+    "startRide": "Start Ride",
+    "viewAll": "View All",
+    "seeDetails": "See Details"
+  },
+  "sections": {
+    "recentActivity": "Recent Activity",
+    "achievements": "Achievements",
+    "goals": "Goals",
+    "stats": "Your Stats"
+  },
+  "empty": {
+    "noActivity": "No activity yet",
+    "noActivityMessage": "Start your first ride to see your stats here",
+    "noGoals": "No goals set",
+    "noGoalsMessage": "Set your first goal to track your progress"
+  }
+}

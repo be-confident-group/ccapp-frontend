@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "done": "Hecho",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "skip": "Omitir",
+    "submit": "Enviar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "share": "Compartir",
+    "retry": "Reintentar"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "maps": "Mapas",
+    "groups": "Grupos",
+    "you": "Tú",
+    "quickActions": "Acciones Rápidas"
+  },
+  "status": {
+    "loading": "Cargando...",
+    "saving": "Guardando...",
+    "success": "Éxito",
+    "error": "Error",
+    "comingSoon": "Próximamente"
+  },
+  "units": {
+    "km": "km",
+    "kg": "kg",
+    "kmh": "km/h",
+    "min": "min",
+    "sec": "seg",
+    "hours": "horas"
+  },
+  "days": {
+    "monday": "Lunes",
+    "tuesday": "Martes",
+    "wednesday": "Miércoles",
+    "thursday": "Jueves",
+    "friday": "Viernes",
+    "saturday": "Sábado",
+    "sunday": "Domingo"
+  },
+  "months": {
+    "january": "Enero",
+    "february": "Febrero",
+    "march": "Marzo",
+    "april": "Abril",
+    "may": "Mayo",
+    "june": "Junio",
+    "july": "Julio",
+    "august": "Agosto",
+    "september": "Septiembre",
+    "october": "Octubre",
+    "november": "Noviembre",
+    "december": "Diciembre"
+  },
+  "timePeriods": {
+    "week": "Semana",
+    "month": "Mes",
+    "threeMonths": "3 Meses",
+    "sixMonths": "6 Meses",
+    "year": "Año",
+    "allTime": "Todo el Tiempo"
+  }
+}

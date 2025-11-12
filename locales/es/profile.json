@@ -1,0 +1,67 @@
+{
+  "header": {
+    "joined": "Miembro desde {{date}}"
+  },
+  "sections": {
+    "account": "Cuenta",
+    "preferences": "Preferencias",
+    "integrations": "Integraciones",
+    "privacyNotifications": "Privacidad y Notificaciones",
+    "feedback": "Comentarios"
+  },
+  "account": {
+    "editProfile": "Editar Perfil",
+    "editProfileSubtitle": "Actualiza tu información personal"
+  },
+  "preferences": {
+    "theme": "Tema",
+    "themeLight": "Modo claro",
+    "themeDark": "Modo oscuro",
+    "themeLabelLight": "Claro",
+    "themeLabelDark": "Oscuro",
+    "systemLanguage": "Idioma del Sistema",
+    "systemLanguageSubtitle": "Español",
+    "unitsOfMeasure": "Unidades de Medida",
+    "unitsMetric": "Métrico (km, kg)",
+    "unitsImperial": "Imperial (mi, lb)"
+  },
+  "integrations": {
+    "connectedApps": "Aplicaciones y Dispositivos Conectados",
+    "connectedAppsSubtitle": "Strava, Apple Health, Google Fit",
+    "backgroundTracking": "Seguimiento en Segundo Plano",
+    "backgroundTrackingSubtitle": "Rastrear viajes automáticamente"
+  },
+  "privacy": {
+    "privacy": "Privacidad",
+    "privacySubtitle": "Administra tu configuración de privacidad",
+    "dailyReminder": "Recordatorio Diario",
+    "dailyReminderSubtitle": "Recibe recordatorios para registrar tus viajes",
+    "notificationSettings": "Configuración de Notificaciones",
+    "notificationSettingsSubtitle": "Administrar todas las notificaciones"
+  },
+  "feedback": {
+    "sendFeedback": "Enviar Comentarios",
+    "sendFeedbackSubtitle": "Comparte tus ideas con nosotros",
+    "rateUs": "Calificar",
+    "rateUsSubtitle": "Califícanos en la App Store"
+  },
+  "logout": "Cerrar Sesión",
+  "editProfileModal": {
+    "title": "Editar Perfil",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "email": "Correo Electrónico",
+    "dateOfBirth": "Fecha de Nacimiento",
+    "gender": "Género",
+    "genderMale": "Masculino",
+    "genderFemale": "Femenino",
+    "genderOther": "Otro",
+    "genderPreferNotToSay": "Prefiero no decir",
+    "selectGender": "Seleccionar Género",
+    "profilePicture": "Foto de Perfil",
+    "changePhoto": "Cambiar Foto",
+    "chooseFromLibrary": "Elegir de la Biblioteca",
+    "takePhoto": "Tomar Foto",
+    "removePhoto": "Eliminar Foto"
+  }
+}

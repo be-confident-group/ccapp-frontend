@@ -17,8 +17,11 @@ import {
   TrophyIcon
 } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/i18n/formatters';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const [isTrackingActive, setIsTrackingActive] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,7 +45,7 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
           <ThemedText type="subtitle" style={styles.headerDate}>
-            Today, 28 October
+            {t('home:header.date', { date: formatDate(new Date(), { month: 'long', day: 'numeric' }) })}
           </ThemedText>
 
           <TouchableOpacity style={styles.headerIcon}>
@@ -66,8 +69,8 @@ export default function HomeScreen() {
                   <MaterialIcons name="directions-run" size={18} color="#fff" />
                 </View>
                 <View style={styles.menuTextCol}>
-                  <ThemedText style={styles.menuTitle}>Tracking on</ThemedText>
-                  <ThemedText style={[styles.menuSubtitle, { color: colors.textSecondary }]}>Rides & walks • until you turn it off</ThemedText>
+                  <ThemedText style={styles.menuTitle}>{t('home:header.tracking.on')}</ThemedText>
+                  <ThemedText style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{t('home:header.tracking.subtitle')}</ThemedText>
                 </View>
               </TouchableOpacity>
 
@@ -85,7 +88,7 @@ export default function HomeScreen() {
                   <Ionicons name="man" size={18} color="#fff" />
                 </View>
                 <View style={styles.menuTextCol}>
-                  <ThemedText style={styles.menuTitle}>Tracking off</ThemedText>
+                  <ThemedText style={styles.menuTitle}>{t('home:header.tracking.off')}</ThemedText>
                   <ThemedText style={[styles.menuSubtitle, { color: colors.textSecondary }]}>No background tracking</ThemedText>
                 </View>
               </TouchableOpacity>
@@ -128,10 +131,10 @@ export default function HomeScreen() {
               </LinearGradient>
               <View style={styles.trackingTextContainer}>
                 <ThemedText style={styles.trackingTitle}>
-                  {isTrackingActive ? 'Tracking on' : 'Tracking off'}
+                  {isTrackingActive ? t('home:header.tracking.on') : t('home:header.tracking.off')}
                 </ThemedText>
                 <ThemedText style={[styles.trackingSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                  Rides & walks
+                  {t('home:header.tracking.subtitle')}
                 </ThemedText>
               </View>
               <ChevronDownIcon size={20} color={colors.icon} />
@@ -186,7 +189,7 @@ export default function HomeScreen() {
                     <TrophyIcon size={20} color="#F59E0B" />
                   </View>
                   <ThemedText style={styles.statValue}>125.5</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>km walked</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.walked')}</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
@@ -196,7 +199,7 @@ export default function HomeScreen() {
                     <FireIcon size={20} color="#3B82F6" />
                   </View>
                   <ThemedText style={styles.statValue}>42.3</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>km ride</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.ride')}</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
@@ -206,7 +209,7 @@ export default function HomeScreen() {
                     <FireIcon size={20} color="#10B981" />
                   </View>
                   <ThemedText style={styles.statValue}>42</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>rides</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.rides')}</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
@@ -216,7 +219,7 @@ export default function HomeScreen() {
                     <BeakerIcon size={20} color="#6366F1" />
                   </View>
                   <ThemedText style={styles.statValue}>15.2</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>kg CO₂</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.co2')}</ThemedText>
                 </View>
               </View>
 
@@ -227,7 +230,7 @@ export default function HomeScreen() {
               <View style={styles.summarySection}>
                 <View style={styles.summaryHeader}>
                   <FireIcon size={18} color="#F59E0B" />
-                  <ThemedText style={styles.summaryTitle}>Great progress this week!</ThemedText>
+                  <ThemedText style={styles.summaryTitle}>{t('home:messages.greatProgress')}</ThemedText>
                 </View>
                 <ThemedText style={[styles.summaryText, { color: colors.textSecondary }]}>
                   You've walked 125.5km and rode 42.3km this week, saving 15.2kg of CO₂. Your recent 8km evening ride brought you closer to your weekly goal. Keep up the amazing work!
@@ -289,10 +292,10 @@ export default function HomeScreen() {
                 <View style={styles.streakSummary}>
                   <View style={styles.streakHeader}>
                     <FireIcon size={18} color="#EF4444" />
-                    <ThemedText style={styles.streakTitle}>You are on 1 day streak!</ThemedText>
+                    <ThemedText style={styles.streakTitle}>{t('home:streak.title', { count: 1 })}</ThemedText>
                   </View>
                   <ThemedText style={[styles.callToAction, { color: colors.textSecondary }]}>
-                    Keep moving! Every journey counts. 🚴
+                    {t('home:streak.cta')} 🚴
                   </ThemedText>
                 </View>
               </View>

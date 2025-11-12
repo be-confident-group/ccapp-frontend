@@ -8,6 +8,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { useProtectedRoute } from '@/contexts/useProtectedRoute';
 import { initializeMapbox } from '@/config/mapbox';
 
+// Initialize i18n
+import '@/lib/i18n';
+
 // Initialize Mapbox
 initializeMapbox();
 

@@ -1,0 +1,46 @@
+{
+  "title": "Grupos",
+  "tabs": {
+    "feed": "Feed",
+    "discover": "Descubrir",
+    "myGroups": "Mis Grupos"
+  },
+  "buttons": {
+    "createGroup": "Crear Grupo",
+    "joinGroup": "Unirse al Grupo",
+    "leaveGroup": "Abandonar Grupo",
+    "createPost": "Crear Publicación",
+    "viewLeaderboard": "Tabla de Clasificación"
+  },
+  "post": {
+    "like": "Me gusta",
+    "comment": "Comentar",
+    "share": "Compartir",
+    "comments_one": "{{count}} comentario",
+    "comments_other": "{{count}} comentarios",
+    "likes_one": "{{count}} me gusta",
+    "likes_other": "{{count}} me gusta"
+  },
+  "createPost": {
+    "title": "Crear Publicación",
+    "placeholder": "Comparte tus pensamientos...",
+    "addPhoto": "Agregar Foto",
+    "addRide": "Adjuntar Viaje",
+    "post": "Publicar"
+  },
+  "createGroup": {
+    "title": "Crear Grupo",
+    "groupName": "Nombre del Grupo",
+    "description": "Descripción",
+    "privacy": "Privacidad",
+    "public": "Público",
+    "private": "Privado",
+    "create": "Crear Grupo"
+  },
+  "empty": {
+    "noGroups": "Aún no hay grupos",
+    "noGroupsMessage": "Únete o crea un grupo para comenzar",
+    "noPosts": "Aún no hay publicaciones",
+    "noPostsMessage": "¡Sé el primero en compartir algo!"
+  }
+}

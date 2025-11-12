@@ -3,6 +3,7 @@ import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   UserIcon,
   Cog6ToothIcon,
@@ -25,12 +26,19 @@ import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { ActivityChart } from '@/components/profile/ActivityChart';
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { LanguagePicker } from '@/components/ui/LanguagePicker';
+import { useLanguage } from '@/lib/hooks/useLanguage';
+import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
+import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
 
 export default function YouScreen() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
+  const { currentLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
 
   // Mock user data - replace with actual user data from context/API
@@ -45,25 +53,22 @@ export default function YouScreen() {
   });
 
   const handleLogout = async () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
+    showConfirmAlert(
+      'alerts:logout.title',
+      'alerts:logout.message',
+      async () => {
+        setLoading(true);
+        await signOut();
       },
-      {
-        text: 'Log Out',
-        style: 'destructive',
-        onPress: async () => {
-          setLoading(true);
-          await signOut();
-        },
-      },
-    ]);
+      'alerts:logout.confirmButton',
+      'alerts:logout.cancelButton',
+      'destructive'
+    );
   };
 
   const handleSaveProfile = (profile: any) => {
     setUserProfile({ ...userProfile, ...profile });
-    Alert.alert('Success', 'Profile updated successfully!');
+    showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
   };
 
   const handleRateApp = () => {
@@ -73,7 +78,7 @@ export default function YouScreen() {
         : 'https://play.google.com/store/apps/details?id=com.ccapp'; // Replace with actual package name
 
     Linking.openURL(storeUrl).catch(() =>
-      Alert.alert('Error', 'Unable to open app store')
+      showInfoAlert('alerts:error.title', 'alerts:error.appStore')
     );
   };
 
@@ -98,7 +103,7 @@ export default function YouScreen() {
               {userProfile.firstName} {userProfile.lastName}
             </ThemedText>
             <ThemedText style={[styles.joinedDate, { color: colors.textSecondary }]}>
-              Joined {userProfile.joinedDate}
+              {t('profile:header.joined', { date: userProfile.joinedDate })}
             </ThemedText>
           </View>
 
@@ -128,7 +133,7 @@ export default function YouScreen() {
 
           {/* Account Section */}
           <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>Account</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile:sections.account')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <SettingsItem
                 icon={
@@ -136,8 +141,8 @@ export default function YouScreen() {
                     <UserIcon size={20} color="#3B82F6" />
                   </View>
                 }
-                title="Edit Profile"
-                subtitle="Update your personal information"
+                title={t('profile:account.editProfile')}
+                subtitle={t('profile:account.editProfileSubtitle')}
                 onPress={() => setShowEditProfile(true)}
                 isFirst
                 isLast
@@ -147,7 +152,7 @@ export default function YouScreen() {
 
           {/* Preferences Section */}
           <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>Preferences</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile:sections.preferences')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <SettingsItem
                 icon={
@@ -155,8 +160,8 @@ export default function YouScreen() {
                     <SunIcon size={20} color={isDark ? '#F59E0B' : '#D97706'} />
                   </View>
                 }
-                title="Theme"
-                subtitle={isDark ? 'Dark mode' : 'Light mode'}
+                title={t('profile:preferences.theme')}
+                subtitle={isDark ? t('profile:preferences.themeDark') : t('profile:preferences.themeLight')}
                 onPress={toggleTheme}
                 showChevron={false}
                 rightElement={
@@ -172,7 +177,7 @@ export default function YouScreen() {
                     ]}
                   >
                     <ThemedText style={[styles.themeBadgeText, { color: colors.primary }]}>
-                      {isDark ? 'Dark' : 'Light'}
+                      {isDark ? t('profile:preferences.themeLabelDark') : t('profile:preferences.themeLabelLight')}
                     </ThemedText>
                   </TouchableOpacity>
                 }
@@ -184,9 +189,9 @@ export default function YouScreen() {
                     <GlobeAltIcon size={20} color="#6366F1" />
                   </View>
                 }
-                title="System Language"
-                subtitle="English"
-                onPress={() => Alert.alert('Coming Soon', 'Language settings will be available soon.')}
+                title={t('profile:preferences.systemLanguage')}
+                subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
+                onPress={() => setShowLanguagePicker(true)}
               />
               <SettingsItem
                 icon={
@@ -194,9 +199,9 @@ export default function YouScreen() {
                     <Cog6ToothIcon size={20} color="#EC4899" />
                   </View>
                 }
-                title="Units of Measure"
-                subtitle="Metric (km, kg)"
-                onPress={() => Alert.alert('Coming Soon', 'Unit settings will be available soon.')}
+                title={t('profile:preferences.unitsOfMeasure')}
+                subtitle={t('profile:preferences.unitsMetric')}
+                onPress={() => showComingSoonAlert('unitSettings')}
                 isLast
               />
             </View>
@@ -204,7 +209,7 @@ export default function YouScreen() {
 
           {/* Integrations Section */}
           <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>Integrations</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile:sections.integrations')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <SettingsItem
                 icon={
@@ -212,11 +217,9 @@ export default function YouScreen() {
                     <LinkIcon size={20} color="#10B981" />
                   </View>
                 }
-                title="Connected Apps & Devices"
-                subtitle="Strava, Apple Health, Google Fit"
-                onPress={() =>
-                  Alert.alert('Coming Soon', 'App and device connections will be available soon.')
-                }
+                title={t('profile:integrations.connectedApps')}
+                subtitle={t('profile:integrations.connectedAppsSubtitle')}
+                onPress={() => showComingSoonAlert('appConnections')}
                 isFirst
               />
               <SettingsItem
@@ -225,11 +228,9 @@ export default function YouScreen() {
                     <DevicePhoneMobileIcon size={20} color="#EF4444" />
                   </View>
                 }
-                title="Phone Background Tracking"
-                subtitle="Track rides automatically"
-                onPress={() =>
-                  Alert.alert('Coming Soon', 'Background tracking settings will be available soon.')
-                }
+                title={t('profile:integrations.backgroundTracking')}
+                subtitle={t('profile:integrations.backgroundTrackingSubtitle')}
+                onPress={() => showComingSoonAlert('backgroundTracking')}
                 isLast
               />
             </View>
@@ -237,7 +238,7 @@ export default function YouScreen() {
 
           {/* Privacy & Notifications Section */}
           <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>Privacy & Notifications</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile:sections.privacyNotifications')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <SettingsItem
                 icon={
@@ -245,9 +246,9 @@ export default function YouScreen() {
                     <ShieldCheckIcon size={20} color="#F59E0B" />
                   </View>
                 }
-                title="Privacy"
-                subtitle="Manage your privacy settings"
-                onPress={() => Alert.alert('Coming Soon', 'Privacy settings will be available soon.')}
+                title={t('profile:privacy.privacy')}
+                subtitle={t('profile:privacy.privacySubtitle')}
+                onPress={() => showComingSoonAlert('privacySettings')}
                 isFirst
               />
               <SettingsItem
@@ -256,8 +257,8 @@ export default function YouScreen() {
                     <BellIcon size={20} color="#3B82F6" />
                   </View>
                 }
-                title="Daily Reminder"
-                subtitle="Get reminded to log your rides"
+                title={t('profile:privacy.dailyReminder')}
+                subtitle={t('profile:privacy.dailyReminderSubtitle')}
                 toggleValue={dailyReminderEnabled}
                 onToggleChange={setDailyReminderEnabled}
                 showChevron={false}
@@ -268,11 +269,9 @@ export default function YouScreen() {
                     <BellIcon size={20} color="#6366F1" />
                   </View>
                 }
-                title="Notification Settings"
-                subtitle="Manage all notifications"
-                onPress={() =>
-                  Alert.alert('Coming Soon', 'Notification settings will be available soon.')
-                }
+                title={t('profile:privacy.notificationSettings')}
+                subtitle={t('profile:privacy.notificationSettingsSubtitle')}
+                onPress={() => showComingSoonAlert('notificationSettings')}
                 isLast
               />
             </View>
@@ -280,7 +279,7 @@ export default function YouScreen() {
 
           {/* Feedback Section */}
           <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>Feedback</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile:sections.feedback')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <SettingsItem
                 icon={
@@ -288,8 +287,8 @@ export default function YouScreen() {
                     <ChatBubbleBottomCenterTextIcon size={20} color="#EC4899" />
                   </View>
                 }
-                title="Send Feedback"
-                subtitle="Share your thoughts with us"
+                title={t('profile:feedback.sendFeedback')}
+                subtitle={t('profile:feedback.sendFeedbackSubtitle')}
                 onPress={() => router.push('/feedback')}
                 isFirst
               />
@@ -299,8 +298,8 @@ export default function YouScreen() {
                     <StarIcon size={20} color="#F59E0B" />
                   </View>
                 }
-                title="Rate Us"
-                subtitle="Rate us on the App Store"
+                title={t('profile:feedback.rateUs')}
+                subtitle={t('profile:feedback.rateUsSubtitle')}
                 onPress={handleRateApp}
                 isLast
               />
@@ -310,7 +309,7 @@ export default function YouScreen() {
           {/* Log Out Button */}
           <View style={styles.logoutSection}>
             <Button
-              title="Log Out"
+              title={t('profile:logout')}
               onPress={handleLogout}
               variant="outline"
               size="large"
@@ -328,6 +327,12 @@ export default function YouScreen() {
           onClose={() => setShowEditProfile(false)}
           profile={userProfile}
           onSave={handleSaveProfile}
+        />
+
+        {/* Language Picker Modal */}
+        <LanguagePicker
+          visible={showLanguagePicker}
+          onClose={() => setShowLanguagePicker(false)}
         />
       </ThemedView>
     </SafeAreaView>

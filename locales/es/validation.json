@@ -1,0 +1,34 @@
+{
+  "required": "{{field}} es requerido",
+  "email": {
+    "invalid": "Por favor, ingresa un correo electrónico válido",
+    "required": "El correo electrónico es requerido"
+  },
+  "password": {
+    "required": "La contraseña es requerida",
+    "min": "La contraseña debe tener al menos {{min}} caracteres",
+    "match": "Las contraseñas deben coincidir",
+    "weak": "La contraseña es demasiado débil. Usa al menos 8 caracteres con letras y números"
+  },
+  "firstName": {
+    "required": "El nombre es requerido",
+    "min": "El nombre debe tener al menos {{min}} caracteres"
+  },
+  "lastName": {
+    "required": "El apellido es requerido",
+    "min": "El apellido debe tener al menos {{min}} caracteres"
+  },
+  "dateOfBirth": {
+    "required": "La fecha de nacimiento es requerida",
+    "invalid": "Por favor, ingresa una fecha válida",
+    "age": "Debes tener al menos {{age}} años"
+  },
+  "gender": {
+    "required": "Por favor, selecciona un género"
+  },
+  "feedback": {
+    "categoryRequired": "Por favor, selecciona una categoría",
+    "messageRequired": "El mensaje es requerido",
+    "messageMin": "El mensaje debe tener al menos {{min}} caracteres"
+  }
+}

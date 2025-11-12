@@ -1,0 +1,56 @@
+{
+  "title": "Mapas",
+  "tabs": {
+    "track": "Seguimiento",
+    "history": "Historial",
+    "feedback": "Comentarios",
+    "heatmap": "Mapa de Calor"
+  },
+  "buttons": {
+    "startRide": "Comenzar Viaje",
+    "endRide": "Terminar Viaje",
+    "pauseRide": "Pausar",
+    "resumeRide": "Reanudar",
+    "manualEntry": "Registrar Viaje Manualmente"
+  },
+  "rideTypes": {
+    "walk": "Caminar",
+    "cycle": "Bicicleta",
+    "run": "Correr"
+  },
+  "activeRide": {
+    "duration": "Duración",
+    "distance": "Distancia",
+    "speed": "Velocidad",
+    "avgSpeed": "Velocidad Promedio",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "stop": "Detener Viaje"
+  },
+  "tripDetail": {
+    "title": "Detalles del Viaje",
+    "date": "Fecha",
+    "duration": "Duración",
+    "distance": "Distancia",
+    "avgSpeed": "Velocidad Promedio",
+    "co2Saved": "CO₂ Ahorrado",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "share": "Compartir"
+  },
+  "manualEntry": {
+    "title": "Registrar Viaje Manualmente",
+    "rideType": "Tipo de Viaje",
+    "distance": "Distancia (km)",
+    "duration": "Duración (min)",
+    "date": "Fecha",
+    "notes": "Notas (opcional)",
+    "submit": "Registrar Viaje"
+  },
+  "empty": {
+    "noHistory": "Aún no hay viajes",
+    "noHistoryMessage": "Comienza a rastrear tus viajes para verlos aquí",
+    "noFeedback": "Aún no hay comentarios",
+    "noFeedbackMessage": "Califica rutas para ver tus comentarios aquí"
+  }
+}

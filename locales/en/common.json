@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "done": "Done",
+    "close": "Close",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "share": "Share",
+    "retry": "Retry"
+  },
+  "navigation": {
+    "home": "Home",
+    "maps": "Maps",
+    "groups": "Groups",
+    "you": "You",
+    "quickActions": "Quick Actions"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "success": "Success",
+    "error": "Error",
+    "comingSoon": "Coming Soon"
+  },
+  "units": {
+    "km": "km",
+    "kg": "kg",
+    "kmh": "km/h",
+    "min": "min",
+    "sec": "sec",
+    "hours": "hours"
+  },
+  "days": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "timePeriods": {
+    "week": "Week",
+    "month": "Month",
+    "threeMonths": "3 Months",
+    "sixMonths": "6 Months",
+    "year": "Year",
+    "allTime": "All Time"
+  }
+}

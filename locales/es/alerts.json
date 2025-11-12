@@ -1,0 +1,33 @@
+{
+  "logout": {
+    "title": "Cerrar Sesión",
+    "message": "¿Estás seguro de que quieres cerrar sesión?",
+    "confirmButton": "Cerrar Sesión",
+    "cancelButton": "Cancelar"
+  },
+  "profileUpdated": {
+    "title": "Éxito",
+    "message": "¡Perfil actualizado exitosamente!"
+  },
+  "comingSoon": {
+    "title": "Próximamente",
+    "languageSettings": "La configuración de idioma estará disponible pronto.",
+    "unitSettings": "La configuración de unidades estará disponible pronto.",
+    "appConnections": "Las conexiones de aplicaciones y dispositivos estarán disponibles pronto.",
+    "backgroundTracking": "La configuración de seguimiento en segundo plano estará disponible pronto.",
+    "privacySettings": "La configuración de privacidad estará disponible pronto.",
+    "notificationSettings": "La configuración de notificaciones estará disponible pronto."
+  },
+  "error": {
+    "title": "Error",
+    "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "network": "Error de red. Por favor, verifica tu conexión.",
+    "appStore": "No se puede abrir la tienda de aplicaciones"
+  },
+  "deleteConfirm": {
+    "title": "Eliminar",
+    "message": "¿Estás seguro de que quieres eliminar esto?",
+    "confirmButton": "Eliminar",
+    "cancelButton": "Cancelar"
+  }
+}

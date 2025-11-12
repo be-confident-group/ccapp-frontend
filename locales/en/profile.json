@@ -1,0 +1,67 @@
+{
+  "header": {
+    "joined": "Joined {{date}}"
+  },
+  "sections": {
+    "account": "Account",
+    "preferences": "Preferences",
+    "integrations": "Integrations",
+    "privacyNotifications": "Privacy & Notifications",
+    "feedback": "Feedback"
+  },
+  "account": {
+    "editProfile": "Edit Profile",
+    "editProfileSubtitle": "Update your personal information"
+  },
+  "preferences": {
+    "theme": "Theme",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "themeLabelLight": "Light",
+    "themeLabelDark": "Dark",
+    "systemLanguage": "System Language",
+    "systemLanguageSubtitle": "English",
+    "unitsOfMeasure": "Units of Measure",
+    "unitsMetric": "Metric (km, kg)",
+    "unitsImperial": "Imperial (mi, lb)"
+  },
+  "integrations": {
+    "connectedApps": "Connected Apps & Devices",
+    "connectedAppsSubtitle": "Strava, Apple Health, Google Fit",
+    "backgroundTracking": "Phone Background Tracking",
+    "backgroundTrackingSubtitle": "Track rides automatically"
+  },
+  "privacy": {
+    "privacy": "Privacy",
+    "privacySubtitle": "Manage your privacy settings",
+    "dailyReminder": "Daily Reminder",
+    "dailyReminderSubtitle": "Get reminded to log your rides",
+    "notificationSettings": "Notification Settings",
+    "notificationSettingsSubtitle": "Manage all notifications"
+  },
+  "feedback": {
+    "sendFeedback": "Send Feedback",
+    "sendFeedbackSubtitle": "Share your thoughts with us",
+    "rateUs": "Rate Us",
+    "rateUsSubtitle": "Rate us on the App Store"
+  },
+  "logout": "Log Out",
+  "editProfileModal": {
+    "title": "Edit Profile",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "dateOfBirth": "Date of Birth",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
+    "genderPreferNotToSay": "Prefer not to say",
+    "selectGender": "Select Gender",
+    "profilePicture": "Profile Picture",
+    "changePhoto": "Change Photo",
+    "chooseFromLibrary": "Choose from Library",
+    "takePhoto": "Take Photo",
+    "removePhoto": "Remove Photo"
+  }
+}

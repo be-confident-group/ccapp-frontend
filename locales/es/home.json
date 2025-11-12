@@ -1,0 +1,50 @@
+{
+  "header": {
+    "date": "Hoy, {{date}}",
+    "greeting": "¡Hola, {{name}}!",
+    "tracking": {
+      "on": "Seguimiento activado",
+      "off": "Seguimiento desactivado",
+      "subtitle": "Viajes y caminatas"
+    }
+  },
+  "stats": {
+    "walked": "km caminados",
+    "ride": "km en bicicleta",
+    "rides": "viajes",
+    "co2": "kg CO₂",
+    "distance": "Distancia",
+    "duration": "Duración",
+    "speed": "Velocidad",
+    "calories": "Calorías"
+  },
+  "streak": {
+    "title_one": "¡Llevas {{count}} día de racha!",
+    "title_other": "¡Llevas {{count}} días de racha!",
+    "cta": "¡Sigue adelante! Cada viaje cuenta.",
+    "noStreak": "¡Comienza tu racha hoy!"
+  },
+  "messages": {
+    "greatProgress": "¡Gran progreso esta semana!",
+    "keepGoing": "¡Sigue así!",
+    "almostThere": "¡Casi llegas!",
+    "goalAchieved": "¡Objetivo alcanzado! 🎉"
+  },
+  "buttons": {
+    "startRide": "Comenzar Viaje",
+    "viewAll": "Ver Todo",
+    "seeDetails": "Ver Detalles"
+  },
+  "sections": {
+    "recentActivity": "Actividad Reciente",
+    "achievements": "Logros",
+    "goals": "Objetivos",
+    "stats": "Tus Estadísticas"
+  },
+  "empty": {
+    "noActivity": "Aún no hay actividad",
+    "noActivityMessage": "Comienza tu primer viaje para ver tus estadísticas aquí",
+    "noGoals": "No hay objetivos establecidos",
+    "noGoalsMessage": "Establece tu primer objetivo para seguir tu progreso"
+  }
+}
