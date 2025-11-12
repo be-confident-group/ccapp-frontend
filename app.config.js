@@ -14,6 +14,7 @@ export default {
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your activities and show your position on the map.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Radzi needs your location to track your activities in the background.",
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
@@ -53,8 +54,7 @@ export default {
         "@rnmapbox/maps",
         {
           RNMapboxMapsImpl: "mapbox",
-          RNMapboxMapsVersion: "11.16.0",
-          RNMapboxMapsDownloadToken: process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN,
+          RNMapboxMapsVersion: "11.16.0"
         },
       ],
       "expo-web-browser",
