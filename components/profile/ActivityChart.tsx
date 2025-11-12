@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
-import { Circle, useFont } from '@shopify/react-native-skia';
+import { Circle } from '@shopify/react-native-skia';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 
@@ -53,6 +53,20 @@ const generateMockData = (): {
   return { month: monthData, '6months': sixMonthsData, year: yearData };
 };
 
+const getXAxisLabel = (range: TimeRange, index: number): string => {
+  if (range === 'month') {
+    // Show every 5th day for month view
+    return index % 5 === 0 ? `${index}` : '';
+  } else if (range === '6months') {
+    // Show every 4th week (roughly monthly)
+    return index % 4 === 0 ? `W${index}` : '';
+  } else {
+    // Year view - show month names
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[index] || '';
+  }
+};
+
 export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
   const { colors, isDark } = useTheme();
   const [selectedRange, setSelectedRange] = useState<TimeRange>('month');
@@ -60,7 +74,6 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
   const { state, isActive } = useChartPressState({ x: 0, y: { distance: 0 } });
 
   const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - 64;
 
   const tabs: { key: TimeRange; label: string }[] = [
     { key: 'month', label: 'Month' },
@@ -72,6 +85,11 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
   const totalDistance = currentData.reduce((sum, d) => sum + d.distance, 0);
   const avgDistance = totalDistance / currentData.length;
   const bestDay = Math.max(...currentData.map((d) => d.distance));
+
+  // Calculate Y-axis labels
+  const maxDistance = Math.max(...currentData.map((d) => d.distance));
+  const yAxisMax = Math.ceil(maxDistance / 50) * 50 + 50;
+  const yAxisStep = yAxisMax / 4;
 
   return (
     <View style={styles.container}>
@@ -109,42 +127,77 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
         </ThemedText>
         {isActive && (
           <Text style={[styles.activeValue, { color: colors.primary }]}>
-            Day {state.x.value.value.toFixed(0)}: {state.y.distance.value.value.toFixed(1)} km
+            {state.y.distance.value.value.toFixed(1)} km
           </Text>
         )}
       </View>
 
-      {/* Chart */}
-      <View style={styles.chartContainer}>
-        <CartesianChart
-          data={currentData}
-          xKey="day"
-          yKeys={['distance']}
-          chartPressState={state}
-          padding={{ left: 10, right: 10, top: 10, bottom: 10 }}
-          domainPadding={{ left: 20, right: 20, top: 20, bottom: 20 }}
-        >
-          {({ points, chartBounds }) => (
-            <>
-              <Line
-                points={points.distance}
-                color={colors.primary}
-                strokeWidth={3}
-                curveType="catmullRom"
-                animate={{ type: 'timing', duration: 300 }}
-              />
-              {isActive && (
-                <Circle
-                  cx={state.x.position}
-                  cy={state.y.distance.position}
-                  r={8}
-                  color={colors.primary}
-                  opacity={0.8}
-                />
-              )}
-            </>
+      {/* Chart with Axes */}
+      <View style={styles.chartWrapper}>
+        {/* Y-axis labels */}
+        <View style={styles.yAxisLabels}>
+          {[yAxisMax, yAxisMax - yAxisStep, yAxisMax - yAxisStep * 2, yAxisMax - yAxisStep * 3, 0].map(
+            (value, index) => (
+              <Text
+                key={index}
+                style={[styles.yAxisLabel, { color: colors.textSecondary }]}
+              >
+                {Math.round(value)}
+              </Text>
+            )
           )}
-        </CartesianChart>
+        </View>
+
+        {/* Chart Container */}
+        <View style={styles.chartWithXAxis}>
+          <View style={styles.chartContainer}>
+            <CartesianChart
+              data={currentData}
+              xKey="day"
+              yKeys={['distance']}
+              chartPressState={state}
+              padding={{ left: 10, right: 10, top: 10, bottom: 10 }}
+              domainPadding={{ left: 20, right: 20, top: 30, bottom: 10 }}
+              domain={{ y: [0, yAxisMax] }}
+            >
+              {({ points }) => (
+                <>
+                  <Line
+                    points={points.distance}
+                    color={colors.primary}
+                    strokeWidth={3}
+                    curveType="catmullRom"
+                    animate={{ type: 'timing', duration: 300 }}
+                  />
+                  {isActive && (
+                    <Circle
+                      cx={state.x.position}
+                      cy={state.y.distance.position}
+                      r={8}
+                      color={colors.primary}
+                      opacity={0.8}
+                    />
+                  )}
+                </>
+              )}
+            </CartesianChart>
+          </View>
+
+          {/* X-axis labels */}
+          <View style={styles.xAxisLabels}>
+            {currentData.map((point, index) => {
+              const label = getXAxisLabel(selectedRange, point.day);
+              if (!label) return <View key={index} style={styles.xAxisLabelItem} />;
+              return (
+                <View key={index} style={styles.xAxisLabelItem}>
+                  <Text style={[styles.xAxisLabel, { color: colors.textSecondary }]}>
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
       </View>
 
       {/* Summary Stats */}
@@ -160,14 +213,14 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
           <Text style={[styles.statValue, { color: colors.text }]}>
             {avgDistance.toFixed(1)}
           </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg km/day</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg km</Text>
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.text }]}>
             {bestDay.toFixed(0)}
           </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Best day</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Best</Text>
         </View>
       </View>
     </View>
@@ -203,7 +256,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   chartHeader: {
-    marginBottom: 12,
+    marginBottom: 16,
     paddingLeft: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -214,12 +267,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   activeValue: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  chartWrapper: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  yAxisLabels: {
+    width: 35,
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  yAxisLabel: {
+    fontSize: 10,
+    textAlign: 'right',
+  },
+  chartWithXAxis: {
+    flex: 1,
   },
   chartContainer: {
-    height: 200,
-    marginBottom: 16,
+    height: 180,
+  },
+  xAxisLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+    height: 20,
+  },
+  xAxisLabelItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  xAxisLabel: {
+    fontSize: 10,
   },
   statsContainer: {
     flexDirection: 'row',

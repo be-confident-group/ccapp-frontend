@@ -109,24 +109,20 @@ export default function YouScreen() {
 
           {/* Activity Chart Card */}
           <View style={styles.chartSection}>
-            <View
-              style={[
-                styles.chartCard,
-                { backgroundColor: colors.card },
-                styles.cardShadow,
-              ]}
-            >
-              {!isDark && (
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 0.3 }}
-                  style={styles.cardTopHighlight}
-                />
-              )}
-              <View style={styles.chartContent}>
-                <ActivityChart />
+            <View style={[styles.chartCard, styles.cardShadow]}>
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <View style={styles.chartContent}>
+                  <ActivityChart />
+                </View>
               </View>
             </View>
           </View>
@@ -135,18 +131,25 @@ export default function YouScreen() {
           <View style={styles.settingsSection}>
             <ThemedText style={styles.sectionTitle}>{t('profile:sections.account')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#DBEAFE' }]}>
-                    <UserIcon size={20} color="#3B82F6" />
-                  </View>
-                }
-                title={t('profile:account.editProfile')}
-                subtitle={t('profile:account.editProfileSubtitle')}
-                onPress={() => setShowEditProfile(true)}
-                isFirst
-                isLast
-              />
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<UserIcon size={22} color={colors.text} />}
+                  title={t('profile:account.editProfile')}
+                  subtitle={t('profile:account.editProfileSubtitle')}
+                  onPress={() => setShowEditProfile(true)}
+                  isFirst
+                  isLast
+                />
+              </View>
             </View>
           </View>
 
@@ -154,56 +157,55 @@ export default function YouScreen() {
           <View style={styles.settingsSection}>
             <ThemedText style={styles.sectionTitle}>{t('profile:sections.preferences')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#FEF3C7' : '#FEF3C7' }]}>
-                    <SunIcon size={20} color={isDark ? '#F59E0B' : '#D97706'} />
-                  </View>
-                }
-                title={t('profile:preferences.theme')}
-                subtitle={isDark ? t('profile:preferences.themeDark') : t('profile:preferences.themeLight')}
-                onPress={toggleTheme}
-                showChevron={false}
-                rightElement={
-                  <TouchableOpacity
-                    onPress={toggleTheme}
-                    style={[
-                      styles.themeBadge,
-                      {
-                        backgroundColor: isDark
-                          ? colors.primary + '20'
-                          : colors.backgroundSecondary,
-                      },
-                    ]}
-                  >
-                    <ThemedText style={[styles.themeBadgeText, { color: colors.primary }]}>
-                      {isDark ? t('profile:preferences.themeLabelDark') : t('profile:preferences.themeLabelLight')}
-                    </ThemedText>
-                  </TouchableOpacity>
-                }
-                isFirst
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#E0E7FF' }]}>
-                    <GlobeAltIcon size={20} color="#6366F1" />
-                  </View>
-                }
-                title={t('profile:preferences.systemLanguage')}
-                subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
-                onPress={() => setShowLanguagePicker(true)}
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#FCE7F3' }]}>
-                    <Cog6ToothIcon size={20} color="#EC4899" />
-                  </View>
-                }
-                title={t('profile:preferences.unitsOfMeasure')}
-                subtitle={t('profile:preferences.unitsMetric')}
-                onPress={() => showComingSoonAlert('unitSettings')}
-                isLast
-              />
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<SunIcon size={22} color={colors.text} />}
+                  title={t('profile:preferences.theme')}
+                  subtitle={isDark ? t('profile:preferences.themeDark') : t('profile:preferences.themeLight')}
+                  onPress={toggleTheme}
+                  showChevron={false}
+                  rightElement={
+                    <TouchableOpacity
+                      onPress={toggleTheme}
+                      style={[
+                        styles.themeBadge,
+                        {
+                          backgroundColor: isDark
+                            ? colors.primary + '20'
+                            : colors.backgroundSecondary,
+                        },
+                      ]}
+                    >
+                      <ThemedText style={[styles.themeBadgeText, { color: colors.primary }]}>
+                        {isDark ? t('profile:preferences.themeLabelDark') : t('profile:preferences.themeLabelLight')}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  }
+                  isFirst
+                />
+                <SettingsItem
+                  icon={<GlobeAltIcon size={22} color={colors.text} />}
+                  title={t('profile:preferences.systemLanguage')}
+                  subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
+                  onPress={() => setShowLanguagePicker(true)}
+                />
+                <SettingsItem
+                  icon={<Cog6ToothIcon size={22} color={colors.text} />}
+                  title={t('profile:preferences.unitsOfMeasure')}
+                  subtitle={t('profile:preferences.unitsMetric')}
+                  onPress={() => showComingSoonAlert('unitSettings')}
+                  isLast
+                />
+              </View>
             </View>
           </View>
 
@@ -211,28 +213,31 @@ export default function YouScreen() {
           <View style={styles.settingsSection}>
             <ThemedText style={styles.sectionTitle}>{t('profile:sections.integrations')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#D1FAE5' }]}>
-                    <LinkIcon size={20} color="#10B981" />
-                  </View>
-                }
-                title={t('profile:integrations.connectedApps')}
-                subtitle={t('profile:integrations.connectedAppsSubtitle')}
-                onPress={() => showComingSoonAlert('appConnections')}
-                isFirst
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#FEE2E2' }]}>
-                    <DevicePhoneMobileIcon size={20} color="#EF4444" />
-                  </View>
-                }
-                title={t('profile:integrations.backgroundTracking')}
-                subtitle={t('profile:integrations.backgroundTrackingSubtitle')}
-                onPress={() => showComingSoonAlert('backgroundTracking')}
-                isLast
-              />
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<LinkIcon size={22} color={colors.text} />}
+                  title={t('profile:integrations.connectedApps')}
+                  subtitle={t('profile:integrations.connectedAppsSubtitle')}
+                  onPress={() => showComingSoonAlert('appConnections')}
+                  isFirst
+                />
+                <SettingsItem
+                  icon={<DevicePhoneMobileIcon size={22} color={colors.text} />}
+                  title={t('profile:integrations.backgroundTracking')}
+                  subtitle={t('profile:integrations.backgroundTrackingSubtitle')}
+                  onPress={() => showComingSoonAlert('backgroundTracking')}
+                  isLast
+                />
+              </View>
             </View>
           </View>
 
@@ -240,40 +245,39 @@ export default function YouScreen() {
           <View style={styles.settingsSection}>
             <ThemedText style={styles.sectionTitle}>{t('profile:sections.privacyNotifications')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#FEF3C7' }]}>
-                    <ShieldCheckIcon size={20} color="#F59E0B" />
-                  </View>
-                }
-                title={t('profile:privacy.privacy')}
-                subtitle={t('profile:privacy.privacySubtitle')}
-                onPress={() => showComingSoonAlert('privacySettings')}
-                isFirst
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#DBEAFE' }]}>
-                    <BellIcon size={20} color="#3B82F6" />
-                  </View>
-                }
-                title={t('profile:privacy.dailyReminder')}
-                subtitle={t('profile:privacy.dailyReminderSubtitle')}
-                toggleValue={dailyReminderEnabled}
-                onToggleChange={setDailyReminderEnabled}
-                showChevron={false}
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#E0E7FF' }]}>
-                    <BellIcon size={20} color="#6366F1" />
-                  </View>
-                }
-                title={t('profile:privacy.notificationSettings')}
-                subtitle={t('profile:privacy.notificationSettingsSubtitle')}
-                onPress={() => showComingSoonAlert('notificationSettings')}
-                isLast
-              />
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<ShieldCheckIcon size={22} color={colors.text} />}
+                  title={t('profile:privacy.privacy')}
+                  subtitle={t('profile:privacy.privacySubtitle')}
+                  onPress={() => showComingSoonAlert('privacySettings')}
+                  isFirst
+                />
+                <SettingsItem
+                  icon={<BellIcon size={22} color={colors.text} />}
+                  title={t('profile:privacy.dailyReminder')}
+                  subtitle={t('profile:privacy.dailyReminderSubtitle')}
+                  toggleValue={dailyReminderEnabled}
+                  onToggleChange={setDailyReminderEnabled}
+                  showChevron={false}
+                />
+                <SettingsItem
+                  icon={<BellIcon size={22} color={colors.text} />}
+                  title={t('profile:privacy.notificationSettings')}
+                  subtitle={t('profile:privacy.notificationSettingsSubtitle')}
+                  onPress={() => showComingSoonAlert('notificationSettings')}
+                  isLast
+                />
+              </View>
             </View>
           </View>
 
@@ -281,28 +285,31 @@ export default function YouScreen() {
           <View style={styles.settingsSection}>
             <ThemedText style={styles.sectionTitle}>{t('profile:sections.feedback')}</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#FCE7F3' }]}>
-                    <ChatBubbleBottomCenterTextIcon size={20} color="#EC4899" />
-                  </View>
-                }
-                title={t('profile:feedback.sendFeedback')}
-                subtitle={t('profile:feedback.sendFeedbackSubtitle')}
-                onPress={() => router.push('/feedback')}
-                isFirst
-              />
-              <SettingsItem
-                icon={
-                  <View style={[styles.iconWrapper, { backgroundColor: '#FEF3C7' }]}>
-                    <StarIcon size={20} color="#F59E0B" />
-                  </View>
-                }
-                title={t('profile:feedback.rateUs')}
-                subtitle={t('profile:feedback.rateUsSubtitle')}
-                onPress={handleRateApp}
-                isLast
-              />
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<ChatBubbleBottomCenterTextIcon size={22} color={colors.text} />}
+                  title={t('profile:feedback.sendFeedback')}
+                  subtitle={t('profile:feedback.sendFeedbackSubtitle')}
+                  onPress={() => router.push('/feedback')}
+                  isFirst
+                />
+                <SettingsItem
+                  icon={<StarIcon size={22} color={colors.text} />}
+                  title={t('profile:feedback.rateUs')}
+                  subtitle={t('profile:feedback.rateUsSubtitle')}
+                  onPress={handleRateApp}
+                  isLast
+                />
+              </View>
             </View>
           </View>
 
@@ -373,7 +380,6 @@ const styles = StyleSheet.create({
   },
   chartCard: {
     borderRadius: 16,
-    overflow: 'hidden',
   },
   cardShadow: {
     shadowColor: '#000',
@@ -404,15 +410,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   settingsCard: {
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: 16,
   },
-  iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardInner: {
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   themeBadge: {
     paddingHorizontal: 12,
