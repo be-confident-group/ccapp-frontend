@@ -1,23 +1,23 @@
 export default {
   expo: {
-    name: "BeActive",
+    name: "Radzi",
     slug: "ccapp-frontend",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "beactive",
+    scheme: "radzi",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
-      bundleIdentifier: "com.beactive.app",
+      bundleIdentifier: "com.radzi.app",
       supportsTablet: true,
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "BeActive needs your location to track your activities and show your position on the map.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "BeActive needs your location to track your activities in the background.",
+        NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your activities and show your position on the map.",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Radzi needs your location to track your activities in the background.",
       },
     },
     android: {
-      package: "com.beactive.app",
+      package: "com.radzi.app",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -54,6 +54,7 @@ export default {
         {
           RNMapboxMapsImpl: "mapbox",
           RNMapboxMapsVersion: "11.16.0",
+          RNMapboxMapsDownloadToken: process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN,
         },
       ],
       "expo-web-browser",
