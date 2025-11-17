@@ -7,7 +7,7 @@ import type { Coordinate } from './location';
 /**
  * Type of activity
  */
-export type TripType = 'cycle' | 'walk';
+export type TripType = 'walk' | 'run' | 'cycle' | 'drive';
 
 /**
  * Trip status
@@ -99,8 +99,88 @@ export interface UpdateTripDto {
  */
 export interface TripFilters {
   type?: TripType;
-  startDate?: Date;
-  endDate?: Date;
+  status?: TripStatus;
+  synced?: boolean;
+  startDate?: number;
+  endDate?: number;
   minDistance?: number;
   maxDistance?: number;
+}
+
+/**
+ * Manual trip entry DTO
+ */
+export interface ManualTripDto {
+  userId: string;
+  type: TripType;
+  distance: number; // meters
+  duration: number; // seconds
+  startTime: number;
+  notes?: string;
+  routeData?: Coordinate[];
+}
+
+/**
+ * Get display name for trip type
+ */
+export function getTripTypeName(type: TripType): string {
+  const names: Record<TripType, string> = {
+    walk: 'Walking',
+    run: 'Running',
+    cycle: 'Cycling',
+    drive: 'Driving',
+  };
+  return names[type];
+}
+
+/**
+ * Get icon name for trip type
+ */
+export function getTripTypeIcon(type: TripType): string {
+  const icons: Record<TripType, string> = {
+    walk: 'walk',
+    run: 'run-fast',
+    cycle: 'bicycle',
+    drive: 'car',
+  };
+  return icons[type];
+}
+
+/**
+ * Get color for trip type
+ */
+export function getTripTypeColor(type: TripType): string {
+  const colors: Record<TripType, string> = {
+    walk: '#4CAF50',
+    run: '#FF9800',
+    cycle: '#2196F3',
+    drive: '#F44336',
+  };
+  return colors[type];
+}
+
+/**
+ * Get status display name
+ */
+export function getTripStatusName(status: TripStatus): string {
+  const names: Record<TripStatus, string> = {
+    active: 'Active',
+    paused: 'Paused',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+  return names[status];
+}
+
+/**
+ * Get status color
+ */
+export function getTripStatusColor(status: TripStatus): string {
+  const colors: Record<TripStatus, string> = {
+    active: '#4CAF50',
+    paused: '#FF9800',
+    completed: '#2196F3',
+    cancelled: '#9E9E9E',
+  };
+  return colors[status];
 }

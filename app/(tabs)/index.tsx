@@ -19,11 +19,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
+import { useTrackingToggle } from '@/components/tracking/TrackingToggle';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
-  const [isTrackingActive, setIsTrackingActive] = useState(true);
+  const { isTracking, toggleTracking } = useTrackingToggle();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
@@ -60,7 +61,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
-                  setIsTrackingActive(true);
+                  if (!isTracking) toggleTracking();
                   setIsMenuOpen(false);
                 }}
                 activeOpacity={0.8}
@@ -79,7 +80,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
-                  setIsTrackingActive(false);
+                  if (isTracking) toggleTracking();
                   setIsMenuOpen(false);
                 }}
                 activeOpacity={0.8}
@@ -111,12 +112,12 @@ export default function HomeScreen() {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={isTrackingActive ? ['#FFA7A7', '#EF4444', '#B91C1C'] : ['#F3F4F6', '#9CA3AF', '#6B7280']}
+                colors={isTracking ? ['#FFA7A7', '#EF4444', '#B91C1C'] : ['#F3F4F6', '#9CA3AF', '#6B7280']}
                 start={{ x: 0.1, y: 0.05 }}
                 end={{ x: 0.9, y: 1 }}
                 style={[styles.trackingIcon, styles.iconShadow]}
               >
-                {isTrackingActive ? (
+                {isTracking ? (
                   <MaterialIcons name="directions-run" size={16} color="#FFFFFF" />
                 ) : (
                   <Ionicons name="man" size={16} color="#FFFFFF" />
@@ -131,7 +132,7 @@ export default function HomeScreen() {
               </LinearGradient>
               <View style={styles.trackingTextContainer}>
                 <ThemedText style={styles.trackingTitle}>
-                  {isTrackingActive ? t('home:header.tracking.on') : t('home:header.tracking.off')}
+                  {isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
                 </ThemedText>
                 <ThemedText style={[styles.trackingSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                   {t('home:header.tracking.subtitle')}
@@ -393,7 +394,7 @@ export default function HomeScreen() {
                     style={styles.cardTopHighlight}
                   />
                 )}
-                
+
                 {/* Goals List */}
                 <View style={styles.goalsContent}>
                   {[
@@ -411,11 +412,11 @@ export default function HomeScreen() {
                           </ThemedText>
                         </View>
                         <View style={[styles.progressBarBg, { backgroundColor: goal.bg }]}>
-                          <View 
+                          <View
                             style={[
-                              styles.progressBarFill, 
+                              styles.progressBarFill,
                               { width: `${progress}%`, backgroundColor: goal.color }
-                            ]} 
+                            ]}
                           />
                         </View>
                       </View>
@@ -432,7 +433,7 @@ export default function HomeScreen() {
                     <View style={styles.goalsTitleRow}>
                       <ThemedText style={styles.goalsSummaryTitle}>Goals</ThemedText>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.expandIconButton}
                       onPress={() => router.push('/home/goals')}
                     >
@@ -445,6 +446,27 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card }]}
+              onPress={() => router.push('/home/trip-history')}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="history" size={24} color={colors.primary} />
+              <ThemedText style={styles.actionButtonText}>Trip History</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card }]}
+              onPress={() => router.push('/home/manual-entry')}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="add-circle-outline" size={24} color={colors.primary} />
+              <ThemedText style={styles.actionButtonText}>Add Manual Trip</ThemedText>
+            </TouchableOpacity>
           </View>
 
         </ScrollView>
@@ -875,5 +897,29 @@ const styles = StyleSheet.create({
   },
   menuSubtitle: {
     fontSize: 12,
+  },
+  // Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: Spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
