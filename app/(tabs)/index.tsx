@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -12,7 +12,6 @@ import {
   BeakerIcon,
   BellIcon,
   ChevronDownIcon,
-  CloudIcon,
   FireIcon,
   TrophyIcon
 } from 'react-native-heroicons/outline';
@@ -20,11 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
 import { useTrackingToggle } from '@/components/tracking/TrackingToggle';
+import { useWeather } from '@/hooks/useWeather';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const { isTracking, toggleTracking } = useTrackingToggle();
+  const { weather, loading: weatherLoading } = useWeather();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
@@ -149,7 +150,11 @@ export default function HomeScreen() {
                 end={{ x: 0.9, y: 0.9 }}
                 style={[styles.weatherIconWrapper, styles.iconShadow]}
               >
-                <CloudIcon size={16} color="#0284C7" />
+                <MaterialCommunityIcons
+                  name={weather?.icon || 'weather-partly-cloudy'}
+                  size={16}
+                  color="#0284C7"
+                />
                 <LinearGradient
                   pointerEvents="none"
                   colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
@@ -159,9 +164,11 @@ export default function HomeScreen() {
                 />
               </LinearGradient>
               <View style={styles.weatherTextContainer}>
-                <ThemedText style={styles.weatherTemp}>10°C</ThemedText>
+                <ThemedText style={styles.weatherTemp}>
+                  {weatherLoading ? '--' : weather?.temperature ?? '--'}°C
+                </ThemedText>
                 <ThemedText style={[styles.weatherLocation, { color: colors.textSecondary }]}>
-                  London
+                  {weatherLoading ? 'Loading...' : weather?.city ?? 'Unknown'}
                 </ThemedText>
               </View>
             </View>
