@@ -12,8 +12,10 @@ export default {
       bundleIdentifier: "com.radzi.app",
       supportsTablet: true,
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your activities and show your position on the map.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "Radzi needs your location to track your activities in the background.",
+        NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your cycling and walking activities while you use the app, and to show your position on the map.",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Radzi needs continuous access to your location to automatically record complete trips even when the app is in the background or closed. This ensures no part of your journey is missed.",
+        NSMotionUsageDescription: "Radzi uses motion data to detect your activity type (walking, running, cycling) for more accurate automatic tracking.",
+        UIBackgroundModes: ["location"],
         ITSAppUsesNonExemptEncryption: false,
       },
     },
@@ -28,6 +30,11 @@ export default {
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "com.google.android.gms.permission.ACTIVITY_RECOGNITION",
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
       ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -39,6 +46,16 @@ export default {
     plugins: [
       "expo-router",
       "expo-localization",
+      [
+        "expo-location",
+        {
+          locationAlwaysAndWhenInUsePermission: "Allow Radzi to use your location to automatically track your activities in the background.",
+          locationAlwaysPermission: "Allow Radzi to track your activities all the time.",
+          locationWhenInUsePermission: "Allow Radzi to use your location to track your activities and show your position on the map.",
+          isAndroidBackgroundLocationEnabled: true,
+          isAndroidForegroundServiceEnabled: true,
+        }
+      ],
       [
         "expo-splash-screen",
         {
