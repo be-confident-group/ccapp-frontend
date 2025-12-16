@@ -71,7 +71,7 @@ export default function HomeScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#EF4444' }]}>
+                <View style={[styles.menuIcon, { backgroundColor: colors.trackingActive }]}>
                   <MaterialIcons name="directions-run" size={18} color="#fff" />
                 </View>
                 <View style={styles.menuTextCol}>
@@ -120,7 +120,7 @@ export default function HomeScreen() {
                 <View
                   style={[
                     styles.tileIcon,
-                    { backgroundColor: isTracking ? '#EF4444' : '#9CA3AF' },
+                    { backgroundColor: isTracking ? colors.trackingActive : '#9CA3AF' },
                   ]}
                 >
                   {isTracking ? (
@@ -162,7 +162,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/home/manual-entry')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.tileIcon, { backgroundColor: '#EF4444' }]}>
+                <View style={[styles.tileIcon, { backgroundColor: colors.primary }]}>
                   <MaterialIcons name="add" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.tileTextContainer}>
@@ -178,7 +178,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/home/trip-history')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.tileIcon, { backgroundColor: '#6366F1' }]}>
+                <View style={[styles.tileIcon, { backgroundColor: colors.primary }]}>
                   <MaterialIcons name="history" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.tileTextContainer}>

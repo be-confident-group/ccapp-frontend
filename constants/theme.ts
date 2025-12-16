@@ -9,6 +9,8 @@ import { Platform } from 'react-native';
 const primaryRed = '#ED2536';
 const accentGold = '#F4C542';
 const secondaryBlue = '#232244';
+const secondaryBlueDark = '#14708a';
+const trackingGreen = '#7de155';
 const successGreen = '#4CAF50';
 const warningOrange = '#FF9800';
 const errorRed = '#F44336';
@@ -21,6 +23,7 @@ export interface ThemeColors {
   primary: string;
   accent: string;
   secondary: string;
+  trackingActive: string;
 
   // Status colors
   success: string;
@@ -60,9 +63,10 @@ export interface ThemeColors {
 export const Colors: Record<ColorScheme, ThemeColors> = {
   light: {
     // Brand colors
-    primary: primaryRed,
+    primary: '#0d4d63',
     accent: accentGold,
     secondary: secondaryBlue,
+    trackingActive: trackingGreen,
 
     // Status colors
     success: successGreen,
@@ -84,10 +88,10 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     shadow: '#000000',
 
     // Interactive elements
-    tint: primaryRed,
+    tint: '#0d4d63',
     icon: '#687076',
     tabIconDefault: '#687076',
-    tabIconSelected: primaryRed,
+    tabIconSelected: '#0d4d63',
 
     // Input fields
     inputBackground: '#F5F5F5',
@@ -100,9 +104,10 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
   },
   dark: {
     // Brand colors
-    primary: primaryRed,
+    primary: '#0d4d63',
     accent: accentGold,
-    secondary: secondaryBlue,
+    secondary: '#14708a',
+    trackingActive: trackingGreen,
 
     // Status colors
     success: successGreen,
@@ -124,10 +129,10 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     shadow: '#000000',
 
     // Interactive elements
-    tint: primaryRed,
+    tint: '#14708a',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: accentGold,
+    tabIconSelected: '#14708a',
 
     // Input fields
     inputBackground: '#1F1F1F',
