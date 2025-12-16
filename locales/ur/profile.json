@@ -1,0 +1,67 @@
+{
+  "header": {
+    "joined": "شامل ہوئے {{date}}"
+  },
+  "sections": {
+    "account": "اکاؤنٹ",
+    "preferences": "ترجیحات",
+    "integrations": "انضمامات",
+    "privacyNotifications": "رازداری اور اطلاعات",
+    "feedback": "رائے"
+  },
+  "account": {
+    "editProfile": "پروفائل میں ترمیم کریں",
+    "editProfileSubtitle": "اپنی ذاتی معلومات کو اپ ڈیٹ کریں"
+  },
+  "preferences": {
+    "theme": "تھیم",
+    "themeLight": "روشن موڈ",
+    "themeDark": "تاریک موڈ",
+    "themeLabelLight": "روشن",
+    "themeLabelDark": "تاریک",
+    "systemLanguage": "سسٹم زبان",
+    "systemLanguageSubtitle": "انگریزی",
+    "unitsOfMeasure": "پیمائش کی اکائیاں",
+    "unitsMetric": "میٹرک (کلومیٹر، کلوگرام)",
+    "unitsImperial": "امپیریل (میل، پاؤنڈ)"
+  },
+  "integrations": {
+    "connectedApps": "منسلک ایپس اور ڈیوائسز",
+    "connectedAppsSubtitle": "Strava، Apple Health، Google Fit",
+    "backgroundTracking": "فون بیک گراؤنڈ ٹریکنگ",
+    "backgroundTrackingSubtitle": "خودکار طور پر سواریاں ٹریک کریں"
+  },
+  "privacy": {
+    "privacy": "رازداری",
+    "privacySubtitle": "اپنی رازداری کی ترتیبات کا انتظام کریں",
+    "dailyReminder": "روزانہ یاد دہانی",
+    "dailyReminderSubtitle": "اپنی سواریوں کو لاگ کرنے کی یاد دلائی جائے",
+    "notificationSettings": "اطلاعات کی ترتیبات",
+    "notificationSettingsSubtitle": "تمام اطلاعات کا انتظام کریں"
+  },
+  "feedback": {
+    "sendFeedback": "رائے بھیجیں",
+    "sendFeedbackSubtitle": "ہمارے ساتھ اپنے خیالات شیئر کریں",
+    "rateUs": "ہمیں ریٹ کریں",
+    "rateUsSubtitle": "ایپ سٹور پر ہمیں ریٹ کریں"
+  },
+  "logout": "لاگ آؤٹ",
+  "editProfileModal": {
+    "title": "پروفائل میں ترمیم کریں",
+    "firstName": "پہلا نام",
+    "lastName": "آخری نام",
+    "email": "ای میل",
+    "dateOfBirth": "تاریخ پیدائش",
+    "gender": "جنس",
+    "genderMale": "مرد",
+    "genderFemale": "عورت",
+    "genderOther": "دیگر",
+    "genderPreferNotToSay": "نہیں بتانا چاہتے",
+    "selectGender": "جنس منتخب کریں",
+    "profilePicture": "پروفائل تصویر",
+    "changePhoto": "تصویر تبدیل کریں",
+    "chooseFromLibrary": "لائبریری سے منتخب کریں",
+    "takePhoto": "تصویر لیں",
+    "removePhoto": "تصویر ہٹائیں"
+  }
+}

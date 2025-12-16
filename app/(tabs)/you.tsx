@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -22,6 +22,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { ActivityChart } from '@/components/profile/ActivityChart';
 import { SettingsItem } from '@/components/profile/SettingsItem';
@@ -30,18 +31,20 @@ import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
+import { authApi, User } from '@/lib/api/auth';
 
 export default function YouScreen() {
   const { t } = useTranslation();
   const { signOut } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
+  const { unitSystem, setUnitSystem } = useUnits();
   const [loading, setLoading] = useState(false);
+  const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
 
-  // Mock user data - replace with actual user data from context/API
   const [userProfile, setUserProfile] = useState({
     firstName: 'John',
     lastName: 'Doe',
@@ -51,6 +54,34 @@ export default function YouScreen() {
     profilePicture: undefined as string | undefined,
     joinedDate: 'Sep 2025',
   });
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setFetchingProfile(true);
+      const user = await authApi.getProfile();
+
+      // Map API response to local state
+      setUserProfile({
+        firstName: user.first_name || 'User',
+        lastName: user.last_name || '',
+        email: user.email || '',
+        dateOfBirth: user.profile?.date_of_birth || '',
+        gender: user.profile?.gender || '',
+        profilePicture: user.profile?.avatar,
+        joinedDate: user.profile?.joined_date || 'Recently',
+      });
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      // Keep default values if fetch fails
+    } finally {
+      setFetchingProfile(false);
+    }
+  };
 
   const handleLogout = async () => {
     showConfirmAlert(
@@ -66,9 +97,45 @@ export default function YouScreen() {
     );
   };
 
-  const handleSaveProfile = (profile: any) => {
-    setUserProfile({ ...userProfile, ...profile });
-    showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
+  const handleSaveProfile = async (profile: any) => {
+    try {
+      setLoading(true);
+
+      // Map local profile format to API format
+      // Backend requires: name, last_name, date_of_birth, gender (all required)
+      const updateData: any = {
+        name: profile.firstName,  // Backend uses 'name' not 'first_name'
+        last_name: profile.lastName,
+        // Backend requires date_of_birth - use current value or a default
+        date_of_birth: profile.dateOfBirth && profile.dateOfBirth.match(/^\d{4}-\d{2}-\d{2}$/)
+          ? profile.dateOfBirth
+          : '2000-01-01',  // Default date if not set
+        // Backend requires gender - use current value or default to 'O'
+        gender: profile.gender || 'O',
+      };
+
+      // Call API to update profile
+      const updatedUser = await authApi.updateProfile(updateData);
+
+      // Update local state with response
+      setUserProfile({
+        firstName: updatedUser.first_name || profile.firstName,
+        lastName: updatedUser.last_name || profile.lastName,
+        email: updatedUser.email || profile.email,
+        dateOfBirth: updatedUser.profile?.date_of_birth || profile.dateOfBirth,
+        gender: updatedUser.profile?.gender || profile.gender,
+        profilePicture: updatedUser.profile?.avatar || profile.profilePicture,
+        joinedDate: userProfile.joinedDate,
+      });
+
+      showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      const errorMessage = error?.response?.data?.message || 'Failed to update profile';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRateApp = () => {
@@ -85,27 +152,35 @@ export default function YouScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Header */}
-          <View style={styles.profileHeader}>
-            <ProfileAvatar
-              imageUri={userProfile.profilePicture}
-              firstName={userProfile.firstName}
-              lastName={userProfile.lastName}
-              size={120}
-              editable={false}
-            />
-            <ThemedText style={styles.userName}>
-              {userProfile.firstName} {userProfile.lastName}
-            </ThemedText>
-            <ThemedText style={[styles.joinedDate, { color: colors.textSecondary }]}>
-              {t('profile:header.joined', { date: userProfile.joinedDate })}
+        {fetchingProfile ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Loading profile...
             </ThemedText>
           </View>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Profile Header */}
+            <View style={styles.profileHeader}>
+              <ProfileAvatar
+                imageUri={userProfile.profilePicture}
+                firstName={userProfile.firstName}
+                lastName={userProfile.lastName}
+                size={120}
+                editable={false}
+              />
+              <ThemedText style={styles.userName}>
+                {userProfile.firstName} {userProfile.lastName}
+              </ThemedText>
+              <ThemedText style={[styles.joinedDate, { color: colors.textSecondary }]}>
+                {t('profile:header.joined', { date: userProfile.joinedDate })}
+              </ThemedText>
+            </View>
 
           {/* Activity Chart Card */}
           <View style={styles.chartSection}>
@@ -185,8 +260,12 @@ export default function YouScreen() {
                 <SettingsItem
                   icon={<Cog6ToothIcon size={22} color={colors.text} />}
                   title={t('profile:preferences.unitsOfMeasure')}
-                  subtitle={t('profile:preferences.unitsMetric')}
-                  onPress={() => showComingSoonAlert('unitSettings')}
+                  subtitle={unitSystem === 'metric' ? t('profile:preferences.unitsMetric') : t('profile:preferences.unitsImperial')}
+                  toggleValue={unitSystem === 'imperial'}
+                  onToggleChange={async (value) => {
+                    await setUnitSystem(value ? 'imperial' : 'metric');
+                  }}
+                  showChevron={false}
                   isLast
                 />
               </View>
@@ -310,7 +389,8 @@ export default function YouScreen() {
               iconPosition="left"
             />
           </View>
-        </ScrollView>
+          </ScrollView>
+        )}
 
         {/* Edit Profile Modal */}
         <EditProfileModal
@@ -336,6 +416,15 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
   },
   scrollView: {
     flex: 1,

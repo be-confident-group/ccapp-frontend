@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useCallback, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -16,13 +17,13 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MIN_TRANSLATE_Y = 140; // Minimum height when collapsed
 const MAX_TRANSLATE_Y = SCREEN_HEIGHT * 0.75; // Maximum height when expanded
 
-// Mock recent trips data
+// Mock recent trips data - distances in km for conversion
 const RECENT_TRIPS = [
   {
     id: '1',
     name: 'Morning Commute',
     date: 'Today, 8:30 AM',
-    distance: '12.5 km',
+    distanceKm: 12.5,
     duration: '35 min',
     type: 'cycle',
     route: 'Market St → Downtown',
@@ -31,7 +32,7 @@ const RECENT_TRIPS = [
     id: '2',
     name: 'Evening Ride',
     date: 'Yesterday, 6:15 PM',
-    distance: '8.2 km',
+    distanceKm: 8.2,
     duration: '22 min',
     type: 'cycle',
     route: 'Park Loop',
@@ -40,7 +41,7 @@ const RECENT_TRIPS = [
     id: '3',
     name: 'Weekend Trail',
     date: '2 days ago, 10:00 AM',
-    distance: '24.8 km',
+    distanceKm: 24.8,
     duration: '1h 15m',
     type: 'cycle',
     route: 'Mountain Trail',
@@ -49,7 +50,7 @@ const RECENT_TRIPS = [
     id: '4',
     name: 'City Exploration',
     date: '3 days ago, 3:45 PM',
-    distance: '15.3 km',
+    distanceKm: 15.3,
     duration: '42 min',
     type: 'cycle',
     route: 'Waterfront → Marina',
@@ -58,7 +59,7 @@ const RECENT_TRIPS = [
     id: '5',
     name: 'Lunch Break Ride',
     date: '4 days ago, 12:30 PM',
-    distance: '6.7 km',
+    distanceKm: 6.7,
     duration: '18 min',
     type: 'cycle',
     route: 'Office → Cafe',
@@ -72,6 +73,7 @@ interface MapBottomSheetProps {
 
 export function MapBottomSheet({ onOptionPress, onExpandChange }: MapBottomSheetProps) {
   const { colors, isDark } = useTheme();
+  const { formatDistance } = useUnits();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -201,7 +203,7 @@ export function MapBottomSheet({ onOptionPress, onExpandChange }: MapBottomSheet
                 {/* Stats */}
                 <View style={styles.tripStats}>
                   <Text style={[styles.statValue, { color: colors.text }]}>
-                    {trip.distance}
+                    {formatDistance(trip.distanceKm)}
                   </Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                     distance

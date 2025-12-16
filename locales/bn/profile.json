@@ -1,0 +1,67 @@
+{
+  "header": {
+    "joined": "যোগদান {{date}}"
+  },
+  "sections": {
+    "account": "অ্যাকাউন্ট",
+    "preferences": "পছন্দসমূহ",
+    "integrations": "ইন্টিগ্রেশন",
+    "privacyNotifications": "গোপনীয়তা এবং বিজ্ঞপ্তি",
+    "feedback": "মতামত"
+  },
+  "account": {
+    "editProfile": "প্রোফাইল সম্পাদনা করুন",
+    "editProfileSubtitle": "আপনার ব্যক্তিগত তথ্য আপডেট করুন"
+  },
+  "preferences": {
+    "theme": "থিম",
+    "themeLight": "লাইট মোড",
+    "themeDark": "ডার্ক মোড",
+    "themeLabelLight": "লাইট",
+    "themeLabelDark": "ডার্ক",
+    "systemLanguage": "সিস্টেম ভাষা",
+    "systemLanguageSubtitle": "ইংরেজি",
+    "unitsOfMeasure": "পরিমাপের একক",
+    "unitsMetric": "মেট্রিক (কিমি, কেজি)",
+    "unitsImperial": "ইম্পেরিয়াল (মাইল, পাউন্ড)"
+  },
+  "integrations": {
+    "connectedApps": "সংযুক্ত অ্যাপ এবং ডিভাইস",
+    "connectedAppsSubtitle": "Strava, Apple Health, Google Fit",
+    "backgroundTracking": "ফোন ব্যাকগ্রাউন্ড ট্র্যাকিং",
+    "backgroundTrackingSubtitle": "স্বয়ংক্রিয়ভাবে রাইড ট্র্যাক করুন"
+  },
+  "privacy": {
+    "privacy": "গোপনীয়তা",
+    "privacySubtitle": "আপনার গোপনীয়তা সেটিংস পরিচালনা করুন",
+    "dailyReminder": "দৈনিক অনুস্মারক",
+    "dailyReminderSubtitle": "আপনার রাইড লগ করার জন্য মনে করিয়ে দিন",
+    "notificationSettings": "বিজ্ঞপ্তি সেটিংস",
+    "notificationSettingsSubtitle": "সমস্ত বিজ্ঞপ্তি পরিচালনা করুন"
+  },
+  "feedback": {
+    "sendFeedback": "মতামত পাঠান",
+    "sendFeedbackSubtitle": "আমাদের সাথে আপনার চিন্তা শেয়ার করুন",
+    "rateUs": "আমাদের রেটিং দিন",
+    "rateUsSubtitle": "অ্যাপ স্টোরে আমাদের রেটিং দিন"
+  },
+  "logout": "লগ আউট",
+  "editProfileModal": {
+    "title": "প্রোফাইল সম্পাদনা করুন",
+    "firstName": "প্রথম নাম",
+    "lastName": "শেষ নাম",
+    "email": "ইমেল",
+    "dateOfBirth": "জন্ম তারিখ",
+    "gender": "লিঙ্গ",
+    "genderMale": "পুরুষ",
+    "genderFemale": "মহিলা",
+    "genderOther": "অন্যান্য",
+    "genderPreferNotToSay": "বলতে চাই না",
+    "selectGender": "লিঙ্গ নির্বাচন করুন",
+    "profilePicture": "প্রোফাইল ছবি",
+    "changePhoto": "ছবি পরিবর্তন করুন",
+    "chooseFromLibrary": "লাইব্রেরি থেকে নির্বাচন করুন",
+    "takePhoto": "ছবি তুলুন",
+    "removePhoto": "ছবি সরান"
+  }
+}

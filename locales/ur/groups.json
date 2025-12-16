@@ -1,0 +1,46 @@
+{
+  "title": "Groups",
+  "tabs": {
+    "feed": "Feed",
+    "discover": "Discover",
+    "myGroups": "My Groups"
+  },
+  "buttons": {
+    "createGroup": "Create Group",
+    "joinGroup": "Join Group",
+    "leaveGroup": "Leave Group",
+    "createPost": "Create Post",
+    "viewLeaderboard": "Leaderboard"
+  },
+  "post": {
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "comments_one": "{{count}} comment",
+    "comments_other": "{{count}} comments",
+    "likes_one": "{{count}} like",
+    "likes_other": "{{count}} likes"
+  },
+  "createPost": {
+    "title": "Create Post",
+    "placeholder": "Share your thoughts...",
+    "addPhoto": "Add Photo",
+    "addRide": "Attach Ride",
+    "post": "Post"
+  },
+  "createGroup": {
+    "title": "Create Group",
+    "groupName": "Group Name",
+    "description": "Description",
+    "privacy": "Privacy",
+    "public": "Public",
+    "private": "Private",
+    "create": "Create Group"
+  },
+  "empty": {
+    "noGroups": "No groups yet",
+    "noGroupsMessage": "Join or create a group to get started",
+    "noPosts": "No posts yet",
+    "noPostsMessage": "Be the first to share something!"
+  }
+}

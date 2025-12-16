@@ -6,6 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import translation resources
 import en from '@/locales/en';
 import es from '@/locales/es';
+import ur from '@/locales/ur';
+import pl from '@/locales/pl';
+import bn from '@/locales/bn';
 
 const LANGUAGE_STORAGE_KEY = '@beactive_language';
 
@@ -51,6 +54,9 @@ i18n
     resources: {
       en,
       es,
+      ur,
+      pl,
+      bn,
     },
     fallbackLng: 'en',
     defaultNS: 'common',

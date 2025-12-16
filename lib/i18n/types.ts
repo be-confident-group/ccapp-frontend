@@ -2,6 +2,9 @@
 export const SUPPORTED_LANGUAGES = {
   en: 'English',
   es: 'Español',
+  ur: 'اردو',
+  pl: 'Polski',
+  bn: 'বাংলা',
   // Add more languages as needed
   // fr: 'Français',
   // de: 'Deutsch',
@@ -20,6 +23,9 @@ export interface LanguageOption {
 export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'ur', name: 'Urdu', nativeName: 'اردو' },
+  { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
   // Add more languages as needed
 ];
 

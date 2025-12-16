@@ -2,11 +2,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
 import {
   ArrowsPointingOutIcon,
   BeakerIcon,
@@ -24,11 +25,14 @@ import { useWeather } from '@/hooks/useWeather';
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
+  const { formatDistance, formatWeight, formatTemperature, distanceUnit, weightUnit, kmToDistance, kgToWeight } = useUnits();
   const { isTracking, toggleTracking } = useTrackingToggle();
   const { weather, loading: weatherLoading } = useWeather();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
+  const weatherIconName =
+    (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
 
   const openMenu = () => {
     if (toggleRef.current && toggleRef.current.measureInWindow) {
@@ -67,7 +71,7 @@ export default function HomeScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#EF4444' }, styles.iconShadow]}>
+                <View style={[styles.menuIcon, { backgroundColor: '#EF4444' }]}>
                   <MaterialIcons name="directions-run" size={18} color="#fff" />
                 </View>
                 <View style={styles.menuTextCol}>
@@ -86,7 +90,7 @@ export default function HomeScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#9CA3AF' }, styles.iconShadow]}>
+                <View style={[styles.menuIcon, { backgroundColor: '#9CA3AF' }]}>
                   <Ionicons name="man" size={18} color="#fff" />
                 </View>
                 <View style={styles.menuTextCol}>
@@ -103,74 +107,87 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Control Buttons */}
-          <View style={styles.controlsContainer}>
-            {/* Background Tracking Toggle */}
-            <TouchableOpacity
-              ref={toggleRef}
-              style={[styles.trackingToggle, { backgroundColor: colors.card }, styles.buttonShadow]}
-              onPress={openMenu}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isTracking ? ['#FFA7A7', '#EF4444', '#B91C1C'] : ['#F3F4F6', '#9CA3AF', '#6B7280']}
-                start={{ x: 0.1, y: 0.05 }}
-                end={{ x: 0.9, y: 1 }}
-                style={[styles.trackingIcon, styles.iconShadow]}
+          {/* Top Tiles (2x2 grid) */}
+          <View style={styles.topTiles}>
+            <View style={styles.tileRow}>
+              {/* Background Tracking Toggle */}
+              <TouchableOpacity
+                ref={toggleRef}
+                style={[styles.tile, styles.tileWide, styles.buttonShadow, { backgroundColor: colors.card }]}
+                onPress={openMenu}
+                activeOpacity={0.8}
               >
-                {isTracking ? (
-                  <MaterialIcons name="directions-run" size={16} color="#FFFFFF" />
-                ) : (
-                  <Ionicons name="man" size={16} color="#FFFFFF" />
-                )}
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0.2, y: 0 }}
-                  end={{ x: 0.8, y: 0.8 }}
-                  style={styles.iconHighlight}
-                />
-              </LinearGradient>
-              <View style={styles.trackingTextContainer}>
-                <ThemedText style={styles.trackingTitle}>
-                  {isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
-                </ThemedText>
-                <ThemedText style={[styles.trackingSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {t('home:header.tracking.subtitle')}
-                </ThemedText>
-              </View>
-              <ChevronDownIcon size={20} color={colors.icon} />
-            </TouchableOpacity>
+                <View
+                  style={[
+                    styles.tileIcon,
+                    { backgroundColor: isTracking ? '#EF4444' : '#9CA3AF' },
+                  ]}
+                >
+                  {isTracking ? (
+                    <MaterialIcons name="directions-run" size={16} color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="man" size={16} color="#FFFFFF" />
+                  )}
+                </View>
+                <View style={styles.tileTextContainer}>
+                  <ThemedText style={styles.tileTitle}>
+                    {isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
+                  </ThemedText>
+                  <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {t('home:header.tracking.subtitle')}
+                  </ThemedText>
+                </View>
+                <ChevronDownIcon size={16} color={colors.icon} />
+              </TouchableOpacity>
 
-            {/* Weather Display */}
-            <View style={[styles.weatherButton, { backgroundColor: colors.card }, styles.buttonShadow]}>
-              <LinearGradient
-                colors={['#E0F2FE', '#BAE6FD', '#7DD3FC']}
-                start={{ x: 0.1, y: 0.1 }}
-                end={{ x: 0.9, y: 0.9 }}
-                style={[styles.weatherIconWrapper, styles.iconShadow]}
-              >
-                <MaterialCommunityIcons
-                  name={weather?.icon || 'weather-partly-cloudy'}
-                  size={16}
-                  color="#0284C7"
-                />
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0.2, y: 0 }}
-                  end={{ x: 0.8, y: 0.8 }}
-                  style={styles.iconHighlight}
-                />
-              </LinearGradient>
-              <View style={styles.weatherTextContainer}>
-                <ThemedText style={styles.weatherTemp}>
-                  {weatherLoading ? '--' : weather?.temperature ?? '--'}°C
-                </ThemedText>
-                <ThemedText style={[styles.weatherLocation, { color: colors.textSecondary }]}>
-                  {weatherLoading ? 'Loading...' : weather?.city ?? 'Unknown'}
-                </ThemedText>
+              {/* Weather Display */}
+              <View style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}>
+                <View style={[styles.tileIcon, { backgroundColor: '#E0F2FE' }]}>
+                  <MaterialCommunityIcons name={weatherIconName} size={16} color="#0284C7" />
+                </View>
+                <View style={styles.tileTextContainer}>
+                  <ThemedText style={styles.tileTitle}>
+                    {weatherLoading ? '--' : weather?.temperature ? formatTemperature(weather.temperature, 0) : '--'}
+                  </ThemedText>
+                  <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {weatherLoading ? 'Loading...' : weather?.city ?? 'Unknown'}
+                  </ThemedText>
+                </View>
               </View>
+            </View>
+
+            <View style={styles.tileRow}>
+              <TouchableOpacity
+                style={[styles.tile, styles.tileWide, styles.buttonShadow, { backgroundColor: colors.card }]}
+                onPress={() => router.push('/home/manual-entry')}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.tileIcon, { backgroundColor: '#EF4444' }]}>
+                  <MaterialIcons name="add" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.tileTextContainer}>
+                  <ThemedText style={styles.tileTitle}>Add Manual Trip</ThemedText>
+                  <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                    Log a ride or walk
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}
+                onPress={() => router.push('/home/trip-history')}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.tileIcon, { backgroundColor: '#6366F1' }]}>
+                  <MaterialIcons name="history" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.tileTextContainer}>
+                  <ThemedText style={styles.tileTitle}>Trip History</ThemedText>
+                  <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                    Past trips
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -193,28 +210,28 @@ export default function HomeScreen() {
                 {/* Stats Grid */}
                 <View style={styles.statsCard}>
                 <View style={styles.statItem}>
-                  <View style={[styles.statIconWrapper, { backgroundColor: '#FEF3C7' }, styles.statIconShadow]}>
-                    <TrophyIcon size={20} color="#F59E0B" />
+                  <View style={styles.statIconWrapper}>
+                    <Image source={require('@/assets/images/page-icons/walking.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>125.5</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.walked')}</ThemedText>
+                  <ThemedText style={styles.statValue}>{kmToDistance(125.5).toFixed(1)}</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} walked</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
 
                 <View style={styles.statItem}>
-                  <View style={[styles.statIconWrapper, { backgroundColor: '#DBEAFE' }, styles.statIconShadow]}>
-                    <FireIcon size={20} color="#3B82F6" />
+                  <View style={styles.statIconWrapper}>
+                    <Image source={require('@/assets/images/page-icons/cycling.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>42.3</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.ride')}</ThemedText>
+                  <ThemedText style={styles.statValue}>{kmToDistance(42.3).toFixed(1)}</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} ride</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
 
                 <View style={styles.statItem}>
-                  <View style={[styles.statIconWrapper, { backgroundColor: '#DCFCE7' }, styles.statIconShadow]}>
-                    <FireIcon size={20} color="#10B981" />
+                  <View style={styles.statIconWrapper}>
+                    <Image source={require('@/assets/images/page-icons/star.png')} style={styles.statIcon} />
                   </View>
                   <ThemedText style={styles.statValue}>42</ThemedText>
                   <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.rides')}</ThemedText>
@@ -223,11 +240,11 @@ export default function HomeScreen() {
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
 
                 <View style={styles.statItem}>
-                  <View style={[styles.statIconWrapper, { backgroundColor: '#E0E7FF' }, styles.statIconShadow]}>
-                    <BeakerIcon size={20} color="#6366F1" />
+                  <View style={styles.statIconWrapper}>
+                    <Image source={require('@/assets/images/page-icons/co2.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>15.2</ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.co2')}</ThemedText>
+                  <ThemedText style={styles.statValue}>{kgToWeight(15.2).toFixed(1)}</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{weightUnit} CO₂</ThemedText>
                 </View>
               </View>
 
@@ -241,7 +258,7 @@ export default function HomeScreen() {
                   <ThemedText style={styles.summaryTitle}>{t('home:messages.greatProgress')}</ThemedText>
                 </View>
                 <ThemedText style={[styles.summaryText, { color: colors.textSecondary }]}>
-                  You've walked 125.5km and rode 42.3km this week, saving 15.2kg of CO₂. Your recent 8km evening ride brought you closer to your weekly goal. Keep up the amazing work!
+                  You've walked {formatDistance(125.5)} and rode {formatDistance(42.3)} this week, saving {formatWeight(15.2)} of CO₂. Your recent {formatDistance(8)} evening ride brought you closer to your weekly goal. Keep up the amazing work!
                 </ThemedText>
               </View>
               </View>
@@ -334,14 +351,14 @@ export default function HomeScreen() {
                   style={styles.trophiesScroll}
                 >
                   {[
-                    { id: 1, icon: <TrophyIcon size={28} color="#F59E0B" />, title: 'First Ride', earned: true, bg: '#FEF3C7' },
-                    { id: 2, icon: <FireIcon size={28} color="#10B981" />, title: 'First Walk', earned: true, bg: '#DCFCE7' },
-                    { id: 3, icon: <TrophyIcon size={28} color="#3B82F6" />, title: '10 Rides', earned: true, bg: '#DBEAFE' },
-                    { id: 4, icon: <FireIcon size={28} color="#8B5CF6" />, title: '10 Walks', earned: false, bg: '#E0E7FF' },
-                    { id: 5, icon: <TrophyIcon size={28} color="#EF4444" />, title: '100 Rides', earned: false, bg: '#FEE2E2' },
-                    { id: 6, icon: <BeakerIcon size={28} color="#F59E0B" />, title: '10 km', earned: true, bg: '#FEF3C7' },
-                    { id: 7, icon: <BeakerIcon size={28} color="#10B981" />, title: '50 km', earned: true, bg: '#DCFCE7' },
-                    { id: 8, icon: <BeakerIcon size={28} color="#3B82F6" />, title: '100 km', earned: false, bg: '#DBEAFE' },
+                    { id: 1, title: 'First Ride', earned: true },
+                    { id: 2, title: 'First Walk', earned: true },
+                    { id: 3, title: 'Rides', earned: true },
+                    { id: 4, title: 'Walks', earned: false },
+                    { id: 5, title: 'Century', earned: false },
+                    { id: 6, title: 'Distance', earned: true },
+                    { id: 7, title: 'Explorer', earned: true },
+                    { id: 8, title: 'Streak', earned: false },
                   ].map((trophy) => (
                     <TouchableOpacity
                       key={trophy.id}
@@ -351,8 +368,8 @@ export default function HomeScreen() {
                       ]}
                       onPress={() => router.push(`/home/badge-detail?id=${trophy.id}`)}
                     >
-                      <View style={[styles.trophyIconWrapper, { backgroundColor: trophy.bg }]}>
-                        {trophy.icon}
+                      <View style={styles.trophyIconWrapper}>
+                        <Image source={require('@/assets/images/page-icons/trophy.png')} style={styles.trophyIcon} />
                       </View>
                       <ThemedText style={styles.trophyTitle} numberOfLines={2}>
                         {trophy.title}
@@ -405,9 +422,9 @@ export default function HomeScreen() {
                 {/* Goals List */}
                 <View style={styles.goalsContent}>
                   {[
-                    { id: 1, title: 'Ride 50km this week', current: 32, target: 50, color: '#3B82F6', bg: '#DBEAFE' },
+                    { id: 1, title: `Ride ${formatDistance(50)} this week`, current: 32, target: 50, color: '#3B82F6', bg: '#DBEAFE' },
                     { id: 2, title: 'Walk 5 times this week', current: 3, target: 5, color: '#10B981', bg: '#DCFCE7' },
-                    { id: 3, title: 'Save 10kg CO₂ this month', current: 7.5, target: 10, color: '#F59E0B', bg: '#FEF3C7' },
+                    { id: 3, title: `Save ${formatWeight(10)} CO₂ this month`, current: 7.5, target: 10, color: '#F59E0B', bg: '#FEF3C7' },
                   ].map((goal) => {
                     const progress = (goal.current / goal.target) * 100;
                     return (
@@ -455,27 +472,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.card }]}
-              onPress={() => router.push('/home/trip-history')}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons name="history" size={24} color={colors.primary} />
-              <ThemedText style={styles.actionButtonText}>Trip History</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.card }]}
-              onPress={() => router.push('/home/manual-entry')}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons name="add-circle-outline" size={24} color={colors.primary} />
-              <ThemedText style={styles.actionButtonText}>Add Manual Trip</ThemedText>
-            </TouchableOpacity>
-          </View>
-
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -506,26 +502,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  controlsContainer: {
-    flexDirection: 'row',
+  topTiles: {
     paddingTop: Spacing.md,
-    paddingBottom: 0,
     gap: Spacing.md,
     marginBottom: Spacing.md,
   },
-  trackingToggle: {
-    flex: 7,
+  tileRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  tile: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 2,
-    borderRadius: 18,
-    gap: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    gap: 8,
   },
-  trackingIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  tileWide: {
+    flex: 3, // 60%
+  },
+  tileNarrow: {
+    flex: 2, // 40%
+  },
+  tileIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -536,39 +540,17 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  iconShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  trackingTextContainer: {
+  tileTextContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
-  trackingTitle: {
-    fontSize: 14,
+  tileTitle: {
+    fontSize: 13,
     fontWeight: '600',
   },
-  trackingSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  weatherButton: {
-    flexDirection: 'row',
-    flex: 3,
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 2,
-    borderRadius: 18,
-    gap: 10,
-  },
-  weatherIconWrapper: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tileSubtitle: {
+    fontSize: 11,
+    marginTop: -2,
   },
   iconHighlight: {
     position: 'absolute',
@@ -581,16 +563,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 999,
     borderBottomRightRadius: 999,
     opacity: 0.9,
-  },
-  weatherTextContainer: {
-    alignItems: 'flex-start',
-  },
-  weatherTemp: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  weatherLocation: {
-    fontSize: 11,
   },
   scrollView: {
     flex: 1,
@@ -639,10 +611,14 @@ const styles = StyleSheet.create({
   statIconWrapper: {
     width: 44,
     height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    resizeMode: 'contain',
   },
   statIconShadow: {
     shadowColor: '#000',
@@ -765,9 +741,13 @@ const styles = StyleSheet.create({
   trophyIconWrapper: {
     width: 64,
     height: 64,
-    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  trophyIcon: {
+    width: 64,
+    height: 64,
+    resizeMode: 'contain',
   },
   trophyTitle: {
     fontSize: 13,
@@ -905,18 +885,13 @@ const styles = StyleSheet.create({
   menuSubtitle: {
     fontSize: 12,
   },
-  // Quick Actions
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: Spacing.md,
-  },
+  // Quick Actions (legacy)
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     gap: 8,
     elevation: 2,
@@ -925,8 +900,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  actionButtonLeft: {
+    flex: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  actionButtonRight: {
+    flex: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

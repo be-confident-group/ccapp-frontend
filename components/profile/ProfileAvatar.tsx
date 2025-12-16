@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraIcon } from 'react-native-heroicons/solid';
@@ -24,6 +24,11 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   const { colors, isDark } = useTheme();
   const [localImageUri, setLocalImageUri] = useState(imageUri);
 
+  // Sync local state with prop changes
+  useEffect(() => {
+    setLocalImageUri(imageUri);
+  }, [imageUri]);
+
   const getInitials = () => {
     const firstInitial = firstName?.charAt(0).toUpperCase() || 'U';
     const lastInitial = lastName?.charAt(0).toUpperCase() || '';
@@ -44,7 +49,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,

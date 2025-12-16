@@ -1,0 +1,56 @@
+{
+  "title": "Maps",
+  "tabs": {
+    "track": "Track",
+    "history": "History",
+    "feedback": "Feedback",
+    "heatmap": "Heatmap"
+  },
+  "buttons": {
+    "startRide": "Start Ride",
+    "endRide": "End Ride",
+    "pauseRide": "Pause",
+    "resumeRide": "Resume",
+    "manualEntry": "Log Ride Manually"
+  },
+  "rideTypes": {
+    "walk": "Walk",
+    "cycle": "Cycle",
+    "run": "Run"
+  },
+  "activeRide": {
+    "duration": "Duration",
+    "distance": "Distance",
+    "speed": "Speed",
+    "avgSpeed": "Avg Speed",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop Ride"
+  },
+  "tripDetail": {
+    "title": "Trip Details",
+    "date": "Date",
+    "duration": "Duration",
+    "distance": "Distance",
+    "avgSpeed": "Average Speed",
+    "co2Saved": "CO₂ Saved",
+    "edit": "Edit",
+    "delete": "Delete",
+    "share": "Share"
+  },
+  "manualEntry": {
+    "title": "Log Ride Manually",
+    "rideType": "Ride Type",
+    "distance": "Distance (km)",
+    "duration": "Duration (min)",
+    "date": "Date",
+    "notes": "Notes (optional)",
+    "submit": "Log Ride"
+  },
+  "empty": {
+    "noHistory": "No rides yet",
+    "noHistoryMessage": "Start tracking your rides to see them here",
+    "noFeedback": "No feedback yet",
+    "noFeedbackMessage": "Rate routes to see your feedback here"
+  }
+}

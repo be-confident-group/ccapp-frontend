@@ -1,0 +1,28 @@
+{
+  "title": "Send Feedback",
+  "subtitle": "We'd love to hear from you!",
+  "categories": {
+    "label": "Category",
+    "bugReport": "Bug Report",
+    "featureRequest": "Feature Request",
+    "generalFeedback": "General Feedback",
+    "other": "Other"
+  },
+  "message": {
+    "label": "Message",
+    "placeholder": "Tell us what's on your mind..."
+  },
+  "contact": {
+    "label": "Email (optional)",
+    "placeholder": "your.email@example.com"
+  },
+  "submit": "Submit Feedback",
+  "success": {
+    "title": "Thank You!",
+    "message": "Your feedback has been submitted successfully."
+  },
+  "error": {
+    "title": "Error",
+    "message": "Unable to submit feedback. Please try again."
+  }
+}

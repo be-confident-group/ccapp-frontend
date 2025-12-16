@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { UnitsProvider } from '@/contexts/UnitsContext';
 import { useProtectedRoute } from '@/contexts/useProtectedRoute';
 import { initializeMapbox } from '@/config/mapbox';
 
@@ -54,7 +55,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootLayoutNav />
+        <UnitsProvider>
+          <RootLayoutNav />
+        </UnitsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

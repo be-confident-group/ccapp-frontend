@@ -92,15 +92,13 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
               </ThemedText>
             </View>
           ) : (
-            <View style={styles.listContainer}>
-              <FlatList
-                data={LANGUAGE_OPTIONS}
-                renderItem={renderLanguageItem}
-                keyExtractor={(item) => item.code}
-                scrollEnabled={false}
-                contentContainerStyle={styles.listContent}
-              />
-            </View>
+            <FlatList
+              data={LANGUAGE_OPTIONS}
+              renderItem={renderLanguageItem}
+              keyExtractor={(item) => item.code}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={true}
+            />
           )}
         </View>
       </View>
@@ -119,7 +117,6 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    minHeight: 300,
     maxHeight: '70%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
@@ -142,11 +139,8 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
-  listContainer: {
-    flex: 1,
-  },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   languageItem: {
     flexDirection: 'row',

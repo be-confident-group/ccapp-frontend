@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "save": "محفوظ کریں",
+    "cancel": "منسوخ کریں",
+    "delete": "حذف کریں",
+    "edit": "ترمیم",
+    "done": "مکمل",
+    "close": "بند کریں",
+    "confirm": "تصدیق کریں",
+    "continue": "جاری رکھیں",
+    "back": "واپس",
+    "next": "اگلا",
+    "skip": "چھوڑ دیں",
+    "submit": "جمع کرائیں",
+    "search": "تلاش کریں",
+    "filter": "فلٹر",
+    "share": "شیئر کریں",
+    "retry": "دوبارہ کوشش کریں"
+  },
+  "navigation": {
+    "home": "ہوم",
+    "maps": "نقشے",
+    "groups": "گروپس",
+    "you": "آپ",
+    "quickActions": "فوری اقدامات"
+  },
+  "status": {
+    "loading": "لوڈ ہو رہا ہے...",
+    "saving": "محفوظ ہو رہا ہے...",
+    "success": "کامیابی",
+    "error": "خرابی",
+    "comingSoon": "جلد آرہا ہے"
+  },
+  "units": {
+    "km": "کلومیٹر",
+    "kg": "کلوگرام",
+    "kmh": "کلومیٹر/گھنٹہ",
+    "min": "منٹ",
+    "sec": "سیکنڈ",
+    "hours": "گھنٹے"
+  },
+  "days": {
+    "monday": "پیر",
+    "tuesday": "منگل",
+    "wednesday": "بدھ",
+    "thursday": "جمعرات",
+    "friday": "جمعہ",
+    "saturday": "ہفتہ",
+    "sunday": "اتوار"
+  },
+  "months": {
+    "january": "جنوری",
+    "february": "فروری",
+    "march": "مارچ",
+    "april": "اپریل",
+    "may": "مئی",
+    "june": "جون",
+    "july": "جولائی",
+    "august": "اگست",
+    "september": "ستمبر",
+    "october": "اکتوبر",
+    "november": "نومبر",
+    "december": "دسمبر"
+  },
+  "timePeriods": {
+    "week": "ہفتہ",
+    "month": "مہینہ",
+    "threeMonths": "3 مہینے",
+    "sixMonths": "6 مہینے",
+    "year": "سال",
+    "allTime": "تمام وقت"
+  }
+}

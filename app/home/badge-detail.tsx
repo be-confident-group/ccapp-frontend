@@ -1,11 +1,13 @@
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { mockBadges } from '@/lib/utils/mockData';
+import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function BadgeDetailScreen() {
   const { colors } = useTheme();
@@ -27,28 +29,35 @@ export default function BadgeDetailScreen() {
   const hasProgress = badge.progress !== undefined && badge.target;
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Badge Display */}
-        <Card variant="elevated">
-          <View style={styles.badgeHeader}>
-            <View
-              style={[
-                styles.iconContainer,
-                {
-                  backgroundColor: isEarned ? colors.primary : colors.surface,
-                  opacity: isEarned ? 1 : 0.5,
-                },
-              ]}
-            >
-              <ThemedText style={styles.badgeIcon}>
-                {isEarned ? badge.icon : '🔒'}
-              </ThemedText>
-            </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      <ThemedView style={styles.container}>
+        {/* Header with Back Button */}
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ChevronLeftIcon size={28} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.placeholder} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Badge Display */}
+          <Card variant="elevated">
+            <View style={styles.badgeHeader}>
+              <View style={[styles.iconContainer, { opacity: isEarned ? 1 : 0.4 }]}>
+                <Image
+                  source={require('@/assets/images/page-icons/trophy.png')}
+                  style={styles.trophyIcon}
+                />
+              </View>
 
             <ThemedText type="title" style={styles.badgeName}>
               {badge.name}
@@ -115,14 +124,35 @@ export default function BadgeDetailScreen() {
             </Card>
           </View>
         )}
-      </ScrollView>
-    </ThemedView>
+        </ScrollView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholder: {
+    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -141,14 +171,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
   },
   iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: BorderRadius.full,
+    width: 120,
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  badgeIcon: {
-    fontSize: 48,
+  trophyIcon: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
   },
   badgeName: {
     fontSize: 24,

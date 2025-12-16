@@ -1,0 +1,67 @@
+{
+  "header": {
+    "joined": "Dołączono {{date}}"
+  },
+  "sections": {
+    "account": "Konto",
+    "preferences": "Preferencje",
+    "integrations": "Integracje",
+    "privacyNotifications": "Prywatność i powiadomienia",
+    "feedback": "Opinia"
+  },
+  "account": {
+    "editProfile": "Edytuj profil",
+    "editProfileSubtitle": "Zaktualizuj swoje dane osobowe"
+  },
+  "preferences": {
+    "theme": "Motyw",
+    "themeLight": "Tryb jasny",
+    "themeDark": "Tryb ciemny",
+    "themeLabelLight": "Jasny",
+    "themeLabelDark": "Ciemny",
+    "systemLanguage": "Język systemu",
+    "systemLanguageSubtitle": "Angielski",
+    "unitsOfMeasure": "Jednostki miary",
+    "unitsMetric": "Metryczny (km, kg)",
+    "unitsImperial": "Imperialny (mi, lb)"
+  },
+  "integrations": {
+    "connectedApps": "Połączone aplikacje i urządzenia",
+    "connectedAppsSubtitle": "Strava, Apple Health, Google Fit",
+    "backgroundTracking": "Śledzenie w tle telefonu",
+    "backgroundTrackingSubtitle": "Śledź przejazdy automatycznie"
+  },
+  "privacy": {
+    "privacy": "Prywatność",
+    "privacySubtitle": "Zarządzaj ustawieniami prywatności",
+    "dailyReminder": "Codzienne przypomnienie",
+    "dailyReminderSubtitle": "Przypominaj o logowaniu przejazdów",
+    "notificationSettings": "Ustawienia powiadomień",
+    "notificationSettingsSubtitle": "Zarządzaj wszystkimi powiadomieniami"
+  },
+  "feedback": {
+    "sendFeedback": "Wyślij opinię",
+    "sendFeedbackSubtitle": "Podziel się z nami swoimi przemyśleniami",
+    "rateUs": "Oceń nas",
+    "rateUsSubtitle": "Oceń nas w App Store"
+  },
+  "logout": "Wyloguj",
+  "editProfileModal": {
+    "title": "Edytuj profil",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "email": "E-mail",
+    "dateOfBirth": "Data urodzenia",
+    "gender": "Płeć",
+    "genderMale": "Mężczyzna",
+    "genderFemale": "Kobieta",
+    "genderOther": "Inna",
+    "genderPreferNotToSay": "Wolę nie mówić",
+    "selectGender": "Wybierz płeć",
+    "profilePicture": "Zdjęcie profilowe",
+    "changePhoto": "Zmień zdjęcie",
+    "chooseFromLibrary": "Wybierz z biblioteki",
+    "takePhoto": "Zrób zdjęcie",
+    "removePhoto": "Usuń zdjęcie"
+  }
+}

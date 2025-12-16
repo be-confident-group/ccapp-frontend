@@ -1,0 +1,33 @@
+{
+  "logout": {
+    "title": "Log Out",
+    "message": "Are you sure you want to log out?",
+    "confirmButton": "Log Out",
+    "cancelButton": "Cancel"
+  },
+  "profileUpdated": {
+    "title": "Success",
+    "message": "Profile updated successfully!"
+  },
+  "comingSoon": {
+    "title": "Coming Soon",
+    "languageSettings": "Language settings will be available soon.",
+    "unitSettings": "Unit settings will be available soon.",
+    "appConnections": "App and device connections will be available soon.",
+    "backgroundTracking": "Background tracking settings will be available soon.",
+    "privacySettings": "Privacy settings will be available soon.",
+    "notificationSettings": "Notification settings will be available soon."
+  },
+  "error": {
+    "title": "Error",
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "appStore": "Unable to open app store"
+  },
+  "deleteConfirm": {
+    "title": "Delete",
+    "message": "Are you sure you want to delete this?",
+    "confirmButton": "Delete",
+    "cancelButton": "Cancel"
+  }
+}

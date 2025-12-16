@@ -30,7 +30,7 @@ interface EditProfileModalProps {
   visible: boolean;
   onClose: () => void;
   profile: UserProfile;
-  onSave: (profile: UserProfile) => void;
+  onSave: (profile: UserProfile) => Promise<void>;
 }
 
 const GENDER_OPTIONS = [
@@ -51,6 +51,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(
     profile.dateOfBirth ? new Date(profile.dateOfBirth) : new Date()
   );
@@ -81,10 +82,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateForm()) {
-      onSave(formData);
-      onClose();
+      try {
+        setSaving(true);
+        await onSave(formData);
+        onClose();
+      } catch (error) {
+        console.error('Error saving profile:', error);
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -136,12 +144,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+          <TouchableOpacity onPress={onClose} style={styles.cancelButton} disabled={saving}>
+            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
+            <Text style={[styles.saveText, { color: saving ? colors.textSecondary : colors.primary }]}>
+              {saving ? 'Saving...' : 'Save'}
+            </Text>
           </TouchableOpacity>
         </View>
 

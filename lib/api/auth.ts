@@ -42,6 +42,9 @@ export interface User {
 export interface UserProfile {
   avatar?: string;
   bio?: string;
+  date_of_birth?: string;
+  gender?: 'M' | 'F' | 'O' | '';
+  joined_date?: string;
   total_distance?: number;
   total_rides?: number;
   co2_saved?: number;
@@ -55,9 +58,11 @@ export interface ChangePasswordRequest {
 }
 
 export interface ProfileUpdateRequest {
-  first_name?: string;
+  name?: string;  // Backend uses 'name' not 'first_name'
   last_name?: string;
   email?: string;
+  date_of_birth?: string;
+  gender?: 'M' | 'F' | 'O' | '';
   profile?: {
     avatar?: string;
     bio?: string;
@@ -211,5 +216,28 @@ export const authApi = {
     } catch {
       return null;
     }
+  },
+
+  /**
+   * Upload profile avatar image
+   * NOTE: This endpoint is not yet implemented on the backend
+   * When backend is ready, uncomment and use this function
+   */
+  async uploadAvatar(imageUri: string): Promise<{ avatar: string }> {
+    // Create form data
+    const formData = new FormData();
+
+    // Get file extension from URI
+    const uriParts = imageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+
+    // Append the image file
+    formData.append('avatar', {
+      uri: imageUri,
+      name: `avatar.${fileType}`,
+      type: `image/${fileType}`,
+    } as any);
+
+    return apiClient.upload<{ avatar: string }>('/api/profile/avatar/', formData);
   },
 };

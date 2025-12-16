@@ -3,23 +3,23 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ChevronLeftIcon, TrophyIcon } from 'react-native-heroicons/outline';
+import { ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
+import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TrophiesScreen() {
   const { colors } = useTheme();
 
   const trophies = [
-    { id: 1, number: '2', title: '2-fast streak', earned: true, color: '#F59E0B', bg: '#FEF3C7' },
-    { id: 2, number: '5', title: '5-fast streak', earned: true, color: '#10B981', bg: '#DCFCE7' },
-    { id: 3, number: '10', title: '10-fast streak', earned: false, color: '#3B82F6', bg: '#DBEAFE' },
-    { id: 4, number: '25', title: '25-fast streak', earned: false, color: '#8B5CF6', bg: '#E0E7FF' },
-    { id: 5, number: '50', title: '50-fast streak', earned: false, color: '#EF4444', bg: '#FEE2E2' },
-    { id: 6, number: '100', title: '100-fast streak', earned: false, color: '#F59E0B', bg: '#FEF3C7' },
-    { id: 7, number: '250', title: '250-fast streak', earned: false, color: '#10B981', bg: '#DCFCE7' },
-    { id: 8, number: '500', title: '500-fast streak', earned: false, color: '#3B82F6', bg: '#DBEAFE' },
-    { id: 9, number: '1000', title: '1000-fast streak', earned: false, color: '#8B5CF6', bg: '#E0E7FF' },
+    { id: 1, title: '2-fast streak', earned: true },
+    { id: 2, title: '5-fast streak', earned: true },
+    { id: 3, title: '10-fast streak', earned: false },
+    { id: 4, title: '25-fast streak', earned: false },
+    { id: 5, title: '50-fast streak', earned: false },
+    { id: 6, title: '100-fast streak', earned: false },
+    { id: 7, title: '250-fast streak', earned: false },
+    { id: 8, title: '500-fast streak', earned: false },
+    { id: 9, title: '1000-fast streak', earned: false },
   ];
 
   const handleTrophyPress = (trophyId: number) => {
@@ -61,19 +61,14 @@ export default function TrophiesScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.trophyCard, { opacity: trophy.earned ? 1 : 0.4 }]}>
-                  {/* Trophy Badge */}
-                  <View style={[styles.trophyContainer, { backgroundColor: trophy.bg }]}>
-                    <View style={styles.trophyCircle}>
-                      <ThemedText style={[styles.trophyNumber, { color: trophy.earned ? trophy.color : '#9CA3AF' }]}>
-                        {trophy.number}
-                      </ThemedText>
-                    </View>
-                    {/* Trophy Icon at bottom */}
-                    <View style={styles.trophyIconContainer}>
-                      <TrophyIcon size={32} color={trophy.earned ? trophy.color : '#9CA3AF'} />
-                    </View>
+                  {/* Trophy Icon */}
+                  <View style={styles.trophyContainer}>
+                    <Image
+                      source={require('@/assets/images/page-icons/trophy.png')}
+                      style={styles.trophyIcon}
+                    />
                   </View>
-                  
+
                   {/* Trophy Title */}
                   <ThemedText style={[styles.trophyTitle, { color: trophy.earned ? colors.text : colors.textSecondary }]} numberOfLines={1}>
                     {trophy.title}
@@ -139,26 +134,13 @@ const styles = StyleSheet.create({
   trophyContainer: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  trophyCircle: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trophyNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 32,
-  },
-  trophyIconContainer: {
-    position: 'absolute',
-    bottom: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+  trophyIcon: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   trophyTitle: {
     fontSize: 11,

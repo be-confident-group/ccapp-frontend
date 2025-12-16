@@ -1,0 +1,73 @@
+{
+  "buttons": {
+    "save": "সংরক্ষণ করুন",
+    "cancel": "বাতিল করুন",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা করুন",
+    "done": "সম্পন্ন",
+    "close": "বন্ধ করুন",
+    "confirm": "নিশ্চিত করুন",
+    "continue": "চালিয়ে যান",
+    "back": "পিছনে",
+    "next": "পরবর্তী",
+    "skip": "এড়িয়ে যান",
+    "submit": "জমা দিন",
+    "search": "খুঁজুন",
+    "filter": "ফিল্টার",
+    "share": "শেয়ার করুন",
+    "retry": "আবার চেষ্টা করুন"
+  },
+  "navigation": {
+    "home": "হোম",
+    "maps": "ম্যাপ",
+    "groups": "গ্রুপ",
+    "you": "আপনি",
+    "quickActions": "দ্রুত কাজ"
+  },
+  "status": {
+    "loading": "লোড হচ্ছে...",
+    "saving": "সংরক্ষণ হচ্ছে...",
+    "success": "সফল",
+    "error": "ত্রুটি",
+    "comingSoon": "শীঘ্রই আসছে"
+  },
+  "units": {
+    "km": "কিমি",
+    "kg": "কেজি",
+    "kmh": "কিমি/ঘণ্টা",
+    "min": "মিনিট",
+    "sec": "সেকেন্ড",
+    "hours": "ঘণ্টা"
+  },
+  "days": {
+    "monday": "সোমবার",
+    "tuesday": "মঙ্গলবার",
+    "wednesday": "বুধবার",
+    "thursday": "বৃহস্পতিবার",
+    "friday": "শুক্রবার",
+    "saturday": "শনিবার",
+    "sunday": "রবিবার"
+  },
+  "months": {
+    "january": "জানুয়ারি",
+    "february": "ফেব্রুয়ারি",
+    "march": "মার্চ",
+    "april": "এপ্রিল",
+    "may": "মে",
+    "june": "জুন",
+    "july": "জুলাই",
+    "august": "আগস্ট",
+    "september": "সেপ্টেম্বর",
+    "october": "অক্টোবর",
+    "november": "নভেম্বর",
+    "december": "ডিসেম্বর"
+  },
+  "timePeriods": {
+    "week": "সপ্তাহ",
+    "month": "মাস",
+    "threeMonths": "৩ মাস",
+    "sixMonths": "৬ মাস",
+    "year": "বছর",
+    "allTime": "সব সময়"
+  }
+}

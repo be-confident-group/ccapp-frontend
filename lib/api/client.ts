@@ -157,6 +157,75 @@ class ApiClient {
   async delete<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(endpoint, { ...config, method: 'DELETE' });
   }
+
+  /**
+   * Upload multipart/form-data (for file uploads)
+   */
+  async upload<T>(
+    endpoint: string,
+    formData: FormData,
+    config?: RequestConfig
+  ): Promise<T> {
+    const { requiresAuth = true, headers = {}, ...restConfig } = config || {};
+    const url = `${this.baseURL}${endpoint}`;
+
+    const requestHeaders: Record<string, string> = {
+      ...(headers as Record<string, string>),
+      // Don't set Content-Type for FormData - browser/runtime will set it with boundary
+    };
+
+    // Add auth token if required
+    if (requiresAuth) {
+      const token = await this.getAuthToken();
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...restConfig,
+        method: 'POST',
+        headers: requestHeaders,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const text = await response.text();
+          if (text) {
+            const errorData = JSON.parse(text);
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            } else if (errorData.error) {
+              errorMessage = errorData.error;
+            } else if (errorData.detail) {
+              errorMessage = errorData.detail;
+            }
+          }
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return {} as T;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('Network error: Unable to reach the server. Please check your connection.');
+        }
+        throw error;
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
 }
 
 export const apiClient = new ApiClient(API_URL);
