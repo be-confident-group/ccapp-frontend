@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
-        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}"
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "03de4726665728e591508fddc3dd9d25"
       }
     },
     "preview": {
@@ -20,6 +21,7 @@
       "env": {
         "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
         "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "03de4726665728e591508fddc3dd9d25",
         "ANDROID_HOME": "/Users/ashkan/Library/Android/sdk",
         "ANDROID_SDK_ROOT": "/Users/ashkan/Library/Android/sdk"
       }
@@ -28,7 +30,8 @@
       "autoIncrement": true,
       "env": {
         "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
-        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}"
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "03de4726665728e591508fddc3dd9d25"
       }
     }
   },

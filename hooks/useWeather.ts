@@ -27,40 +27,46 @@ export function useWeather(): UseWeatherReturn {
       setLoading(true);
       setError(null);
 
+      console.log('[useWeather] Requesting location permissions...');
       // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('[useWeather] Permission status:', status);
+
       if (status !== 'granted') {
         throw new Error('Location permission denied');
       }
 
+      console.log('[useWeather] Getting current position...');
       // Get current location
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      console.log('[useWeather] Got location:', location.coords.latitude, location.coords.longitude);
 
       // Fetch weather
+      console.log('[useWeather] Fetching weather data...');
       const weatherData = await WeatherService.fetchWeatherByCoords(
         location.coords.latitude,
         location.coords.longitude
       );
+      console.log('[useWeather] Weather data received:', weatherData);
 
       setWeather(weatherData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch weather';
-
-      // Only log non-401 errors (401 is expected when API key is activating)
-      if (!errorMessage.includes('401')) {
-        console.error('[useWeather] Error:', errorMessage);
-      }
+      console.error('[useWeather] Error fetching weather:', errorMessage);
+      console.error('[useWeather] Full error:', err);
 
       setError(errorMessage);
 
-      // Set fallback data for development/testing
+      // Always provide fallback weather to avoid showing "Unknown"
+      // This ensures a good user experience even when weather API fails
+      console.log('[useWeather] Using fallback weather data');
       setWeather({
         temperature: 15,
-        city: 'London',
+        city: 'Weather unavailable',
         condition: 'Clouds',
-        description: 'few clouds',
+        description: 'Unable to fetch weather',
         icon: 'weather-partly-cloudy',
         humidity: 65,
         windSpeed: 12,

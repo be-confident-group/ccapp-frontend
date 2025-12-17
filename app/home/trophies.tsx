@@ -2,28 +2,47 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
-import { router } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { ScrollView, StyleSheet, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useCallback } from 'react';
+import { trophyAPI, type Trophy } from '@/lib/api/trophies';
 
 export default function TrophiesScreen() {
   const { colors } = useTheme();
+  const [trophies, setTrophies] = useState<Trophy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const trophies = [
-    { id: 1, title: '2-fast streak', earned: true },
-    { id: 2, title: '5-fast streak', earned: true },
-    { id: 3, title: '10-fast streak', earned: false },
-    { id: 4, title: '25-fast streak', earned: false },
-    { id: 5, title: '50-fast streak', earned: false },
-    { id: 6, title: '100-fast streak', earned: false },
-    { id: 7, title: '250-fast streak', earned: false },
-    { id: 8, title: '500-fast streak', earned: false },
-    { id: 9, title: '1000-fast streak', earned: false },
-  ];
+  const loadTrophies = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedTrophies = await trophyAPI.getTrophies();
+      setTrophies(fetchedTrophies);
+    } catch (err) {
+      console.error('[TrophiesScreen] Error loading trophies:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load trophies');
+      // Fallback to cached trophies if available
+      const cached = await trophyAPI.getCachedTrophies();
+      if (cached) {
+        setTrophies(cached);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleTrophyPress = (trophyId: number) => {
-    router.push(`/home/badge-detail?id=${trophyId}`);
+  // Refresh trophies when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadTrophies();
+    }, [loadTrophies])
+  );
+
+  const handleTrophyPress = (trophyCode: string) => {
+    router.push(`/home/badge-detail?code=${trophyCode}`);
   };
 
   return (
@@ -51,32 +70,85 @@ export default function TrophiesScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Trophies Grid */}
-          <View style={styles.trophiesGrid}>
-            {trophies.map((trophy) => (
-              <TouchableOpacity
-                key={trophy.id}
-                style={styles.trophyWrapper}
-                onPress={() => handleTrophyPress(trophy.id)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.trophyCard, { opacity: trophy.earned ? 1 : 0.4 }]}>
-                  {/* Trophy Icon */}
-                  <View style={styles.trophyContainer}>
-                    <Image
-                      source={require('@/assets/images/page-icons/trophy.png')}
-                      style={styles.trophyIcon}
-                    />
-                  </View>
+          {/* Loading State */}
+          {loading && trophies.length === 0 && (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText style={styles.loadingText}>Loading trophies...</ThemedText>
+            </View>
+          )}
 
-                  {/* Trophy Title */}
-                  <ThemedText style={[styles.trophyTitle, { color: trophy.earned ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                    {trophy.title}
-                  </ThemedText>
-                </View>
+          {/* Error State */}
+          {error && !loading && trophies.length === 0 && (
+            <View style={styles.centerContainer}>
+              <ThemedText style={styles.errorText}>Failed to load trophies</ThemedText>
+              <ThemedText style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</ThemedText>
+              <TouchableOpacity
+                style={[styles.retryButton, { backgroundColor: colors.primary }]}
+                onPress={loadTrophies}
+              >
+                <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
+          )}
+
+          {/* Trophies Grid */}
+          {!loading && trophies.length > 0 && (
+            <>
+              {/* Summary */}
+              <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+                <ThemedText style={styles.summaryText}>
+                  {trophyAPI.getEarnedTrophies(trophies).length} of {trophies.length} trophies earned
+                </ThemedText>
+              </View>
+
+              <View style={styles.trophiesGrid}>
+                {trophies.map((trophy) => (
+                  <TouchableOpacity
+                    key={trophy.code}
+                    style={styles.trophyWrapper}
+                    onPress={() => handleTrophyPress(trophy.code)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.trophyCard, { opacity: trophy.is_earned ? 1 : 0.4 }]}>
+                      {/* Trophy Icon */}
+                      <View style={styles.trophyContainer}>
+                        <ThemedText style={styles.trophyEmoji}>
+                          {trophyAPI.getTrophyIcon(trophy)}
+                        </ThemedText>
+                      </View>
+
+                      {/* Trophy Title */}
+                      <ThemedText
+                        style={[
+                          styles.trophyTitle,
+                          { color: trophy.is_earned ? colors.text : colors.textSecondary }
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {trophy.name}
+                      </ThemedText>
+
+                      {/* Progress Bar for Unearned Trophies */}
+                      {!trophy.is_earned && trophy.progress > 0 && (
+                        <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+                          <View
+                            style={[
+                              styles.progressBar,
+                              {
+                                backgroundColor: colors.primary,
+                                width: `${trophy.progress}%`
+                              }
+                            ]}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -118,6 +190,47 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing.xl * 2,
   },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl * 2,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+  },
+  retryButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summaryCard: {
+    padding: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.lg,
+    alignItems: 'center',
+  },
+  summaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
   trophiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -137,6 +250,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  trophyEmoji: {
+    fontSize: 48,
+  },
   trophyIcon: {
     width: '100%',
     height: '100%',
@@ -146,6 +262,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: Spacing.xs,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
   },
 });
 

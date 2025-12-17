@@ -87,7 +87,7 @@ export default {
       eas: {
         projectId: "377c486d-066c-4fa6-a11f-98195f1b848e",
       },
-      mapboxPublicToken: process.env.MAPBOX_ACCESS_TOKEN,
+      mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
     },
   },
 };

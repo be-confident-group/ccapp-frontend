@@ -14,11 +14,11 @@ export function initializeMapbox(): void {
     // Get token from app config extras
     const token =
       Constants.expoConfig?.extra?.mapboxPublicToken ||
-      process.env.MAPBOX_ACCESS_TOKEN;
+      process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
     if (!token) {
       console.error(
-        '[Mapbox] Access token not found. Please set MAPBOX_ACCESS_TOKEN in .env file.'
+        '[Mapbox] Access token not found. Please set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in .env file.'
       );
       return;
     }

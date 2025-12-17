@@ -19,6 +19,8 @@ import {
 } from '../utils/geoCalculations';
 import type { TripType, TripStats, ManualTripDto, TripFilters } from '../../types/trip';
 import type { Coordinate } from '../../types/location';
+import { syncService } from './SyncService';
+import { trophyAPI, type Trophy } from '../api/trophies';
 
 export class TripManager {
   /**
@@ -47,14 +49,18 @@ export class TripManager {
   /**
    * Stop active trip and finalize statistics
    */
-  static async stopTrip(tripId: string): Promise<DBTrip | null> {
+  static async stopTrip(tripId: string): Promise<{
+    trip: DBTrip | null;
+    synced: boolean;
+    newTrophies: Trophy[];
+  }> {
     const now = Date.now();
 
     // Get trip
     const trip = await database.getTrip(tripId);
     if (!trip) {
       console.error(`[TripManager] Trip ${tripId} not found`);
-      return null;
+      return { trip: null, synced: false, newTrophies: [] };
     }
 
     // Get trip locations
@@ -68,7 +74,11 @@ export class TripManager {
         updated_at: now,
       });
       console.log(`[TripManager] Trip ${tripId} cancelled (no locations)`);
-      return await database.getTrip(tripId);
+      return {
+        trip: await database.getTrip(tripId),
+        synced: false,
+        newTrophies: [],
+      };
     }
 
     // Calculate final statistics
@@ -96,7 +106,33 @@ export class TripManager {
       type: dominantActivity,
     });
 
-    return await database.getTrip(tripId);
+    const completedTrip = await database.getTrip(tripId);
+
+    // Attempt to sync trip to backend
+    let synced = false;
+    let newTrophies: Trophy[] = [];
+
+    try {
+      synced = await syncService.syncSingleTrip(tripId);
+
+      if (synced) {
+        console.log(`[TripManager] Trip synced successfully, fetching trophies...`);
+        // Fetch new trophies after successful sync
+        newTrophies = await trophyAPI.getNewTrophies();
+        if (newTrophies.length > 0) {
+          console.log(`[TripManager] Earned ${newTrophies.length} new trophies!`);
+        }
+      }
+    } catch (error) {
+      console.error('[TripManager] Error during sync or trophy fetch:', error);
+      // Don't fail the trip completion if sync fails
+    }
+
+    return {
+      trip: completedTrip,
+      synced,
+      newTrophies,
+    };
   }
 
   /**
@@ -218,7 +254,11 @@ export class TripManager {
   /**
    * Create manual trip entry
    */
-  static async createManualTrip(data: ManualTripDto): Promise<DBTrip> {
+  static async createManualTrip(data: ManualTripDto): Promise<{
+    trip: DBTrip;
+    synced: boolean;
+    newTrophies: Trophy[];
+  }> {
     const tripId = `manual_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const now = Date.now();
 
@@ -260,7 +300,49 @@ export class TripManager {
       duration: data.duration,
     });
 
-    return (await database.getTrip(tripId))!;
+    const trip = (await database.getTrip(tripId))!;
+
+    // Attempt to sync trip to backend
+    let synced = false;
+    let newTrophies: Trophy[] = [];
+
+    try {
+      synced = await syncService.syncSingleTrip(tripId);
+
+      if (synced) {
+        console.log(`[TripManager] Manual trip synced successfully, fetching trophies...`);
+        // Fetch new trophies after successful sync
+        newTrophies = await trophyAPI.getNewTrophies();
+        if (newTrophies.length > 0) {
+          console.log(`[TripManager] Earned ${newTrophies.length} new trophies!`);
+        }
+      }
+    } catch (error) {
+      console.error('[TripManager] Error during sync or trophy fetch:', error);
+      // Don't fail the trip creation if sync fails
+    }
+
+    return {
+      trip,
+      synced,
+      newTrophies,
+    };
+  }
+
+  /**
+   * Manually sync all pending trips to backend
+   * Returns sync result with counts and errors
+   */
+  static async syncAllPendingTrips() {
+    console.log('[TripManager] Manually syncing all pending trips...');
+    return await syncService.syncTrips();
+  }
+
+  /**
+   * Get sync status (unsynced count, last sync time, etc.)
+   */
+  static async getSyncStatus() {
+    return await syncService.getSyncStatus();
   }
 
   /**

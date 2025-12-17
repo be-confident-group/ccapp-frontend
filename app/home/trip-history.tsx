@@ -13,16 +13,21 @@ import { formatDistance, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { syncService } from '@/lib/services/SyncService';
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 
 export default function TripHistoryScreen() {
   const { colors } = useTheme();
   const [trips, setTrips] = useState<DBTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
     loadTrips();
@@ -33,6 +38,10 @@ export default function TripHistoryScreen() {
       await database.init();
       const allTrips = await database.getAllTrips({ status: 'completed' });
       setTrips(allTrips);
+
+      // Get unsynced count
+      const unsynced = await syncService.getUnsyncedCount();
+      setUnsyncedCount(unsynced);
     } catch (error) {
       console.error('[TripHistory] Error loading trips:', error);
     } finally {
@@ -46,11 +55,43 @@ export default function TripHistoryScreen() {
     setRefreshing(false);
   }
 
+  async function handleSyncAll() {
+    if (!isOnline) {
+      Alert.alert('No Internet', 'Please check your internet connection and try again.');
+      return;
+    }
+
+    if (syncing) return;
+
+    setSyncing(true);
+    try {
+      const result = await syncService.syncTrips();
+
+      if (result.success) {
+        Alert.alert(
+          'Sync Complete',
+          `Successfully synced ${result.syncedCount} trip${result.syncedCount !== 1 ? 's' : ''}.${
+            result.failedCount > 0 ? `\n${result.failedCount} trip${result.failedCount !== 1 ? 's' : ''} failed to sync.` : ''
+          }`
+        );
+        await loadTrips(); // Reload to update sync status
+      } else {
+        Alert.alert('Sync Failed', 'Failed to sync trips. Please try again.');
+      }
+    } catch (error) {
+      console.error('[TripHistory] Sync error:', error);
+      Alert.alert('Sync Error', error instanceof Error ? error.message : 'An error occurred while syncing.');
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   function renderTrip({ item }: { item: DBTrip }) {
     const tripColor = getTripTypeColor(item.type);
     const tripIcon = getTripTypeIcon(item.type);
     const tripName = getTripTypeName(item.type);
     const date = new Date(item.start_time);
+    const isSynced = item.synced === 1;
 
     return (
       <TouchableOpacity
@@ -72,6 +113,14 @@ export default function TripHistoryScreen() {
                 <ThemedText style={styles.manualText}>Manual</ThemedText>
               </View>
             )}
+            {/* Sync Status Badge */}
+            <View style={[styles.syncBadge, { backgroundColor: isSynced ? '#4CAF50' : '#FF9800' }]}>
+              <MaterialCommunityIcons
+                name={isSynced ? 'cloud-check' : 'cloud-upload'}
+                size={14}
+                color="#FFFFFF"
+              />
+            </View>
           </View>
 
           <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
@@ -124,11 +173,38 @@ export default function TripHistoryScreen() {
             <ChevronLeftIcon size={28} color={colors.text} />
           </TouchableOpacity>
 
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            Trip History
-          </ThemedText>
+          <View style={styles.headerCenter}>
+            <ThemedText type="subtitle" style={styles.headerTitle}>
+              Trip History
+            </ThemedText>
+            {unsyncedCount > 0 && (
+              <View style={[styles.unsyncedBadge, { backgroundColor: colors.primary }]}>
+                <ThemedText style={styles.unsyncedText}>{unsyncedCount}</ThemedText>
+              </View>
+            )}
+          </View>
 
-          <View style={styles.placeholder} />
+          {/* Sync Button */}
+          {unsyncedCount > 0 && (
+            <TouchableOpacity
+              style={styles.syncButton}
+              onPress={handleSyncAll}
+              disabled={syncing || !isOnline}
+              activeOpacity={0.7}
+            >
+              {syncing ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <MaterialCommunityIcons
+                  name="cloud-sync"
+                  size={24}
+                  color={isOnline ? colors.primary : colors.textSecondary}
+                />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {unsyncedCount === 0 && <View style={styles.placeholder} />}
         </View>
 
       {trips.length === 0 ? (
@@ -178,9 +254,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  unsyncedBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unsyncedText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  syncButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   placeholder: {
     width: 40,
@@ -233,6 +335,14 @@ const styles = StyleSheet.create({
   manualText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  syncBadge: {
+    marginLeft: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tripDate: {
     fontSize: 13,
