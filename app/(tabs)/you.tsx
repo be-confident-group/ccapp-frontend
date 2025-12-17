@@ -385,7 +385,7 @@ export default function YouScreen() {
               size="large"
               fullWidth
               loading={loading}
-              icon={<ArrowRightOnRectangleIcon size={20} color={colors.error} />}
+              icon={<ArrowRightOnRectangleIcon size={20} color={colors.primary} />}
               iconPosition="left"
             />
           </View>
