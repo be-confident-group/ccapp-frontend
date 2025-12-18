@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export const SCHEMA = {
   trips: `
@@ -24,7 +24,8 @@ export const SCHEMA = {
       route_data TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      synced INTEGER DEFAULT 0
+      synced INTEGER DEFAULT 0,
+      backend_id INTEGER
     )
   `,
 
@@ -81,10 +82,20 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Enable foreign keys
   await db.execAsync('PRAGMA foreign_keys = ON');
 
+  // Check current version
+  const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+  const currentVersion = result?.user_version || 0;
+  console.log(`[Database] Current version: ${currentVersion}, Target version: ${DB_VERSION}`);
+
   // Create tables
   for (const [tableName, createSQL] of Object.entries(SCHEMA)) {
     await db.execAsync(createSQL);
     console.log(`[Database] Created table: ${tableName}`);
+  }
+
+  // Run migrations if needed
+  if (currentVersion < DB_VERSION) {
+    await runMigrations(db, currentVersion, DB_VERSION);
   }
 
   // Create indexes
@@ -98,4 +109,22 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
 
   console.log('[Database] Initialized successfully');
   return db;
+}
+
+async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number): Promise<void> {
+  console.log(`[Database] Running migrations from version ${from} to ${to}`);
+
+  // Migration from version 1 to 2: Add backend_id column
+  if (from < 2 && to >= 2) {
+    console.log('[Database] Migration 1->2: Adding backend_id column to trips table');
+    try {
+      await db.execAsync('ALTER TABLE trips ADD COLUMN backend_id INTEGER');
+      console.log('[Database] Migration 1->2: Successfully added backend_id column');
+    } catch (error) {
+      // Column might already exist if migration was partially run
+      console.log('[Database] Migration 1->2: backend_id column may already exist', error);
+    }
+  }
+
+  console.log('[Database] Migrations completed');
 }

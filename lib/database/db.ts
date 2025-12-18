@@ -21,6 +21,7 @@ export interface Trip {
   created_at: number;
   updated_at: number;
   synced: number;
+  backend_id: number | null;
 }
 
 export interface LocationPoint {

@@ -101,11 +101,12 @@ class SyncService {
       const apiTrip = transformTripForApi(trip as DBTrip);
 
       // Send to backend
-      await tripAPI.createTrip(apiTrip);
+      const backendTrip = await tripAPI.createTrip(apiTrip);
 
-      // Mark as synced in database
+      // Mark as synced in database and store backend_id
       await database.updateTrip(tripId, {
         synced: 1,
+        backend_id: backendTrip.id,
         updated_at: Date.now()
       });
 
@@ -253,11 +254,12 @@ class SyncService {
           // Sync batch
           const syncResult = await tripAPI.syncTrips(apiTrips);
 
-          // Mark synced trips in database
+          // Mark synced trips in database and store backend_id
           if (syncResult.success && syncResult.synced.length > 0) {
             for (const syncedTrip of syncResult.synced) {
               await database.updateTrip(syncedTrip.client_id, {
                 synced: 1,
+                backend_id: syncedTrip.id,
                 updated_at: Date.now(),
               });
               result.syncedCount++;

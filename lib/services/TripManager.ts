@@ -21,6 +21,7 @@ import type { TripType, TripStats, ManualTripDto, TripFilters } from '../../type
 import type { Coordinate } from '../../types/location';
 import { syncService } from './SyncService';
 import { trophyAPI, type Trophy } from '../api/trophies';
+import { tripAPI } from '../api/trips';
 
 export class TripManager {
   /**
@@ -245,10 +246,38 @@ export class TripManager {
 
   /**
    * Delete trip and all associated locations
+   * If the trip was synced, also delete from backend
    */
   static async deleteTrip(tripId: string): Promise<void> {
-    await database.deleteTrip(tripId);
-    console.log(`[TripManager] Deleted trip ${tripId}`);
+    try {
+      // Get the trip to check if it was synced to backend
+      const trip = await database.getTrip(tripId);
+
+      if (!trip) {
+        console.error(`[TripManager] Trip ${tripId} not found`);
+        throw new Error(`Trip ${tripId} not found`);
+      }
+
+      // If trip was synced and has backend_id, delete from backend first
+      if (trip.synced === 1 && trip.backend_id) {
+        console.log(`[TripManager] Deleting trip ${tripId} from backend (backend_id: ${trip.backend_id})`);
+        try {
+          await tripAPI.deleteTrip(trip.backend_id);
+          console.log(`[TripManager] Successfully deleted trip from backend`);
+        } catch (error) {
+          console.error(`[TripManager] Failed to delete trip from backend:`, error);
+          // Continue with local deletion even if backend deletion fails
+          // This could happen if the trip was already deleted on backend or network is unavailable
+        }
+      }
+
+      // Delete from local database
+      await database.deleteTrip(tripId);
+      console.log(`[TripManager] Deleted trip ${tripId} from local database`);
+    } catch (error) {
+      console.error(`[TripManager] Error deleting trip ${tripId}:`, error);
+      throw error;
+    }
   }
 
   /**
