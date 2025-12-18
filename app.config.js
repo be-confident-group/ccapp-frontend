@@ -61,11 +61,11 @@ export default {
         "expo-splash-screen",
         {
           image: "./assets/images/icon.png",
-          imageWidth: 200,
+          imageWidth: 120,
           resizeMode: "contain",
-          backgroundColor: "#ffffff",
+          backgroundColor: "#E6F4FE",
           dark: {
-            backgroundColor: "#000000",
+            backgroundColor: "#E6F4FE",
           },
         },
       ],

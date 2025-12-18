@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { MapPinIcon } from 'react-native-heroicons/solid';
 import { authApi } from '@/lib/api';
 
 export default function SplashScreen() {
@@ -14,9 +13,6 @@ export default function SplashScreen() {
     const checkAuth = async () => {
       try {
         const isAuthenticated = await authApi.isAuthenticated();
-
-        // Wait at least 2 seconds before navigating
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
         if (isAuthenticated) {
           // User is logged in, go to main app
@@ -38,11 +34,13 @@ export default function SplashScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.primary }]}>
       <View style={styles.logoContainer}>
-        <View style={styles.iconWrapper}>
-          <MapPinIcon color="#FFFFFF" size={80} />
-        </View>
+        <Image
+          source={require('@/assets/images/icon.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.appName}>Radzi</Text>
-        <Text style={styles.tagline}>Track Your Journey</Text>
+        <Text style={styles.tagline}>Walk, Cycle, Connect</Text>
       </View>
     </View>
   );
@@ -57,7 +55,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  iconWrapper: {
+  logo: {
+    width: 120,
+    height: 120,
     marginBottom: 24,
   },
   appName: {

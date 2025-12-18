@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
 import { useTrackingToggle } from '@/components/tracking/TrackingToggle';
 import { useWeather } from '@/hooks/useWeather';
+import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const { isTracking, toggleTracking } = useTrackingToggle();
   const { weather, loading: weatherLoading } = useWeather();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
   const weatherIconName =
@@ -141,7 +143,11 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               {/* Weather Display */}
-              <View style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}>
+              <TouchableOpacity
+                style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}
+                onPress={() => setIsWeatherModalOpen(true)}
+                activeOpacity={0.8}
+              >
                 <View style={[styles.tileIcon, { backgroundColor: '#E0F2FE' }]}>
                   <MaterialCommunityIcons name={weatherIconName} size={16} color="#0284C7" />
                 </View>
@@ -153,7 +159,7 @@ export default function HomeScreen() {
                     {weatherLoading ? 'Loading...' : weather?.city ?? 'Unknown'}
                   </ThemedText>
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.tileRow}>
@@ -473,6 +479,13 @@ export default function HomeScreen() {
           </View>
 
         </ScrollView>
+
+        {/* Weather Details Modal */}
+        <WeatherDetailsModal
+          visible={isWeatherModalOpen}
+          onClose={() => setIsWeatherModalOpen(false)}
+          weather={weather}
+        />
       </ThemedView>
     </SafeAreaView>
   );
