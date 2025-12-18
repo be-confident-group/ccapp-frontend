@@ -15,7 +15,6 @@ import {
   StarIcon,
   ArrowRightOnRectangleIcon,
   SunIcon,
-  LinkIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -32,6 +31,8 @@ import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
 import { authApi, User } from '@/lib/api/auth';
+import { useTracking } from '@/contexts/TrackingContext';
+import * as Location from 'expo-location';
 
 export default function YouScreen() {
   const { t } = useTranslation();
@@ -39,6 +40,7 @@ export default function YouScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
+  const { isTracking, toggleTracking, hasPermissions } = useTracking();
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -65,18 +67,29 @@ export default function YouScreen() {
       setFetchingProfile(true);
       const user = await authApi.getProfile();
 
+      console.log('[YouScreen] Fetched user profile:', {
+        name: user.name,
+        profile_picture: user.profile_picture,
+        hasProfile: !!user.profile,
+      });
+
       // Map API response to local state
+      // Backend returns: name, last_name, email, date_of_birth, gender, profile_picture (all at root level)
+      const profilePicture = user.profile_picture || user.profile?.avatar;
+      
+      console.log('[YouScreen] Setting profile picture to:', profilePicture);
+
       setUserProfile({
-        firstName: user.first_name || 'User',
+        firstName: user.name || user.first_name || 'User',
         lastName: user.last_name || '',
         email: user.email || '',
-        dateOfBirth: user.profile?.date_of_birth || '',
-        gender: user.profile?.gender || '',
-        profilePicture: user.profile?.avatar,
-        joinedDate: user.profile?.joined_date || 'Recently',
+        dateOfBirth: user.date_of_birth || user.profile?.date_of_birth || '',
+        gender: user.gender || user.profile?.gender || '',
+        profilePicture: profilePicture,
+        joinedDate: user.date_joined || user.profile?.joined_date || 'Recently',
       });
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      console.error('[YouScreen] Failed to fetch profile:', error);
       // Keep default values if fetch fails
     } finally {
       setFetchingProfile(false);
@@ -114,19 +127,23 @@ export default function YouScreen() {
         gender: profile.gender || 'O',
       };
 
-      // Call API to update profile
-      const updatedUser = await authApi.updateProfile(updateData);
+      // Handle profile picture if it was changed
+      if (profile.profilePicture) {
+        // Check if it's a base64 data URI (from image picker)
+        if (profile.profilePicture.startsWith('data:image')) {
+          // Already base64, use as is
+          updateData.profile_picture = profile.profilePicture;
+        }
+        // If it's an HTTP/HTTPS URL (existing image from S3), don't include it in update
+        // If it's a local file URI, it means something went wrong in the picker
+      }
 
-      // Update local state with response
-      setUserProfile({
-        firstName: updatedUser.first_name || profile.firstName,
-        lastName: updatedUser.last_name || profile.lastName,
-        email: updatedUser.email || profile.email,
-        dateOfBirth: updatedUser.profile?.date_of_birth || profile.dateOfBirth,
-        gender: updatedUser.profile?.gender || profile.gender,
-        profilePicture: updatedUser.profile?.avatar || profile.profilePicture,
-        joinedDate: userProfile.joinedDate,
-      });
+      // Call API to update profile
+      await authApi.updateProfile(updateData);
+
+      // Refetch the profile to get the updated profile picture URL from S3
+      // (ProfileUpdateSerializer has write_only=True for profile_picture, so it's not returned in update response)
+      await fetchUserProfile();
 
       showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
     } catch (error: any) {
@@ -135,6 +152,75 @@ export default function YouScreen() {
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBackgroundTrackingToggle = async (value: boolean) => {
+    if (value) {
+      // Turning ON - check if we have permissions first
+      try {
+        // Check current permission status
+        const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
+        const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+        
+        const hasFullPermissions = 
+          fgStatus === Location.PermissionStatus.GRANTED && 
+          bgStatus === Location.PermissionStatus.GRANTED;
+
+        if (!hasFullPermissions) {
+          // Show permission explanation
+          Alert.alert(
+            'Background Tracking Permission',
+            Platform.OS === 'ios'
+              ? 'To track your activities automatically, Radzi needs "Always Allow" location access.\n\n' +
+                '1. Tap "Settings" below\n' +
+                '2. Go to Location\n' +
+                '3. Select "Always"\n\n' +
+                'This allows the app to track your walks and rides even when you\'re not actively using it.'
+              : 'To track your activities automatically, Radzi needs location access all the time.\n\n' +
+                'Please grant "Allow all the time" permission in the next screen.\n\n' +
+                'This allows the app to track your walks and rides in the background.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: Platform.OS === 'ios' ? 'Open Settings' : 'Grant Permission',
+                onPress: async () => {
+                  if (Platform.OS === 'ios') {
+                    // On iOS, open app settings
+                    Linking.openSettings();
+                  } else {
+                    // On Android, request permission
+                    await toggleTracking();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          // Already have permissions, just start tracking
+          await toggleTracking();
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+        // Fallback to toggle
+        await toggleTracking();
+      }
+    } else {
+      // Turning OFF - confirm first
+      Alert.alert(
+        'Stop Background Tracking?',
+        'Your activities will no longer be tracked automatically. You can still log trips manually.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Stop Tracking',
+            style: 'destructive',
+            onPress: async () => {
+              await toggleTracking();
+            },
+          },
+        ]
+      );
     }
   };
 
@@ -252,10 +338,12 @@ export default function YouScreen() {
                   isFirst
                 />
                 <SettingsItem
-                  icon={<GlobeAltIcon size={22} color={colors.text} />}
-                  title={t('profile:preferences.systemLanguage')}
-                  subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
-                  onPress={() => setShowLanguagePicker(true)}
+                  icon={<DevicePhoneMobileIcon size={22} color={colors.text} />}
+                  title="Background Tracking"
+                  subtitle={isTracking ? 'Automatically tracking your activities' : 'Track activities in the background'}
+                  toggleValue={isTracking}
+                  onToggleChange={handleBackgroundTrackingToggle}
+                  showChevron={false}
                 />
                 <SettingsItem
                   icon={<Cog6ToothIcon size={22} color={colors.text} />}
@@ -266,38 +354,12 @@ export default function YouScreen() {
                     await setUnitSystem(value ? 'imperial' : 'metric');
                   }}
                   showChevron={false}
-                  isLast
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Integrations Section */}
-          <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>{t('profile:sections.integrations')}</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <SettingsItem
-                  icon={<LinkIcon size={22} color={colors.text} />}
-                  title={t('profile:integrations.connectedApps')}
-                  subtitle={t('profile:integrations.connectedAppsSubtitle')}
-                  onPress={() => showComingSoonAlert('appConnections')}
-                  isFirst
                 />
                 <SettingsItem
-                  icon={<DevicePhoneMobileIcon size={22} color={colors.text} />}
-                  title={t('profile:integrations.backgroundTracking')}
-                  subtitle={t('profile:integrations.backgroundTrackingSubtitle')}
-                  onPress={() => showComingSoonAlert('backgroundTracking')}
+                  icon={<GlobeAltIcon size={22} color={colors.text} />}
+                  title={t('profile:preferences.systemLanguage')}
+                  subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
+                  onPress={() => setShowLanguagePicker(true)}
                   isLast
                 />
               </View>

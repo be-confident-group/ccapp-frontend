@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { CheckIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/lib/i18n/types';
 import { ThemedText } from '@/components/themed-text';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface LanguagePickerProps {
   visible: boolean;
@@ -23,15 +27,42 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
   const { colors } = useTheme();
   const { currentLanguage, changeLanguage, isChanging } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
+  
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+
+  // Animate in when visible
+  useEffect(() => {
+    if (visible) {
+      translateY.value = withSpring(0, {
+        damping: 30,
+        stiffness: 200,
+      });
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    // Animate out before closing
+    translateY.value = withSpring(SCREEN_HEIGHT, {
+      damping: 30,
+      stiffness: 200,
+    });
+    setTimeout(() => {
+      onClose();
+    }, 250);
+  };
 
   const handleSelectLanguage = async (language: LanguageOption) => {
     setSelectedLanguage(language.code);
     await changeLanguage(language.code);
     // Close modal after a short delay to show the selection
     setTimeout(() => {
-      onClose();
+      handleClose();
     }, 300);
   };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const renderLanguageItem = ({ item }: { item: LanguageOption }) => {
     const isSelected = item.code === selectedLanguage;
@@ -68,17 +99,22 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      animationType="fade"
+      onRequestClose={handleClose}
+      statusBarTranslucent
     >
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <TouchableOpacity style={styles.overlayTouch} onPress={onClose} activeOpacity={1} />
+      <View style={styles.overlay}>
+        <TouchableOpacity 
+          style={[styles.overlayBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]} 
+          onPress={handleClose} 
+          activeOpacity={1} 
+        />
 
-        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.modalContent, { backgroundColor: colors.background }, animatedStyle]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <ThemedText style={styles.headerTitle}>Select Language</ThemedText>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <XMarkIcon size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -100,7 +136,7 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
               showsVerticalScrollIndicator={true}
             />
           )}
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -111,8 +147,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  overlayTouch: {
-    flex: 1,
+  overlayBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContent: {
     borderTopLeftRadius: 24,

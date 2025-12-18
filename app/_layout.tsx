@@ -6,6 +6,7 @@ import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UnitsProvider } from '@/contexts/UnitsContext';
+import { TrackingProvider } from '@/contexts/TrackingContext';
 import { useProtectedRoute } from '@/contexts/useProtectedRoute';
 import { initializeMapbox } from '@/config/mapbox';
 
@@ -34,7 +35,7 @@ function RootLayoutNav() {
           name="modals/quick-actions-modal"
           options={{
             presentation: 'transparentModal',
-            animation: 'slide_from_bottom',
+            animation: 'fade',
             headerShown: false,
           }}
         />
@@ -56,7 +57,9 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <UnitsProvider>
-          <RootLayoutNav />
+          <TrackingProvider>
+            <RootLayoutNav />
+          </TrackingProvider>
         </UnitsProvider>
       </AuthProvider>
     </ThemeProvider>

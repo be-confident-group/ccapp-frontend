@@ -1,8 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
-import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { Pressable, StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   CameraIcon,
@@ -19,6 +19,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 type ActionItem = {
   icon: React.ComponentType<{ size?: number; color?: string }>;
   title: string;
@@ -28,11 +30,26 @@ type ActionItem = {
 export default function QuickActionsModal() {
   const { colors, isDark } = useTheme();
   
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(SCREEN_HEIGHT);
   const startY = useSharedValue(0);
 
+  // Animate sheet in on mount
+  useEffect(() => {
+    translateY.value = withSpring(0, {
+      damping: 30,
+      stiffness: 200,
+    });
+  }, []);
+
   const handleClose = useCallback(() => {
-    router.back();
+    // Animate out before closing
+    translateY.value = withSpring(SCREEN_HEIGHT, {
+      damping: 30,
+      stiffness: 200,
+    });
+    setTimeout(() => {
+      router.back();
+    }, 250);
   }, []);
 
   const gesture = Gesture.Pan()
@@ -51,8 +68,8 @@ export default function QuickActionsModal() {
       } else {
         // Spring back to original position
         translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 300,
+          damping: 30,
+          stiffness: 200,
         });
       }
     });

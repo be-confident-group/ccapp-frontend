@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
-import { useTrackingToggle } from '@/components/tracking/TrackingToggle';
+import { useTracking } from '@/contexts/TrackingContext';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
 
@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const { formatDistance, formatWeight, formatTemperature, distanceUnit, weightUnit, kmToDistance, kgToWeight } = useUnits();
-  const { isTracking, toggleTracking } = useTrackingToggle();
+  const { isTracking, toggleTracking } = useTracking();
   const { weather, loading: weatherLoading } = useWeather();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);

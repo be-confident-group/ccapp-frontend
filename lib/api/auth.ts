@@ -32,15 +32,20 @@ export interface AuthResponse {
 }
 
 export interface User {
-  id: string;
+  id?: string;
   email: string;
-  first_name: string;
+  name?: string;  // Backend returns 'name' not 'first_name'
+  first_name?: string;  // Keep for backward compatibility
   last_name: string;
-  profile?: UserProfile;
+  date_of_birth?: string;
+  gender?: 'M' | 'F' | 'O' | '';
+  profile_picture?: string;  // Backend returns profile_picture at root level
+  date_joined?: string;  // When user created their account (e.g., "Sep 2025")
+  profile?: UserProfile;  // Keep for backward compatibility
 }
 
 export interface UserProfile {
-  avatar?: string;
+  avatar?: string;  // For backward compatibility
   bio?: string;
   date_of_birth?: string;
   gender?: 'M' | 'F' | 'O' | '';

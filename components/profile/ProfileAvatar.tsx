@@ -26,6 +26,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
 
   // Sync local state with prop changes
   useEffect(() => {
+    console.log('[ProfileAvatar] Received imageUri:', imageUri);
     setLocalImageUri(imageUri);
   }, [imageUri]);
 
@@ -47,18 +48,32 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
         return;
       }
 
-      // Launch image picker
+      // Launch image picker with base64 option
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true, // Get base64 data directly
       });
 
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setLocalImageUri(uri);
-        onImageChange?.(uri);
+        const asset = result.assets[0];
+        const uri = asset.uri;
+        
+        // If base64 is available, create data URI, otherwise just use URI
+        if (asset.base64) {
+          // Determine mime type from uri
+          const extension = uri.split('.').pop()?.toLowerCase() || 'jpeg';
+          const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+          const base64Uri = `data:${mimeType};base64,${asset.base64}`;
+          
+          setLocalImageUri(uri); // Display the local URI
+          onImageChange?.(base64Uri); // Pass base64 data URI to parent
+        } else {
+          setLocalImageUri(uri);
+          onImageChange?.(uri);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -94,6 +109,12 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
                 borderColor: colors.card,
               },
             ]}
+            onError={(error) => {
+              console.error('[ProfileAvatar] Failed to load image:', localImageUri, error.nativeEvent);
+            }}
+            onLoad={() => {
+              console.log('[ProfileAvatar] Image loaded successfully:', localImageUri);
+            }}
           />
         ) : (
           <View
