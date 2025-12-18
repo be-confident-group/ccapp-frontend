@@ -1,7 +1,7 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ClockIcon } from 'react-native-heroicons/outline';
@@ -12,73 +12,50 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { TripManager } from '@/lib/services/TripManager';
+import { getTripTypeIcon, getTripTypeColor, type TripType } from '@/types/trip';
+import { formatDurationHuman, parseRouteData } from '@/lib/utils/geoCalculations';
+import type { Trip } from '@/lib/database/db';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MIN_TRANSLATE_Y = 140; // Minimum height when collapsed
 const MAX_TRANSLATE_Y = SCREEN_HEIGHT * 0.75; // Maximum height when expanded
 
-// Mock recent trips data - distances in km for conversion
-const RECENT_TRIPS = [
-  {
-    id: '1',
-    name: 'Morning Commute',
-    date: 'Today, 8:30 AM',
-    distanceKm: 12.5,
-    duration: '35 min',
-    type: 'cycle',
-    route: 'Market St → Downtown',
-  },
-  {
-    id: '2',
-    name: 'Evening Ride',
-    date: 'Yesterday, 6:15 PM',
-    distanceKm: 8.2,
-    duration: '22 min',
-    type: 'cycle',
-    route: 'Park Loop',
-  },
-  {
-    id: '3',
-    name: 'Weekend Trail',
-    date: '2 days ago, 10:00 AM',
-    distanceKm: 24.8,
-    duration: '1h 15m',
-    type: 'cycle',
-    route: 'Mountain Trail',
-  },
-  {
-    id: '4',
-    name: 'City Exploration',
-    date: '3 days ago, 3:45 PM',
-    distanceKm: 15.3,
-    duration: '42 min',
-    type: 'cycle',
-    route: 'Waterfront → Marina',
-  },
-  {
-    id: '5',
-    name: 'Lunch Break Ride',
-    date: '4 days ago, 12:30 PM',
-    distanceKm: 6.7,
-    duration: '18 min',
-    type: 'cycle',
-    route: 'Office → Cafe',
-  },
-];
-
 interface MapBottomSheetProps {
-  onOptionPress?: (option: string) => void;
+  onTripPress?: (tripId: string) => void;
   onExpandChange?: (isExpanded: boolean) => void;
+  selectedTripId?: string | null;
 }
 
-export function MapBottomSheet({ onOptionPress, onExpandChange }: MapBottomSheetProps) {
+export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: MapBottomSheetProps) {
   const { colors, isDark } = useTheme();
   const { formatDistance } = useUnits();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const translateY = useSharedValue(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const context = useSharedValue({ y: 0 });
+
+  // Fetch recent trips from database
+  useEffect(() => {
+    loadRecentTrips();
+  }, []);
+
+  const loadRecentTrips = async () => {
+    try {
+      setLoading(true);
+      const trips = await TripManager.getRecentTrips(10);
+      setRecentTrips(trips);
+    } catch (error) {
+      console.error('[MapBottomSheet] Error loading recent trips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExpandChange = useCallback((expanded: boolean) => {
     setIsExpanded(expanded);
@@ -123,10 +100,60 @@ export function MapBottomSheet({ onOptionPress, onExpandChange }: MapBottomSheet
   });
 
   const handleTripPress = (tripId: string) => {
-    console.log('Trip pressed:', tripId);
-    if (onOptionPress) {
-      onOptionPress(tripId);
+    console.log('[MapBottomSheet] Trip pressed:', tripId);
+    if (onTripPress) {
+      onTripPress(tripId);
     }
+  };
+
+  const handleSeeAllTrips = () => {
+    console.log('[MapBottomSheet] Navigating to trip history');
+    router.push('/home/trip-history');
+  };
+
+  // Helper function to format trip date
+  const formatTripDate = (timestamp: number): string => {
+    const tripDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - tripDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return `Today, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `Yesterday, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    } else {
+      return tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+  };
+
+  // Helper function to get trip route description
+  const getTripRouteDescription = (trip: Trip): string => {
+    if (!trip.route_data) return 'No route data';
+
+    try {
+      const route = parseRouteData(trip.route_data);
+      if (route.length < 2) return 'Short trip';
+
+      // For now, just show distance - could be enhanced with geocoding
+      const distanceKm = (trip.distance || 0) / 1000;
+      return `${distanceKm.toFixed(1)} km route`;
+    } catch (error) {
+      return 'Route data unavailable';
+    }
+  };
+
+  // Get icon name for trip type
+  const getIconName = (type: TripType): keyof typeof MaterialIcons.glyphMap => {
+    const iconMap: Record<TripType, keyof typeof MaterialIcons.glyphMap> = {
+      walk: 'directions-walk',
+      run: 'directions-run',
+      cycle: 'directions-bike',
+      drive: 'directions-car',
+    };
+    return iconMap[type];
   };
 
   return (
@@ -149,82 +176,116 @@ export function MapBottomSheet({ onOptionPress, onExpandChange }: MapBottomSheet
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Journeys
-            </Text>
-            <Text style={[styles.tripCount, { color: colors.textSecondary }]}>
-              {RECENT_TRIPS.length} trips
-            </Text>
+            <View style={styles.headerLeft}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Recent Journeys
+              </Text>
+              <Text style={[styles.tripCount, { color: colors.textSecondary }]}>
+                {loading ? '...' : `${recentTrips.length} trips`}
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.seeAllButton, { backgroundColor: colors.primary }]}
+              onPress={handleSeeAllTrips}
+              android_ripple={{ color: '#ffffff20' }}
+            >
+              <Text style={styles.seeAllButtonText}>See All Trips</Text>
+              <MaterialIcons name="arrow-forward" size={16} color="#ffffff" />
+            </Pressable>
           </View>
 
           {/* Recent Trips List */}
-          <ScrollView 
+          <ScrollView
             style={styles.tripsList}
             showsVerticalScrollIndicator={!isExpanded}
             scrollEnabled={isExpanded}
           >
-            {RECENT_TRIPS.map((trip, index) => (
-              <Pressable
-                key={trip.id}
-                style={[
-                  styles.tripCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8F9FA',
-                    borderColor: colors.border,
-                  },
-                  index === 0 && !isExpanded && styles.firstTripCard,
-                ]}
-                onPress={() => handleTripPress(trip.id)}
-                android_ripple={{ color: colors.primary + '10' }}
-              >
-                {/* Icon */}
-                <View style={[styles.tripIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <MaterialIcons name="directions-bike" size={24} color={colors.primary} />
-                </View>
+            {loading ? (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Loading trips...
+                </Text>
+              </View>
+            ) : recentTrips.length === 0 ? (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="route" size={48} color={colors.textMuted} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  No trips yet
+                </Text>
+                <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
+                  Start tracking to see your journeys here
+                </Text>
+              </View>
+            ) : (
+              recentTrips.map((trip, index) => {
+                const tripColor = getTripTypeColor(trip.type);
+                const isSelected = selectedTripId === trip.id;
 
-                {/* Trip Info */}
-                <View style={styles.tripInfo}>
-                  <Text style={[styles.tripName, { color: colors.text }]}>
-                    {trip.name}
-                  </Text>
-                  <Text style={[styles.tripRoute, { color: colors.textSecondary }]}>
-                    {trip.route}
-                  </Text>
-                  <View style={styles.tripMeta}>
-                    <View style={styles.metaItem}>
-                      <ClockIcon size={14} color={colors.textMuted} />
-                      <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                        {trip.date}
+                return (
+                  <Pressable
+                    key={trip.id}
+                    style={[
+                      styles.tripCard,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8F9FA',
+                        borderColor: isSelected ? tripColor : colors.border,
+                        borderWidth: isSelected ? 2 : 1,
+                      },
+                      index === 0 && !isExpanded && styles.firstTripCard,
+                    ]}
+                    onPress={() => handleTripPress(trip.id)}
+                    android_ripple={{ color: colors.primary + '10' }}
+                  >
+                    {/* Icon */}
+                    <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
+                      <MaterialIcons name={getIconName(trip.type)} size={24} color={tripColor} />
+                    </View>
+
+                    {/* Trip Info */}
+                    <View style={styles.tripInfo}>
+                      <Text style={[styles.tripName, { color: colors.text }]}>
+                        {trip.type.charAt(0).toUpperCase() + trip.type.slice(1)} Trip
+                      </Text>
+                      <Text style={[styles.tripRoute, { color: colors.textSecondary }]}>
+                        {getTripRouteDescription(trip)}
+                      </Text>
+                      <View style={styles.tripMeta}>
+                        <View style={styles.metaItem}>
+                          <ClockIcon size={14} color={colors.textMuted} />
+                          <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                            {formatTripDate(trip.start_time)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Stats */}
+                    <View style={styles.tripStats}>
+                      <Text style={[styles.statValue, { color: colors.text }]}>
+                        {formatDistance((trip.distance || 0) / 1000)}
+                      </Text>
+                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                        distance
+                      </Text>
+                      <Text style={[styles.statValue, { color: colors.text, marginTop: 8 }]}>
+                        {formatDurationHuman(trip.duration || 0)}
+                      </Text>
+                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                        time
                       </Text>
                     </View>
-                  </View>
-                </View>
 
-                {/* Stats */}
-                <View style={styles.tripStats}>
-                  <Text style={[styles.statValue, { color: colors.text }]}>
-                    {formatDistance(trip.distanceKm)}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    distance
-                  </Text>
-                  <Text style={[styles.statValue, { color: colors.text, marginTop: 8 }]}>
-                    {trip.duration}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    time
-                  </Text>
-                </View>
-
-                {/* Chevron */}
-                <MaterialIcons 
-                  name="chevron-right" 
-                  size={20} 
-                  color={colors.textMuted} 
-                  style={styles.chevron}
-                />
-              </Pressable>
-            ))}
+                    {/* Chevron */}
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={20}
+                      color={colors.textMuted}
+                      style={styles.chevron}
+                    />
+                  </Pressable>
+                );
+              })
+            )}
           </ScrollView>
         </View>
       </Animated.View>
@@ -267,6 +328,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -274,6 +340,19 @@ const styles = StyleSheet.create({
   tripCount: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  seeAllButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   tripsList: {
     flex: 1,
@@ -339,5 +418,19 @@ const styles = StyleSheet.create({
   },
   chevron: {
     marginLeft: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

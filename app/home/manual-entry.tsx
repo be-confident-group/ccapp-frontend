@@ -8,13 +8,14 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { TripManager } from '@/lib/services';
 import { calculateRouteDistance } from '@/lib/utils/geoCalculations';
 import type { TripType } from '@/types/trip';
 import type { Coordinate } from '@/types/location';
 import Mapbox, { Camera, LineLayer, ShapeSource, CircleLayer } from '@rnmapbox/maps';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -28,6 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { TextInput, Button } from '@/components/ui';
+import { useLocation } from '@/lib/hooks/useLocation';
 
 const TRIP_TYPES: { type: TripType; label: string; icon: string }[] = [
   { type: 'walk', label: 'Walking', icon: 'walk' },
@@ -36,6 +38,8 @@ const TRIP_TYPES: { type: TripType; label: string; icon: string }[] = [
 
 export default function ManualEntryScreen() {
   const { colors } = useTheme();
+  const { location, getCurrentLocation } = useLocation();
+  const { unitSystem, distanceUnit, kmToDistance } = useUnits();
   const [selectedType, setSelectedType] = useState<TripType>('walk');
   const [distance, setDistance] = useState('');
   const [hours, setHours] = useState('0');
@@ -45,21 +49,48 @@ export default function ManualEntryScreen() {
   const [showMap, setShowMap] = useState(false);
   const [routePoints, setRoutePoints] = useState<Coordinate[]>([]);
 
+  // Get user location when map is shown
+  useEffect(() => {
+    if (showMap && !location) {
+      getCurrentLocation();
+    }
+  }, [showMap]);
+
+  // Helper to convert display distance to meters for storage
+  const displayDistanceToMeters = (displayDist: number): number => {
+    // displayDist is in user's preferred unit (km or mi)
+    // Convert to km first, then to meters
+    if (unitSystem === 'imperial') {
+      // Convert miles to kilometers, then to meters
+      return displayDist * 1.60934 * 1000;
+    }
+    // Already in km, just convert to meters
+    return displayDist * 1000;
+  };
+
+  // Helper to convert meters to display distance
+  const metersToDisplayDistance = (meters: number): number => {
+    const km = meters / 1000;
+    return kmToDistance(km);
+  };
+
   async function handleSubmit() {
     // Validation
     let distanceNum = parseFloat(distance);
     const hoursNum = parseInt(hours) || 0;
     const minutesNum = parseInt(minutes) || 0;
 
-    // If route drawn, use that distance
+    // If route drawn, use that distance (already in meters)
+    let distanceMeters: number;
     if (routePoints.length > 1) {
-      const routeDistance = calculateRouteDistance(routePoints);
-      distanceNum = routeDistance / 1000; // Convert to km for display
-    }
-
-    if ((!distance && routePoints.length < 2) || (distance && (isNaN(distanceNum) || distanceNum <= 0))) {
-      Alert.alert('Invalid Distance', 'Please enter a distance or draw a route on the map');
-      return;
+      distanceMeters = calculateRouteDistance(routePoints);
+    } else {
+      // User entered distance - need to convert from display units to meters
+      if (!distance || isNaN(distanceNum) || distanceNum <= 0) {
+        Alert.alert('Invalid Distance', 'Please enter a distance or draw a route on the map');
+        return;
+      }
+      distanceMeters = displayDistanceToMeters(distanceNum);
     }
 
     if (hoursNum === 0 && minutesNum === 0) {
@@ -67,9 +98,6 @@ export default function ManualEntryScreen() {
       return;
     }
 
-    const distanceMeters = routePoints.length > 1
-      ? calculateRouteDistance(routePoints)
-      : distanceNum * 1000;
     const durationSeconds = hoursNum * 3600 + minutesNum * 60;
 
     setLoading(true);
@@ -78,7 +106,7 @@ export default function ManualEntryScreen() {
       await TripManager.createManualTrip({
         userId: 'current_user',
         type: selectedType,
-        distance: distanceMeters,
+        distance: distanceMeters, // Always stored in meters
         duration: durationSeconds,
         startTime: Date.now() - durationSeconds * 1000,
         notes: notes.trim() || undefined,
@@ -112,8 +140,9 @@ export default function ManualEntryScreen() {
 
     // Auto-calculate distance if route has points
     if (routePoints.length >= 1) {
-      const totalDistance = calculateRouteDistance([...routePoints, newPoint]);
-      setDistance((totalDistance / 1000).toFixed(2));
+      const totalDistanceMeters = calculateRouteDistance([...routePoints, newPoint]);
+      const displayDist = metersToDisplayDistance(totalDistanceMeters);
+      setDistance(displayDist.toFixed(2));
     }
   }
 
@@ -128,8 +157,9 @@ export default function ManualEntryScreen() {
       setRoutePoints(newPoints);
 
       if (newPoints.length > 1) {
-        const totalDistance = calculateRouteDistance(newPoints);
-        setDistance((totalDistance / 1000).toFixed(2));
+        const totalDistanceMeters = calculateRouteDistance(newPoints);
+        const displayDist = metersToDisplayDistance(totalDistanceMeters);
+        setDistance(displayDist.toFixed(2));
       } else {
         setDistance('');
       }
@@ -244,8 +274,12 @@ export default function ManualEntryScreen() {
                 >
                   <Camera
                     zoomLevel={13}
-                    centerCoordinate={[-122.4194, 37.7749]}
-                    animationDuration={0}
+                    centerCoordinate={
+                      location 
+                        ? [location.longitude, location.latitude]
+                        : [-0.1276, 51.5074] // Default to London
+                    }
+                    animationDuration={300}
                   />
 
                   {routeGeoJSON && (
@@ -305,10 +339,10 @@ export default function ManualEntryScreen() {
         {/* Distance */}
         <View style={styles.section}>
           <TextInput
-            label={`Distance (km)${routePoints.length > 1 ? ' (Auto-calculated)' : ''}`}
+            label={`Distance (${distanceUnit})${routePoints.length > 1 ? ' (Auto-calculated)' : ''}`}
             value={distance}
             onChangeText={setDistance}
-            placeholder="Enter distance or draw route"
+            placeholder={`Enter distance in ${distanceUnit} or draw route`}
             keyboardType="decimal-pad"
             editable={routePoints.length < 2}
             containerStyle={styles.inputContainer}

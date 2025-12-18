@@ -17,6 +17,10 @@ import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { TripManager } from '@/lib/services/TripManager';
+import { parseRouteData } from '@/lib/utils/geoCalculations';
+import { getTripTypeColor } from '@/types/trip';
+import type { Trip as DBTrip } from '@/lib/database/db';
 
 export default function MapsScreen() {
   const { colors, isDark } = useTheme();
@@ -33,10 +37,26 @@ export default function MapsScreen() {
   // Layer selector state - default to theme-appropriate style
   const [selectedLayer, setSelectedLayer] = useState<MapLayer>(isDark ? 'dark' : 'light');
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [recentTrips, setRecentTrips] = useState<DBTrip[]>([]);
   const mapViewRef = useRef<any>(null);
-  
+
   // Track if user has manually changed the layer
   const hasUserChangedLayer = useRef(false);
+
+  // Load recent trips for map display
+  useEffect(() => {
+    loadRecentTrips();
+  }, []);
+
+  const loadRecentTrips = async () => {
+    try {
+      const trips = await TripManager.getRecentTrips(10);
+      setRecentTrips(trips);
+    } catch (error) {
+      console.error('[MapsScreen] Error loading recent trips:', error);
+    }
+  };
 
   // Auto-update layer based on theme, but only if user hasn't manually changed it
   useEffect(() => {
@@ -83,9 +103,41 @@ export default function MapsScreen() {
 
   const tripsToDisplay = getTripsToDisplay();
 
-  const handleBottomSheetOption = (option: string) => {
-    console.log('[MapsScreen] Bottom sheet option pressed:', option);
-    // Handle different options (routes, elevation, surface, difficulty)
+  const handleTripPress = async (tripId: string) => {
+    console.log('[MapsScreen] Trip pressed:', tripId);
+    setSelectedTripId(tripId);
+
+    // Find the trip and center the map on it
+    const trip = recentTrips.find(t => t.id === tripId);
+    if (trip && trip.route_data && mapViewRef.current) {
+      try {
+        const route = parseRouteData(trip.route_data);
+        if (route.length > 0) {
+          // Calculate bounds for the route
+          const lats = route.map(c => c.latitude);
+          const lngs = route.map(c => c.longitude);
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const minLng = Math.min(...lngs);
+          const maxLng = Math.max(...lngs);
+
+          const centerLat = (minLat + maxLat) / 2;
+          const centerLng = (minLng + maxLng) / 2;
+          const latDelta = (maxLat - minLat) * 1.3; // Add 30% padding
+          const lngDelta = (maxLng - minLng) * 1.3;
+
+          // Animate to the trip bounds
+          mapViewRef.current.animateToRegion({
+            latitude: centerLat,
+            longitude: centerLng,
+            latitudeDelta: Math.max(latDelta, 0.01),
+            longitudeDelta: Math.max(lngDelta, 0.01),
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('[MapsScreen] Error parsing route data:', error);
+      }
+    }
   };
 
   const handleFindLocation = () => {
@@ -111,7 +163,12 @@ export default function MapsScreen() {
         >
           {/* Render trip routes based on selected mode */}
           {tripsToDisplay.map((trip) => (
-            <TripRoute key={trip.id} trip={trip} colors={colors} />
+            <TripRoute key={trip.id} trip={trip} colors={colors} isSelected={false} />
+          ))}
+
+          {/* Render recent trips from database */}
+          {recentTrips.map((trip) => (
+            <DBTripRoute key={trip.id} trip={trip} colors={colors} isSelected={selectedTripId === trip.id} />
           ))}
         </MapView>
 
@@ -132,8 +189,9 @@ export default function MapsScreen() {
 
         {/* Bottom sheet for additional options */}
         <MapBottomSheet
-          onOptionPress={handleBottomSheetOption}
+          onTripPress={handleTripPress}
           onExpandChange={setIsBottomSheetExpanded}
+          selectedTripId={selectedTripId}
         />
       </MapContainer>
     </GestureHandlerRootView>
@@ -141,9 +199,9 @@ export default function MapsScreen() {
 }
 
 /**
- * Component to render a single trip route on the map
+ * Component to render a single trip route on the map (mock trips)
  */
-function TripRoute({ trip, colors }: { trip: Trip; colors: any }) {
+function TripRoute({ trip, colors, isSelected }: { trip: Trip; colors: any; isSelected: boolean }) {
   // Convert route to GeoJSON LineString
   const routeGeoJSON = {
     type: 'FeatureCollection' as const,
@@ -170,8 +228,65 @@ function TripRoute({ trip, colors }: { trip: Trip; colors: any }) {
         id={`route-line-${trip.id}`}
         style={{
           lineColor,
-          lineWidth: 3,
-          lineOpacity: 0.7,
+          lineWidth: isSelected ? 5 : 3,
+          lineOpacity: isSelected ? 1 : 0.7,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }}
+      />
+    </ShapeSource>
+  );
+}
+
+/**
+ * Component to render a database trip route on the map
+ */
+function DBTripRoute({ trip, colors, isSelected }: { trip: DBTrip; colors: any; isSelected: boolean }) {
+  // Parse route data
+  let coordinates: Array<[number, number]> = [];
+
+  try {
+    if (trip.route_data) {
+      const route = parseRouteData(trip.route_data);
+      coordinates = route.map((coord) => [coord.longitude, coord.latitude]);
+    }
+  } catch (error) {
+    console.error('[DBTripRoute] Error parsing route data:', error);
+    return null;
+  }
+
+  if (coordinates.length < 2) {
+    return null;
+  }
+
+  // Convert route to GeoJSON LineString
+  const routeGeoJSON = {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: {
+          tripType: trip.type,
+        },
+        geometry: {
+          type: 'LineString' as const,
+          coordinates,
+        },
+      },
+    ],
+  };
+
+  // Color based on trip type
+  const lineColor = getTripTypeColor(trip.type);
+
+  return (
+    <ShapeSource id={`db-route-${trip.id}`} shape={routeGeoJSON}>
+      <LineLayer
+        id={`db-route-line-${trip.id}`}
+        style={{
+          lineColor,
+          lineWidth: isSelected ? 6 : 4,
+          lineOpacity: isSelected ? 1 : 0.6,
           lineCap: 'round',
           lineJoin: 'round',
         }}

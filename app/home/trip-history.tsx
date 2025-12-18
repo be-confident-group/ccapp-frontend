@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
 import { formatDistance, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
@@ -22,6 +23,7 @@ import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 
 export default function TripHistoryScreen() {
   const { colors } = useTheme();
+  const { unitSystem, formatWeight } = useUnits();
   const [trips, setTrips] = useState<DBTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,7 +132,7 @@ export default function TripHistoryScreen() {
           <View style={styles.tripStats}>
             <View style={styles.stat}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDistance(item.distance)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatDistance(item.distance, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.stat}>
@@ -140,7 +142,7 @@ export default function TripHistoryScreen() {
 
             <View style={styles.stat}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂</ThemedText>
-              <ThemedText style={styles.statValue}>{item.co2_saved.toFixed(2)} kg</ThemedText>
+              <ThemedText style={styles.statValue}>{formatWeight(item.co2_saved)}</ThemedText>
             </View>
           </View>
         </View>

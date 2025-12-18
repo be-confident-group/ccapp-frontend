@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useUnits } from '@/contexts/UnitsContext';
 import { database } from '@/lib/database';
 import { TripManager } from '@/lib/services';
 import { formatDistance, formatDuration, formatSpeed } from '@/lib/utils/geoCalculations';
@@ -23,6 +24,7 @@ import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { unitSystem, formatElevation, formatWeight } = useUnits();
   const [tripDetails, setTripDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -185,7 +187,7 @@ export default function TripDetailScreen() {
           <View style={[styles.statsGrid, { backgroundColor: colors.card }]}>
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDistance(trip.distance)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatDistance(trip.distance, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.statItem}>
@@ -195,22 +197,22 @@ export default function TripDetailScreen() {
 
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Speed</ThemedText>
-              <ThemedText style={styles.statValue}>{formatSpeed(trip.avg_speed)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatSpeed(trip.avg_speed, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Max Speed</ThemedText>
-              <ThemedText style={styles.statValue}>{formatSpeed(trip.max_speed)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatSpeed(trip.max_speed, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Elevation</ThemedText>
-              <ThemedText style={styles.statValue}>{trip.elevation_gain.toFixed(0)} m</ThemedText>
+              <ThemedText style={styles.statValue}>{formatElevation(trip.elevation_gain)}</ThemedText>
             </View>
 
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂ Saved</ThemedText>
-              <ThemedText style={styles.statValue}>{trip.co2_saved.toFixed(2)} kg</ThemedText>
+              <ThemedText style={styles.statValue}>{formatWeight(trip.co2_saved)}</ThemedText>
             </View>
           </View>
 
