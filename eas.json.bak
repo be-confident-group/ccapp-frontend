@@ -1,0 +1,44 @@
+{
+  "cli": {
+    "version": ">= 16.20.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_DOWNLOADS_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}",
+        "ANDROID_HOME": "/Users/ashkan/Library/Android/sdk",
+        "ANDROID_SDK_ROOT": "/Users/ashkan/Library/Android/sdk",
+        "ORG_GRADLE_PROJECT_MAPBOX_DOWNLOADS_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
+        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
+        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

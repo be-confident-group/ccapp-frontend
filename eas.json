@@ -6,33 +6,16 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "env": {
-        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
-        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
-        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}"
-      }
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
-        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
-        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}",
-        "ANDROID_HOME": "/Users/ashkan/Library/Android/sdk",
-        "ANDROID_SDK_ROOT": "/Users/ashkan/Library/Android/sdk"
       }
     },
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "${secret:RNMAPBOX_MAPS_DOWNLOAD_TOKEN}",
-        "MAPBOX_ACCESS_TOKEN": "${secret:MAPBOX_ACCESS_TOKEN}",
-        "EXPO_PUBLIC_OPENWEATHERMAP_API_KEY": "${secret:EXPO_PUBLIC_OPENWEATHERMAP_API_KEY}"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
