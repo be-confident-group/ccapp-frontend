@@ -17,6 +17,7 @@ export interface MapViewRef {
   toggle3D: () => void;
   is3DEnabled: boolean;
   resetNorth: () => void;
+  animateToRegion: (region: Region, duration?: number) => void;
 }
 
 interface MapViewProps {
@@ -88,6 +89,16 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
         cameraRef.current.setCamera({
           heading: 0,
           animationDuration: 500,
+        });
+      }
+    },
+    animateToRegion: (region: Region, duration: number = 1000) => {
+      if (cameraRef.current) {
+        const zoomLevel = calculateZoomLevel(region);
+        cameraRef.current.setCamera({
+          centerCoordinate: [region.longitude, region.latitude],
+          zoomLevel,
+          animationDuration: duration,
         });
       }
     },
