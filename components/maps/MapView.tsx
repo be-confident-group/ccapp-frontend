@@ -18,6 +18,7 @@ export interface MapViewRef {
   is3DEnabled: boolean;
   resetNorth: () => void;
   animateToRegion: (region: Region, duration?: number) => void;
+  fitBounds: (bounds: { ne: [number, number]; sw: [number, number] }, padding?: number, duration?: number) => void;
 }
 
 interface MapViewProps {
@@ -102,6 +103,11 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
         });
       }
     },
+    fitBounds: (bounds: { ne: [number, number]; sw: [number, number] }, padding: number = 100, duration: number = 800) => {
+      if (cameraRef.current) {
+        cameraRef.current.fitBounds(bounds.ne, bounds.sw, padding, duration);
+      }
+    },
   }));
 
   // Default center (London) if no region provided
@@ -172,18 +178,23 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
 
 /**
  * Calculate zoom level from region delta
+ * Using more conservative zoom levels to prevent over-zooming
  */
 function calculateZoomLevel(region: Region): number {
   // Rough approximation: smaller delta = higher zoom
   const maxDelta = Math.max(region.latitudeDelta, region.longitudeDelta);
-  if (maxDelta > 10) return 6;
-  if (maxDelta > 5) return 8;
-  if (maxDelta > 2) return 10;
-  if (maxDelta > 1) return 11;
-  if (maxDelta > 0.5) return 12;
+
+  // More conservative zoom levels
+  if (maxDelta > 10) return 5;
+  if (maxDelta > 5) return 7;
+  if (maxDelta > 2) return 9;
+  if (maxDelta > 1) return 10;
+  if (maxDelta > 0.5) return 11;
+  if (maxDelta > 0.2) return 12;
   if (maxDelta > 0.1) return 13;
-  if (maxDelta > 0.05) return 14;
-  return 15;
+  if (maxDelta > 0.05) return 13.5;
+  if (maxDelta > 0.02) return 14;
+  return 14.5; // Cap at 14.5 instead of 15
 }
 
 const styles = StyleSheet.create({

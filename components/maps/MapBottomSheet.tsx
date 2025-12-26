@@ -101,6 +101,14 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: 
 
   const handleTripPress = (tripId: string) => {
     console.log('[MapBottomSheet] Trip pressed:', tripId);
+
+    // Collapse the bottom sheet
+    translateY.value = withSpring(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom, {
+      damping: 50,
+      stiffness: 400,
+    });
+    handleExpandChange(false);
+
     if (onTripPress) {
       onTripPress(tripId);
     }

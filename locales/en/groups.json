@@ -1,9 +1,18 @@
 {
-  "title": "Groups",
+  "title": "Feed",
   "tabs": {
     "feed": "Feed",
     "discover": "Discover",
     "myGroups": "My Groups"
+  },
+  "feed": {
+    "searchPlaceholder": "Search a group, member, etc.",
+    "allGroups": "All Groups",
+    "selectGroup": "Select Group"
+  },
+  "header": {
+    "settings": "Settings",
+    "leaderboards": "Leaderboards"
   },
   "buttons": {
     "createGroup": "Create Group",
@@ -42,5 +51,13 @@
     "noGroupsMessage": "Join or create a group to get started",
     "noPosts": "No posts yet",
     "noPostsMessage": "Be the first to share something!"
+  },
+  "settings": {
+    "title": "Settings",
+    "comingSoon": "Settings coming soon"
+  },
+  "leaderboards": {
+    "title": "Leaderboards",
+    "comingSoon": "Leaderboards coming soon"
   }
 }

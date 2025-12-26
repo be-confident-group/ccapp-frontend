@@ -121,18 +121,13 @@ export default function MapsScreen() {
           const minLng = Math.min(...lngs);
           const maxLng = Math.max(...lngs);
 
-          const centerLat = (minLat + maxLat) / 2;
-          const centerLng = (minLng + maxLng) / 2;
-          const latDelta = (maxLat - minLat) * 1.3; // Add 30% padding
-          const lngDelta = (maxLng - minLng) * 1.3;
+          // Use fitBounds for smoother animation
+          // Format: [longitude, latitude]
+          const ne: [number, number] = [maxLng, maxLat];
+          const sw: [number, number] = [minLng, minLat];
 
-          // Animate to the trip bounds
-          mapViewRef.current.animateToRegion({
-            latitude: centerLat,
-            longitude: centerLng,
-            latitudeDelta: Math.max(latDelta, 0.01),
-            longitudeDelta: Math.max(lngDelta, 0.01),
-          }, 1000);
+          // Use generous padding to show more context around the trip
+          mapViewRef.current.fitBounds({ ne, sw }, 80, 800);
         }
       } catch (error) {
         console.error('[MapsScreen] Error parsing route data:', error);
