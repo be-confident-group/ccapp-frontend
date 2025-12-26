@@ -1,17 +1,121 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ChevronLeftIcon, TrophyIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
+import { useUnits } from '@/contexts/UnitsContext';
+import {
+  LeaderboardHeader,
+  FilterRow,
+  CategoryTabs,
+  SubFilterChips,
+  LeaderboardTable,
+} from '@/components/leaderboard';
+import {
+  mockLeaderboardData,
+  getLeaderboardWithCurrentUser,
+} from '@/lib/utils/mockLeaderboardData';
+import type { FeedGroup } from '@/types/feed';
+import type {
+  MainTab,
+  RidesWalksSubFilter,
+  GenderSubFilter,
+  LeaderboardCategory,
+} from '@/types/leaderboard';
 
 export default function LeaderboardsScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+  const { distanceUnit } = useUnits();
+
+  // Filter state
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(
+    // Default to current month
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  );
+  const [selectedGroup, setSelectedGroup] = useState<FeedGroup | null>(null);
+  const [mainTab, setMainTab] = useState<MainTab>('rides');
+  const [ridesWalksFilter, setRidesWalksFilter] = useState<RidesWalksSubFilter>('distance');
+  const [genderFilter, setGenderFilter] = useState<GenderSubFilter>('male');
+
+  // Get current sub-filter based on main tab
+  const currentSubFilter = mainTab === 'gender' ? genderFilter : ridesWalksFilter;
+
+  // Handle sub-filter change
+  const handleSubFilterChange = useCallback(
+    (filter: RidesWalksSubFilter | GenderSubFilter) => {
+      if (mainTab === 'gender') {
+        setGenderFilter(filter as GenderSubFilter);
+      } else {
+        setRidesWalksFilter(filter as RidesWalksSubFilter);
+      }
+    },
+    [mainTab]
+  );
+
+  // Handle main tab change - reset sub-filter to default
+  const handleMainTabChange = useCallback((tab: MainTab) => {
+    setMainTab(tab);
+    if (tab === 'gender') {
+      setGenderFilter('male');
+    } else {
+      setRidesWalksFilter('distance');
+    }
+  }, []);
+
+  // Determine the category key based on current selections
+  const categoryKey: LeaderboardCategory = useMemo(() => {
+    if (mainTab === 'gender') {
+      switch (genderFilter) {
+        case 'male':
+          return 'male_rider';
+        case 'female':
+          return 'female_rider';
+        case 'new_male':
+          return 'new_male_rider';
+        case 'new_female':
+          return 'new_female_rider';
+      }
+    } else {
+      return `${mainTab}_${ridesWalksFilter}` as LeaderboardCategory;
+    }
+  }, [mainTab, ridesWalksFilter, genderFilter]);
+
+  // Get leaderboard data
+  const leaderboardData = useMemo(() => {
+    const data = mockLeaderboardData[categoryKey];
+    if (!data) return null;
+
+    // Get users with current user highlighted
+    const users = getLeaderboardWithCurrentUser(categoryKey, 5);
+
+    return {
+      ...data,
+      users,
+    };
+  }, [categoryKey]);
+
+  // Get title and value label
+  const { title, valueType, valueLabel } = useMemo(() => {
+    const data = leaderboardData;
+    if (!data) {
+      return { title: '', valueType: 'distance' as const, valueLabel: 'Distance' };
+    }
+
+    let label = 'Distance';
+    if (data.valueType === 'trips') {
+      label = 'Trips';
+    } else {
+      label = distanceUnit === 'km' ? 'Distance (km)' : 'Distance (mi)';
+    }
+
+    return {
+      title: data.title,
+      valueType: data.valueType,
+      valueLabel: label,
+    };
+  }, [leaderboardData, distanceUnit]);
 
   return (
     <SafeAreaView
@@ -19,39 +123,30 @@ export default function LeaderboardsScreen() {
       edges={['top']}
     >
       <ThemedView style={styles.container}>
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            { backgroundColor: colors.background, borderBottomColor: colors.border },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
+        <LeaderboardHeader title={t('leaderboards.title')} />
 
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            {t('leaderboards.title')}
-          </ThemedText>
+        <FilterRow
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          selectedGroup={selectedGroup}
+          onGroupChange={setSelectedGroup}
+        />
 
-          <View style={styles.placeholder} />
-        </View>
+        <CategoryTabs selectedTab={mainTab} onTabChange={handleMainTabChange} />
 
-        {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <TrophyIcon size={80} color={colors.textMuted} />
-          </View>
-          <ThemedText style={[styles.title, { color: colors.textSecondary }]}>
-            {t('leaderboards.comingSoon')}
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: colors.textMuted }]}>
-            Compete with friends and group members. See who walks, rides, and runs the most!
-          </ThemedText>
+        <SubFilterChips
+          mainTab={mainTab}
+          selectedFilter={currentSubFilter}
+          onFilterChange={handleSubFilterChange}
+        />
+
+        <View style={styles.tableContainer}>
+          <LeaderboardTable
+            title={title}
+            users={leaderboardData?.users || []}
+            valueType={valueType}
+            valueLabel={valueLabel}
+          />
         </View>
       </ThemedView>
     </SafeAreaView>
@@ -65,45 +160,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
+  tableContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
-  },
-  iconContainer: {
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

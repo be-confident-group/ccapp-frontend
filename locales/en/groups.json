@@ -58,6 +58,40 @@
   },
   "leaderboards": {
     "title": "Leaderboards",
-    "comingSoon": "Leaderboards coming soon"
+    "comingSoon": "Leaderboards coming soon",
+    "selectMonth": "Select Month",
+    "allTime": "All Time",
+    "tabs": {
+      "rides": "Rides",
+      "walks": "Walks",
+      "gender": "Gender"
+    },
+    "filters": {
+      "distance": "Distance",
+      "trips": "Trips",
+      "topMale": "Top Male",
+      "topFemale": "Top Female",
+      "newMale": "New Male",
+      "newFemale": "New Female"
+    },
+    "categories": {
+      "ridesDistance": "Top Riders - Distance",
+      "ridesTrips": "Top Riders - Trips",
+      "walksDistance": "Top Walkers - Distance",
+      "walksTrips": "Top Walkers - Trips",
+      "maleRider": "Top Male Riders",
+      "femaleRider": "Top Female Riders",
+      "newMaleRider": "Top New Male Riders",
+      "newFemaleRider": "Top New Female Riders"
+    },
+    "table": {
+      "rank": "#",
+      "name": "Name",
+      "distance": "Distance",
+      "trips": "Trips"
+    },
+    "empty": {
+      "noData": "No data for this period"
+    }
   }
 }
