@@ -40,7 +40,8 @@ export interface User {
   date_of_birth?: string;
   gender?: 'M' | 'F' | 'O' | '';
   profile_picture?: string;  // Backend returns profile_picture at root level
-  date_joined?: string;  // When user created their account (e.g., "Sep 2025")
+  date_joined?: string;  // When user created their account (e.g., "Sep 2025") - deprecated
+  joined_at?: string;  // ISO date string from backend (e.g., "2025-01-15T10:30:00Z")
   profile?: UserProfile;  // Keep for backward compatibility
 }
 

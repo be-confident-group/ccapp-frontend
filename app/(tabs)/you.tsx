@@ -81,6 +81,16 @@ export default function YouScreen() {
       
       console.log('[YouScreen] Setting profile picture to:', profilePicture);
 
+      // Format joined date from backend's joined_at field
+      let joinedDateDisplay = 'Date not found';
+      if (user.joined_at) {
+        const joinedDate = new Date(user.joined_at);
+        joinedDateDisplay = joinedDate.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+
       setUserProfile({
         firstName: user.name || user.first_name || 'User',
         lastName: user.last_name || '',
@@ -88,7 +98,7 @@ export default function YouScreen() {
         dateOfBirth: user.date_of_birth || user.profile?.date_of_birth || '',
         gender: user.gender || user.profile?.gender || '',
         profilePicture: profilePicture,
-        joinedDate: user.date_joined || user.profile?.joined_date || 'Recently',
+        joinedDate: joinedDateDisplay,
       });
     } catch (error) {
       console.error('[YouScreen] Failed to fetch profile:', error);

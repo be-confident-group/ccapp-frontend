@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -8,21 +8,22 @@ import { useUnits } from '@/contexts/UnitsContext';
 import {
   LeaderboardHeader,
   FilterRow,
-  CategoryTabs,
-  SubFilterChips,
+  ActivityToggle,
+  SortToggle,
+  GenderToggle,
   LeaderboardTable,
 } from '@/components/leaderboard';
 import {
   mockLeaderboardData,
   getLeaderboardWithCurrentUser,
 } from '@/lib/utils/mockLeaderboardData';
+import { Spacing } from '@/constants/theme';
 import type { FeedGroup } from '@/types/feed';
-import type {
-  MainTab,
-  RidesWalksSubFilter,
-  GenderSubFilter,
-  LeaderboardCategory,
-} from '@/types/leaderboard';
+import type { LeaderboardCategory } from '@/types/leaderboard';
+
+type ActivityType = 'walks' | 'rides';
+type SortBy = 'distance' | 'trips';
+type GenderFilter = 'all' | 'male' | 'female';
 
 export default function LeaderboardsScreen() {
   const { t } = useTranslation('groups');
@@ -35,52 +36,21 @@ export default function LeaderboardsScreen() {
     `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   );
   const [selectedGroup, setSelectedGroup] = useState<FeedGroup | null>(null);
-  const [mainTab, setMainTab] = useState<MainTab>('rides');
-  const [ridesWalksFilter, setRidesWalksFilter] = useState<RidesWalksSubFilter>('distance');
-  const [genderFilter, setGenderFilter] = useState<GenderSubFilter>('male');
-
-  // Get current sub-filter based on main tab
-  const currentSubFilter = mainTab === 'gender' ? genderFilter : ridesWalksFilter;
-
-  // Handle sub-filter change
-  const handleSubFilterChange = useCallback(
-    (filter: RidesWalksSubFilter | GenderSubFilter) => {
-      if (mainTab === 'gender') {
-        setGenderFilter(filter as GenderSubFilter);
-      } else {
-        setRidesWalksFilter(filter as RidesWalksSubFilter);
-      }
-    },
-    [mainTab]
-  );
-
-  // Handle main tab change - reset sub-filter to default
-  const handleMainTabChange = useCallback((tab: MainTab) => {
-    setMainTab(tab);
-    if (tab === 'gender') {
-      setGenderFilter('male');
-    } else {
-      setRidesWalksFilter('distance');
-    }
-  }, []);
+  const [activityType, setActivityType] = useState<ActivityType>('rides'); // Default to rides
+  const [sortBy, setSortBy] = useState<SortBy>('distance');
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
 
   // Determine the category key based on current selections
   const categoryKey: LeaderboardCategory = useMemo(() => {
-    if (mainTab === 'gender') {
-      switch (genderFilter) {
-        case 'male':
-          return 'male_rider';
-        case 'female':
-          return 'female_rider';
-        case 'new_male':
-          return 'new_male_rider';
-        case 'new_female':
-          return 'new_female_rider';
-      }
+    if (genderFilter === 'male') {
+      return 'male_rider';
+    } else if (genderFilter === 'female') {
+      return 'female_rider';
     } else {
-      return `${mainTab}_${ridesWalksFilter}` as LeaderboardCategory;
+      // All genders
+      return `${activityType}_${sortBy}` as LeaderboardCategory;
     }
-  }, [mainTab, ridesWalksFilter, genderFilter]);
+  }, [activityType, sortBy, genderFilter]);
 
   // Get leaderboard data
   const leaderboardData = useMemo(() => {
@@ -110,12 +80,24 @@ export default function LeaderboardsScreen() {
       label = distanceUnit === 'km' ? 'Distance (km)' : 'Distance (mi)';
     }
 
+    // Custom title based on filters
+    let customTitle = '';
+    if (genderFilter === 'male') {
+      customTitle = activityType === 'rides' ? 'Top Male Riders' : 'Top Male Walkers';
+    } else if (genderFilter === 'female') {
+      customTitle = activityType === 'rides' ? 'Top Female Riders' : 'Top Female Walkers';
+    } else {
+      const activityLabel = activityType === 'rides' ? 'Riders' : 'Walkers';
+      const sortLabel = sortBy === 'distance' ? 'Distance' : 'Trips';
+      customTitle = `Top ${activityLabel} - ${sortLabel}`;
+    }
+
     return {
-      title: data.title,
+      title: customTitle,
       valueType: data.valueType,
       valueLabel: label,
     };
-  }, [leaderboardData, distanceUnit]);
+  }, [leaderboardData, distanceUnit, activityType, sortBy, genderFilter]);
 
   return (
     <SafeAreaView
@@ -125,19 +107,25 @@ export default function LeaderboardsScreen() {
       <ThemedView style={styles.container}>
         <LeaderboardHeader title={t('leaderboards.title')} />
 
+        <View style={styles.topControlsRow}>
+          <View style={styles.activityToggle}>
+            <ActivityToggle selected={activityType} onToggle={setActivityType} />
+          </View>
+
+          <View style={styles.sortToggle}>
+            <SortToggle selected={sortBy} onToggle={setSortBy} />
+          </View>
+        </View>
+
+        <View style={styles.genderToggleContainer}>
+          <GenderToggle selected={genderFilter} onToggle={setGenderFilter} />
+        </View>
+
         <FilterRow
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
           selectedGroup={selectedGroup}
           onGroupChange={setSelectedGroup}
-        />
-
-        <CategoryTabs selectedTab={mainTab} onTabChange={handleMainTabChange} />
-
-        <SubFilterChips
-          mainTab={mainTab}
-          selectedFilter={currentSubFilter}
-          onFilterChange={handleSubFilterChange}
         />
 
         <View style={styles.tableContainer}>
@@ -159,6 +147,23 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  topControlsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: 6,
+    gap: Spacing.sm,
+  },
+  activityToggle: {
+    flex: 1,
+  },
+  sortToggle: {
+    flex: 1,
+  },
+  genderToggleContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 6,
   },
   tableContainer: {
     flex: 1,
