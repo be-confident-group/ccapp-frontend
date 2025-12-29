@@ -40,12 +40,24 @@ export interface UserProfile {
   gender: string;
   profile_picture: string | null;
   stats: {
-    total_distance: number;
+    total_distance_ride: number;
     total_rides: number;
+    total_distance_walk: number;
+    total_walks: number;
     co2_saved: number;
     current_streak: number;
   };
   trophies: Trophy[];
+  records?: {
+    longest_distance_walk: number | null;
+    longest_distance_ride: number | null;
+    longest_duration_walk: number;
+    longest_duration_ride: number;
+    most_trips_day: number | null;
+    most_trips_week: number | null;
+    most_trips_month: number | null;
+    longest_streak: number | null;
+  };
 }
 
 const TROPHY_CACHE_KEY = '@radzi_cached_trophies';
@@ -61,11 +73,7 @@ class TrophyAPI {
    */
   async getTrophies(): Promise<Trophy[]> {
     try {
-      console.log('[TrophyAPI] Fetching trophies from backend...');
-
       const trophies = await apiClient.get<Trophy[]>('/api/trophies/');
-
-      console.log(`[TrophyAPI] Fetched ${trophies.length} trophies`);
 
       // Update cache
       await this.cacheTrophies(trophies);
@@ -83,8 +91,6 @@ class TrophyAPI {
    */
   async getUserProfile(): Promise<UserProfile> {
     try {
-      console.log('[TrophyAPI] Fetching user profile...');
-
       const profile = await apiClient.get<UserProfile>('/api/profile/');
 
       // Update trophy cache with profile trophies

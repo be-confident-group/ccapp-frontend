@@ -5,8 +5,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useRef, useState, useCallback } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
 import {
   ArrowsPointingOutIcon,
@@ -22,6 +22,8 @@ import { formatDate } from '@/lib/i18n/formatters';
 import { useTracking } from '@/contexts/TrackingContext';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
+import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
+import { trophyAPI, type Trophy, type UserProfile } from '@/lib/api/trophies';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -31,10 +33,41 @@ export default function HomeScreen() {
   const { weather, loading: weatherLoading } = useWeather();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
+  const [isTrophyModalOpen, setIsTrophyModalOpen] = useState(false);
+  const [selectedTrophy, setSelectedTrophy] = useState<Trophy | null>(null);
+  const [trophies, setTrophies] = useState<Trophy[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
   const weatherIconName =
     (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
+
+  // Load user profile and trophies from backend
+  const loadUserData = useCallback(async () => {
+    try {
+      // Load profile for stats
+      const profile = await trophyAPI.getUserProfile();
+      setUserProfile(profile);
+
+      // Load trophies separately since /api/profile/ may not include them
+      const fetchedTrophies = await trophyAPI.getTrophies();
+      setTrophies(fetchedTrophies);
+    } catch (err) {
+      console.error('[HomeScreen] Error loading user profile:', err);
+      // Fallback to cached trophies if available
+      const cached = await trophyAPI.getCachedTrophies();
+      if (cached) {
+        setTrophies(cached);
+      }
+    }
+  }, []);
+
+  // Refresh user data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+    }, [loadUserData])
+  );
 
   const openMenu = () => {
     if (toggleRef.current && toggleRef.current.measureInWindow) {
@@ -219,7 +252,9 @@ export default function HomeScreen() {
                   <View style={styles.statIconWrapper}>
                     <Image source={require('@/assets/images/page-icons/walking.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>{kmToDistance(125.5).toFixed(1)}</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {kmToDistance(userProfile?.stats.total_distance_walk || 0).toFixed(1)}
+                  </ThemedText>
                   <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} walked</ThemedText>
                 </View>
 
@@ -229,7 +264,9 @@ export default function HomeScreen() {
                   <View style={styles.statIconWrapper}>
                     <Image source={require('@/assets/images/page-icons/cycling.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>{kmToDistance(42.3).toFixed(1)}</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {kmToDistance(userProfile?.stats.total_distance_ride || 0).toFixed(1)}
+                  </ThemedText>
                   <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} ride</ThemedText>
                 </View>
 
@@ -239,7 +276,9 @@ export default function HomeScreen() {
                   <View style={styles.statIconWrapper}>
                     <Image source={require('@/assets/images/page-icons/star.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>42</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {userProfile?.stats.total_rides || 0}
+                  </ThemedText>
                   <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{t('home:stats.rides')}</ThemedText>
                 </View>
 
@@ -249,7 +288,9 @@ export default function HomeScreen() {
                   <View style={styles.statIconWrapper}>
                     <Image source={require('@/assets/images/page-icons/co2.png')} style={styles.statIcon} />
                   </View>
-                  <ThemedText style={styles.statValue}>{kgToWeight(15.2).toFixed(1)}</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {kgToWeight(userProfile?.stats.co2_saved || 0).toFixed(1)}
+                  </ThemedText>
                   <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{weightUnit} CO₂</ThemedText>
                 </View>
               </View>
@@ -264,7 +305,7 @@ export default function HomeScreen() {
                   <ThemedText style={styles.summaryTitle}>{t('home:messages.greatProgress')}</ThemedText>
                 </View>
                 <ThemedText style={[styles.summaryText, { color: colors.textSecondary }]}>
-                  You've walked {formatDistance(125.5)} and rode {formatDistance(42.3)} this week, saving {formatWeight(15.2)} of CO₂. Your recent {formatDistance(8)} evening ride brought you closer to your weekly goal. Keep up the amazing work!
+                  You've walked {formatDistance(userProfile?.stats.total_distance_walk || 0)} and rode {formatDistance(userProfile?.stats.total_distance_ride || 0)}, saving {formatWeight(userProfile?.stats.co2_saved || 0)} of CO₂. Keep up the amazing work!
                 </ThemedText>
               </View>
               </View>
@@ -289,30 +330,45 @@ export default function HomeScreen() {
                 {/* Week Days */}
                 <View style={styles.streakCalendar}>
                   <View style={styles.weekDays}>
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
-                      const isToday = index === 3; // Thursday is today (index 3)
-                      return (
-                        <View key={index} style={styles.dayContainer}>
-                          <View style={[
-                            styles.dayCircle,
-                            { 
-                              backgroundColor: isToday ? '#EF4444' : colors.card,
-                              borderColor: isToday ? '#EF4444' : colors.border,
-                            }
-                          ]}>
-                            <ThemedText style={[
-                              styles.dayText,
-                              { color: isToday ? '#FFFFFF' : colors.text }
+                    {(() => {
+                      // Get the last 7 days, ending with today
+                      const today = new Date();
+                      const currentStreak = userProfile?.stats.current_streak || 0;
+                      const days = [];
+
+                      for (let i = 6; i >= 0; i--) {
+                        const date = new Date(today);
+                        date.setDate(today.getDate() - i);
+                        const dayLetter = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
+                        const isToday = i === 0;
+                        // Highlight if within current streak (counting back from today)
+                        const isActive = i < currentStreak;
+
+                        days.push(
+                          <View key={i} style={styles.dayContainer}>
+                            <View style={[
+                              styles.dayCircle,
+                              {
+                                backgroundColor: isActive ? '#EF4444' : colors.card,
+                                borderColor: isActive ? '#EF4444' : colors.border,
+                              }
                             ]}>
-                              {day}
-                            </ThemedText>
+                              <ThemedText style={[
+                                styles.dayText,
+                                { color: isActive ? '#FFFFFF' : colors.text }
+                              ]}>
+                                {dayLetter}
+                              </ThemedText>
+                            </View>
+                            {isToday && (
+                              <View style={styles.todayIndicator} />
+                            )}
                           </View>
-                          {isToday && (
-                            <View style={styles.todayIndicator} />
-                          )}
-                        </View>
-                      );
-                    })}
+                        );
+                      }
+
+                      return days;
+                    })()}
                   </View>
                 </View>
                 
@@ -323,7 +379,9 @@ export default function HomeScreen() {
                 <View style={styles.streakSummary}>
                   <View style={styles.streakHeader}>
                     <FireIcon size={18} color="#EF4444" />
-                    <ThemedText style={styles.streakTitle}>{t('home:streak.title', { count: 1 })}</ThemedText>
+                    <ThemedText style={styles.streakTitle}>
+                      {t('home:streak.title', { count: userProfile?.stats.current_streak || 0 })}
+                    </ThemedText>
                   </View>
                   <ThemedText style={[styles.callToAction, { color: colors.textSecondary }]}>
                     {t('home:streak.cta')} 🚴
@@ -356,32 +414,37 @@ export default function HomeScreen() {
                   contentContainerStyle={styles.trophiesScrollContent}
                   style={styles.trophiesScroll}
                 >
-                  {[
-                    { id: 1, title: 'First Ride', earned: true },
-                    { id: 2, title: 'First Walk', earned: true },
-                    { id: 3, title: 'Rides', earned: true },
-                    { id: 4, title: 'Walks', earned: false },
-                    { id: 5, title: 'Century', earned: false },
-                    { id: 6, title: 'Distance', earned: true },
-                    { id: 7, title: 'Explorer', earned: true },
-                    { id: 8, title: 'Streak', earned: false },
-                  ].map((trophy) => (
-                    <TouchableOpacity
-                      key={trophy.id}
-                      style={[
-                        styles.trophyItem,
-                        { opacity: trophy.earned ? 1 : 0.4 }
-                      ]}
-                      onPress={() => router.push(`/home/badge-detail?id=${trophy.id}`)}
-                    >
-                      <View style={styles.trophyIconWrapper}>
-                        <Image source={require('@/assets/images/page-icons/trophy.png')} style={styles.trophyIcon} />
-                      </View>
-                      <ThemedText style={styles.trophyTitle} numberOfLines={2}>
-                        {trophy.title}
+                  {trophies.length === 0 ? (
+                    <View style={styles.emptyTrophiesContainer}>
+                      <ThemedText style={[styles.emptyTrophiesText, { color: colors.textSecondary }]}>
+                        No trophies available yet
                       </ThemedText>
-                    </TouchableOpacity>
-                  ))}
+                    </View>
+                  ) : (
+                    trophies.map((trophy) => (
+                      <TouchableOpacity
+                        key={trophy.code}
+                        style={styles.trophyItem}
+                        onPress={() => {
+                          setSelectedTrophy(trophy);
+                          setIsTrophyModalOpen(true);
+                        }}
+                      >
+                        <View style={styles.trophyIconWrapper}>
+                          <Image
+                            source={require('@/assets/images/page-icons/trophy.png')}
+                            style={[
+                              styles.trophyIcon,
+                              { opacity: trophy.is_earned ? 1 : 0.4 }
+                            ]}
+                          />
+                        </View>
+                        <ThemedText style={styles.trophyTitle} numberOfLines={2}>
+                          {trophy.name}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </ScrollView>
 
                 {/* Divider */}
@@ -485,6 +548,13 @@ export default function HomeScreen() {
           visible={isWeatherModalOpen}
           onClose={() => setIsWeatherModalOpen(false)}
           weather={weather}
+        />
+
+        {/* Trophy Details Modal */}
+        <TrophyDetailsModal
+          visible={isTrophyModalOpen}
+          onClose={() => setIsTrophyModalOpen(false)}
+          trophy={selectedTrophy}
         />
       </ThemedView>
     </SafeAreaView>
@@ -763,10 +833,24 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   trophyTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
-    maxWidth: 80,
+    maxWidth: 90,
+    lineHeight: 14,
+  },
+  trophyEmoji: {
+    fontSize: 48,
+  },
+  emptyTrophiesContainer: {
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTrophiesText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   trophiesSummary: {
     padding: Spacing.md,

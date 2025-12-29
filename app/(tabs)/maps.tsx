@@ -11,8 +11,7 @@ import { MapView } from '@/components/maps/MapView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useMapMode } from '@/lib/hooks/useMapMode';
-import { mockCommunityTrips, mockPersonalTrips, mockUserLocation } from '@/lib/utils/mockMapData';
-import type { Trip } from '@/types';
+import { mockUserLocation } from '@/lib/utils/mockMapData';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -92,17 +91,6 @@ export default function MapsScreen() {
     );
   }
 
-  // Determine which trips to show based on mode
-  const getTripsToDisplay = () => {
-    if (viewMode === 'heatmap') {
-      return heatmapMode === 'personal' ? mockPersonalTrips : mockCommunityTrips;
-    }
-    // For feedback mode, we'll show routes but add markers in Phase 5
-    return heatmapMode === 'personal' ? mockPersonalTrips : mockCommunityTrips;
-  };
-
-  const tripsToDisplay = getTripsToDisplay();
-
   const handleTripPress = async (tripId: string) => {
     console.log('[MapsScreen] Trip pressed:', tripId);
     setSelectedTripId(tripId);
@@ -156,11 +144,6 @@ export default function MapsScreen() {
           followUserLocation={false}
           selectedLayer={selectedLayer}
         >
-          {/* Render trip routes based on selected mode */}
-          {tripsToDisplay.map((trip) => (
-            <TripRoute key={trip.id} trip={trip} colors={colors} isSelected={false} />
-          ))}
-
           {/* Render recent trips from database */}
           {recentTrips.map((trip) => (
             <DBTripRoute key={trip.id} trip={trip} colors={colors} isSelected={selectedTripId === trip.id} />
@@ -190,46 +173,6 @@ export default function MapsScreen() {
         />
       </MapContainer>
     </GestureHandlerRootView>
-  );
-}
-
-/**
- * Component to render a single trip route on the map (mock trips)
- */
-function TripRoute({ trip, colors, isSelected }: { trip: Trip; colors: any; isSelected: boolean }) {
-  // Convert route to GeoJSON LineString
-  const routeGeoJSON = {
-    type: 'FeatureCollection' as const,
-    features: [
-      {
-        type: 'Feature' as const,
-        properties: {
-          tripType: trip.type,
-        },
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: trip.route.map((coord) => [coord.longitude, coord.latitude]),
-        },
-      },
-    ],
-  };
-
-  // Color based on trip type
-  const lineColor = trip.type === 'cycle' ? colors.primary : colors.accent;
-
-  return (
-    <ShapeSource id={`route-${trip.id}`} shape={routeGeoJSON}>
-      <LineLayer
-        id={`route-line-${trip.id}`}
-        style={{
-          lineColor,
-          lineWidth: isSelected ? 5 : 3,
-          lineOpacity: isSelected ? 1 : 0.7,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }}
-      />
-    </ShapeSource>
   );
 }
 

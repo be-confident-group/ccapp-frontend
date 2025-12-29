@@ -8,12 +8,15 @@ import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { trophyAPI, type Trophy } from '@/lib/api/trophies';
+import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
 
 export default function TrophiesScreen() {
   const { colors } = useTheme();
   const [trophies, setTrophies] = useState<Trophy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTrophyModalOpen, setIsTrophyModalOpen] = useState(false);
+  const [selectedTrophy, setSelectedTrophy] = useState<Trophy | null>(null);
 
   const loadTrophies = useCallback(async () => {
     try {
@@ -41,8 +44,9 @@ export default function TrophiesScreen() {
     }, [loadTrophies])
   );
 
-  const handleTrophyPress = (trophyCode: string) => {
-    router.push(`/home/badge-detail?code=${trophyCode}`);
+  const handleTrophyPress = (trophy: Trophy) => {
+    setSelectedTrophy(trophy);
+    setIsTrophyModalOpen(true);
   };
 
   return (
@@ -92,30 +96,36 @@ export default function TrophiesScreen() {
             </View>
           )}
 
+          {/* Empty State - No trophies available */}
+          {!loading && !error && trophies.length === 0 && (
+            <View style={styles.centerContainer}>
+              <ThemedText style={styles.emptyTitle}>No trophies available</ThemedText>
+              <ThemedText style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                Trophies will appear here once they are configured. Start riding and walking to earn them!
+              </ThemedText>
+            </View>
+          )}
+
           {/* Trophies Grid */}
           {!loading && trophies.length > 0 && (
-            <>
-              {/* Summary */}
-              <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
-                <ThemedText style={styles.summaryText}>
-                  {trophyAPI.getEarnedTrophies(trophies).length} of {trophies.length} trophies earned
-                </ThemedText>
-              </View>
-
-              <View style={styles.trophiesGrid}>
+            <View style={styles.trophiesGrid}>
                 {trophies.map((trophy) => (
                   <TouchableOpacity
                     key={trophy.code}
                     style={styles.trophyWrapper}
-                    onPress={() => handleTrophyPress(trophy.code)}
+                    onPress={() => handleTrophyPress(trophy)}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.trophyCard, { opacity: trophy.is_earned ? 1 : 0.4 }]}>
+                    <View style={styles.trophyCard}>
                       {/* Trophy Icon */}
                       <View style={styles.trophyContainer}>
-                        <ThemedText style={styles.trophyEmoji}>
-                          {trophyAPI.getTrophyIcon(trophy)}
-                        </ThemedText>
+                        <Image
+                          source={require('@/assets/images/page-icons/trophy.png')}
+                          style={[
+                            styles.trophyImage,
+                            { opacity: trophy.is_earned ? 1 : 0.4 }
+                          ]}
+                        />
                       </View>
 
                       {/* Trophy Title */}
@@ -128,28 +138,19 @@ export default function TrophiesScreen() {
                       >
                         {trophy.name}
                       </ThemedText>
-
-                      {/* Progress Bar for Unearned Trophies */}
-                      {!trophy.is_earned && trophy.progress > 0 && (
-                        <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
-                          <View
-                            style={[
-                              styles.progressBar,
-                              {
-                                backgroundColor: colors.primary,
-                                width: `${trophy.progress}%`
-                              }
-                            ]}
-                          />
-                        </View>
-                      )}
                     </View>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </>
+            </View>
           )}
         </ScrollView>
+
+        {/* Trophy Details Modal */}
+        <TrophyDetailsModal
+          visible={isTrophyModalOpen}
+          onClose={() => setIsTrophyModalOpen(false)}
+          trophy={selectedTrophy}
+        />
       </ThemedView>
     </SafeAreaView>
   );
@@ -221,15 +222,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  summaryCard: {
-    padding: Spacing.md,
-    borderRadius: 12,
-    marginBottom: Spacing.lg,
-    alignItems: 'center',
-  },
-  summaryText: {
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+    lineHeight: 20,
   },
   trophiesGrid: {
     flexDirection: 'row',
@@ -250,10 +252,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trophyEmoji: {
-    fontSize: 48,
-  },
-  trophyIcon: {
+  trophyImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'contain',
@@ -262,17 +261,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     fontWeight: '500',
-  },
-  progressBarContainer: {
-    width: '100%',
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: Spacing.xs,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 2,
   },
 });
 
