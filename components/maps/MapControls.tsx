@@ -39,28 +39,18 @@ export function MapControls({
 
   const [showLayerSelector, setShowLayerSelector] = React.useState(false);
 
-  // Position buttons just above bottom sheet
-  const bottomPosition = insets.bottom + 152;
-  
-  // Consistent spacing between all buttons
-  const buttonGap = Spacing.sm; // 8px gap between all buttons
-  
-  // Calculate positions with consistent spacing
-  // Action buttons container has 2 buttons (44px each) + 1 gap (8px) = 96px total height
-  const actionButtonsHeight = 96;
-  const subModeToggleHeight = 86; // 2 buttons (36px each) + gap (6px) + padding (8px) = 86px
+  // Consistent spacing between all elements
+  const buttonGap = Spacing.sm; // 8px gap
 
   return (
     <>
-      {/* Top Right Mode Toggle - Pill shaped segmented control */}
+      {/* Top Right Controls Stack */}
       <View style={[styles.topRightContainer, { top: insets.top + Spacing.md }]} pointerEvents="box-none">
+        {/* Heatmap/Feedback Mode Toggle */}
         <MapModeToggle activeMode={viewMode} onModeChange={onViewModeChange} />
-      </View>
 
-      {/* Bottom Right Controls - Always visible, z-index handles layering */}
-      <>
-        {/* Vertical Sub-mode toggle - Above buttons with matching spacing */}
-        <View style={[styles.subModeContainer, { bottom: bottomPosition + actionButtonsHeight + buttonGap }]} pointerEvents="box-none">
+        {/* Global/Personal Sub-mode Toggle */}
+        <View style={{ marginTop: buttonGap }}>
           <MapSubModeToggle
             mode={viewMode}
             activeSubMode={viewMode === 'heatmap' ? heatmapMode : feedbackMode}
@@ -74,17 +64,14 @@ export function MapControls({
           />
         </View>
 
-        {/* Action Buttons */}
-        <View
-          style={[styles.actionButtonsContainer, { bottom: bottomPosition }]}
-          pointerEvents="box-none"
-        >
+        {/* Layers and Location Buttons */}
+        <View style={{ marginTop: buttonGap }}>
           <MapActionButtons
             onLayersPress={() => setShowLayerSelector(true)}
             onFindLocation={onFindLocation}
           />
         </View>
-      </>
+      </View>
 
       {/* Layer selector modal */}
       {showLayerSelector && (
@@ -106,17 +93,5 @@ const styles = StyleSheet.create({
     right: Spacing.md,
     zIndex: 100,
     alignItems: 'flex-end',
-  },
-  subModeContainer: {
-    position: 'absolute',
-    right: Spacing.md,
-    zIndex: 100,
-    alignItems: 'flex-end',
-  },
-  actionButtonsContainer: {
-    position: 'absolute',
-    right: Spacing.md,
-    zIndex: 100,
-    elevation: 10,
   },
 });

@@ -1,4 +1,4 @@
-import { Spacing } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
@@ -28,7 +28,7 @@ export function MapActionButtons({
         onPress={onLayersPress}
         android_ripple={{ color: colors.primary + '20' }}
       >
-        <MaterialIcons name="layers" size={24} color={colors.text} />
+        <MaterialIcons name="layers" size={22} color={colors.text} />
       </Pressable>
 
       {/* Find My Location Button */}
@@ -37,7 +37,7 @@ export function MapActionButtons({
         onPress={onFindLocation}
         android_ripple={{ color: colors.primary + '20' }}
       >
-        <MaterialIcons name="my-location" size={24} color={colors.primary} />
+        <MaterialIcons name="my-location" size={22} color={colors.primary} />
       </Pressable>
     </View>
   );
@@ -48,9 +48,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   button: {
-    width: 44,
-    height: 44,
-    borderRadius: 22, // Circular button
+    width: 41,
+    height: 41,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

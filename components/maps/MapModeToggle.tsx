@@ -3,6 +3,7 @@ import type { MapViewMode } from '@/types/mapMode';
 import { MAP_MODE_LABELS } from '@/types/mapMode';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BorderRadius } from '@/constants/theme';
 
 interface MapModeToggleProps {
   activeMode: MapViewMode;
@@ -73,23 +74,23 @@ export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderRadius: 24,
+    borderRadius: BorderRadius.md,
     padding: 4,
     alignSelf: 'flex-start',
     borderWidth: 1,
     gap: 4,
   },
   button: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 18,
-    minWidth: 105,
+    paddingVertical: 9,
+    paddingHorizontal: 22,
+    borderRadius: BorderRadius.sm,
+    minWidth: 98,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

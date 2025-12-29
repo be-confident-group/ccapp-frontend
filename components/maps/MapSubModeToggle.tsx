@@ -4,6 +4,7 @@ import { MAP_MODE_LABELS } from '@/types/mapMode';
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { BorderRadius } from '@/constants/theme';
 
 interface MapSubModeToggleProps {
   mode: 'heatmap' | 'feedback';
@@ -60,10 +61,10 @@ export function MapSubModeToggle({ mode, activeSubMode, onSubModeChange }: MapSu
               },
             ]}
           >
-            <MaterialIcons 
-              name={subMode.icon as any} 
-              size={22} 
-              color={isActive ? '#000000' : inactiveIconColor} 
+            <MaterialIcons
+              name={subMode.icon as any}
+              size={20}
+              color={isActive ? '#000000' : inactiveIconColor}
             />
           </Pressable>
         );
@@ -75,7 +76,7 @@ export function MapSubModeToggle({ mode, activeSubMode, onSubModeChange }: MapSu
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
-    borderRadius: 22,
+    borderRadius: BorderRadius.md,
     padding: 4,
     gap: 6,
     borderWidth: 1,
@@ -86,9 +87,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 33,
+    height: 33,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
