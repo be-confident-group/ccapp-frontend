@@ -221,11 +221,6 @@ export default function HomeScreen() {
                     {unratedTripsCount > 0 ? `${unratedTripsCount} trips to rate` : 'All rated!'}
                   </ThemedText>
                 </View>
-                {unratedTripsCount > 0 && (
-                  <View style={[styles.tileBadge, { backgroundColor: colors.accent }]}>
-                    <ThemedText style={styles.tileBadgeText}>{unratedTripsCount}</ThemedText>
-                  </View>
-                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -650,22 +645,6 @@ const styles = StyleSheet.create({
   tileSubtitle: {
     fontSize: 11,
     marginTop: -2,
-  },
-  tileBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tileBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
   },
   iconHighlight: {
     position: 'absolute',

@@ -11,6 +11,7 @@ import { MapView } from '@/components/maps/MapView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useMapMode } from '@/lib/hooks/useMapMode';
+import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import { mockUserLocation } from '@/lib/utils/mockMapData';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState } from 'react';
@@ -33,15 +34,13 @@ export default function MapsScreen() {
     setFeedbackMode,
   } = useMapMode();
 
-  // Layer selector state - default to theme-appropriate style
-  const [selectedLayer, setSelectedLayer] = useState<MapLayer>(isDark ? 'dark' : 'light');
+  // Use persistent map layer hook
+  const { selectedLayer, setSelectedLayer } = useMapLayer(isDark);
+
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [recentTrips, setRecentTrips] = useState<DBTrip[]>([]);
   const mapViewRef = useRef<any>(null);
-
-  // Track if user has manually changed the layer
-  const hasUserChangedLayer = useRef(false);
 
   // Load recent trips for map display
   useEffect(() => {
@@ -57,16 +56,8 @@ export default function MapsScreen() {
     }
   };
 
-  // Auto-update layer based on theme, but only if user hasn't manually changed it
-  useEffect(() => {
-    if (!hasUserChangedLayer.current) {
-      setSelectedLayer(isDark ? 'dark' : 'light');
-    }
-  }, [isDark]);
-
   // Handle layer change from user interaction
   const handleLayerChange = (layer: MapLayer) => {
-    hasUserChangedLayer.current = true;
     setSelectedLayer(layer);
   };
 

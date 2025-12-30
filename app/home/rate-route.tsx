@@ -12,7 +12,6 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -311,24 +310,26 @@ export default function RateRouteScreen() {
 
           {/* Map with painting overlay */}
           <View style={styles.mapContainer}>
-            <SegmentPainter
-              route={route}
-              routeScreenPoints={routeScreenPoints}
-              selectedFeeling={selectedFeeling}
-              onSegmentPainted={handleSegmentPainted}
-              onPaintingStateChange={handlePaintingStateChange}
-              enabled={isMapReady && selectedFeeling !== null}
-              style={styles.painter}
-            >
-              <RatingMap
-                ref={mapRef}
+            <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
+              <SegmentPainter
                 route={route}
-                segments={segments}
-                previewSegment={previewSegment}
-                onMapReady={handleMapReady}
-                style={styles.map}
-              />
-            </SegmentPainter>
+                routeScreenPoints={routeScreenPoints}
+                selectedFeeling={selectedFeeling}
+                onSegmentPainted={handleSegmentPainted}
+                onPaintingStateChange={handlePaintingStateChange}
+                enabled={isMapReady && selectedFeeling !== null}
+                style={styles.painter}
+              >
+                <RatingMap
+                  ref={mapRef}
+                  route={route}
+                  segments={segments}
+                  previewSegment={previewSegment}
+                  onMapReady={handleMapReady}
+                  style={styles.map}
+                />
+              </SegmentPainter>
+            </View>
 
             {/* Painting mode indicator */}
             {selectedFeeling && (
@@ -340,7 +341,7 @@ export default function RateRouteScreen() {
               >
                 <MaterialCommunityIcons
                   name="gesture-swipe"
-                  size={18}
+                  size={16}
                   color={colors.primary}
                 />
                 <ThemedText style={styles.paintingText}>
@@ -350,78 +351,28 @@ export default function RateRouteScreen() {
             )}
           </View>
 
-          {/* Bottom panel */}
+          {/* Bottom panel - compact */}
           <View style={[styles.bottomPanel, { backgroundColor: colors.card }]}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-            >
-              {/* Feeling selector */}
-              <FeelingSelector
-                selectedFeeling={selectedFeeling}
-                onSelect={setSelectedFeeling}
-                disabled={saving}
-                style={styles.selector}
-              />
+            {/* Instruction hint */}
+            <ThemedText style={[styles.hintText, { color: colors.textSecondary }]}>
+              {selectedFeeling ? 'Now swipe on the route to paint' : 'Select a feeling to start'}
+            </ThemedText>
 
-              {/* Instructions */}
-              <View style={styles.instructions}>
-                <ThemedText
-                  style={[styles.instructionTitle, { color: colors.textSecondary }]}
-                >
-                  How to rate:
-                </ThemedText>
-                <View style={styles.instructionRow}>
-                  <MaterialCommunityIcons
-                    name="numeric-1-circle"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <ThemedText
-                    style={[styles.instructionText, { color: colors.textSecondary }]}
-                  >
-                    Select a feeling above
-                  </ThemedText>
-                </View>
-                <View style={styles.instructionRow}>
-                  <MaterialCommunityIcons
-                    name="numeric-2-circle"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <ThemedText
-                    style={[styles.instructionText, { color: colors.textSecondary }]}
-                  >
-                    Swipe on the map to paint the route
-                  </ThemedText>
-                </View>
-                <View style={styles.instructionRow}>
-                  <MaterialCommunityIcons
-                    name="numeric-3-circle"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <ThemedText
-                    style={[styles.instructionText, { color: colors.textSecondary }]}
-                  >
-                    Tap "Save Rating" when done
-                  </ThemedText>
-                </View>
-              </View>
-            </ScrollView>
+            {/* Feeling selector - compact single row */}
+            <FeelingSelector
+              selectedFeeling={selectedFeeling}
+              onSelect={setSelectedFeeling}
+              disabled={saving}
+              compact
+            />
 
             {/* Save button */}
-            <View
-              style={[
-                styles.footer,
-                { borderTopColor: colors.border },
-              ]}
-            >
+            <View style={styles.footer}>
               <Button
                 title="Save Rating"
                 onPress={handleSave}
                 variant="primary"
-                size="large"
+                size="medium"
                 fullWidth
                 loading={saving}
                 disabled={segments.length === 0}
@@ -485,6 +436,17 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     position: 'relative',
+    padding: Spacing.md,
+  },
+  mapWrapper: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   painter: {
     flex: 1,
@@ -494,23 +456,22 @@ const styles = StyleSheet.create({
   },
   paintingIndicator: {
     position: 'absolute',
-    top: Spacing.md,
-    left: '50%',
-    transform: [{ translateX: -80 }],
+    top: Spacing.lg + 4,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: 20,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
   },
   paintingText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
   bottomPanel: {
@@ -521,34 +482,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    maxHeight: '45%',
-  },
-  scrollContent: {
-    paddingBottom: Spacing.sm,
-  },
-  selector: {
-    paddingTop: Spacing.md,
-  },
-  instructions: {
-    paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
-    gap: Spacing.xs,
   },
-  instructionTitle: {
+  hintText: {
     fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  instructionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  instructionText: {
-    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
   },
   footer: {
-    padding: Spacing.md,
-    borderTopWidth: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
   },
 });

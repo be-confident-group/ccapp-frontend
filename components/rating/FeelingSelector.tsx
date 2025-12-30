@@ -24,6 +24,7 @@ interface FeelingSelectorProps {
   onSelect: (feeling: FeelingType) => void;
   disabled?: boolean;
   style?: ViewStyle;
+  compact?: boolean;
 }
 
 export default function FeelingSelector({
@@ -31,8 +32,57 @@ export default function FeelingSelector({
   onSelect,
   disabled = false,
   style,
+  compact = false,
 }: FeelingSelectorProps) {
   const { colors } = useTheme();
+
+  if (compact) {
+    return (
+      <View style={[styles.compactContainer, style]}>
+        <View style={styles.compactRow}>
+          {FEELING_ORDER.map((feelingType) => {
+            const feeling = FEELINGS[feelingType];
+            const isSelected = selectedFeeling === feelingType;
+            const feelingColor = getFeelingColor(feelingType);
+            const backgroundColor = getFeelingBackgroundColor(feelingType);
+
+            return (
+              <TouchableOpacity
+                key={feelingType}
+                style={[
+                  styles.compactButton,
+                  {
+                    backgroundColor: isSelected ? feelingColor : backgroundColor,
+                    borderColor: feelingColor,
+                    borderWidth: isSelected ? 0 : 1.5,
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+                onPress={() => onSelect(feelingType)}
+                disabled={disabled}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={feeling.icon as any}
+                  size={20}
+                  color={isSelected ? '#FFFFFF' : feelingColor}
+                />
+                <ThemedText
+                  style={[
+                    styles.compactLabel,
+                    { color: isSelected ? '#FFFFFF' : feelingColor },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {feeling.label}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]}>
@@ -110,6 +160,29 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Compact styles for single row
+  compactContainer: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  compactButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  compactLabel: {
+    fontSize: 9,
     fontWeight: '600',
     textAlign: 'center',
   },

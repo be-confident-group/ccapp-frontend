@@ -12,11 +12,15 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  ScrollView,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { InformationCircleIcon } from 'react-native-heroicons/solid';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -30,6 +34,7 @@ export default function UnratedTripsScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const loadTrips = useCallback(async () => {
     try {
@@ -157,6 +162,97 @@ export default function UnratedTripsScreen() {
             }
           />
         )}
+
+        {/* Floating Info Button */}
+        <TouchableOpacity
+          style={[styles.floatingInfoButton, { backgroundColor: colors.card }]}
+          onPress={() => setShowInfoModal(true)}
+          activeOpacity={0.9}
+        >
+          <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.primary} />
+          <ThemedText style={[styles.floatingInfoText, { color: colors.primary }]}>
+            Why rate routes?
+          </ThemedText>
+        </TouchableOpacity>
+
+        {/* Info Modal */}
+        <Modal
+          visible={showInfoModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowInfoModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowInfoModal(false)}
+          >
+            <Pressable
+              style={[styles.modalCard, { backgroundColor: colors.card }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowInfoModal(false)}
+                activeOpacity={0.7}
+              >
+                <XMarkIcon size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Header */}
+              <View style={styles.modalHeaderSection}>
+                <View style={[styles.modalIconBadge, { backgroundColor: colors.accent + '20' }]}>
+                  <MaterialCommunityIcons name="chart-line" size={28} color={colors.accent} />
+                </View>
+                <ThemedText style={[styles.modalTitle, { color: colors.text }]}>
+                  Your Routes Build Better Cities
+                </ThemedText>
+                <ThemedText style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                  Each rating you share becomes valuable data for urban planning
+                </ThemedText>
+              </View>
+
+              {/* Benefits List */}
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <View style={[styles.benefitDot, { backgroundColor: '#4CAF50' }]} />
+                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+                    Spot dangerous intersections and roads that need attention
+                  </ThemedText>
+                </View>
+
+                <View style={styles.benefitItem}>
+                  <View style={[styles.benefitDot, { backgroundColor: '#2196F3' }]} />
+                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+                    Help councils prioritize where to add bike lanes
+                  </ThemedText>
+                </View>
+
+                <View style={styles.benefitItem}>
+                  <View style={[styles.benefitDot, { backgroundColor: '#FF9800' }]} />
+                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+                    Highlight the great routes so others can discover them
+                  </ThemedText>
+                </View>
+
+                <View style={styles.benefitItem}>
+                  <View style={[styles.benefitDot, { backgroundColor: '#9C27B0' }]} />
+                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
+                    All feedback is anonymized to protect your privacy
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Footer */}
+              <View style={[styles.modalFooterNote, { backgroundColor: colors.background }]}>
+                <MaterialCommunityIcons name="lock-outline" size={16} color={colors.textSecondary} />
+                <ThemedText style={[styles.footerNoteText, { color: colors.textSecondary }]}>
+                  Your exact routes are never shared — only aggregated patterns
+                </ThemedText>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </ThemedView>
     </SafeAreaView>
   );
@@ -239,5 +335,111 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Floating Info Button
+  floatingInfoButton: {
+    position: 'absolute',
+    bottom: Spacing.lg,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  floatingInfoText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: Spacing.lg,
+    paddingTop: Spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  modalHeaderSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalIconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  benefitsList: {
+    gap: 14,
+    marginBottom: Spacing.lg,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  benefitDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalFooterNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+  },
+  footerNoteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

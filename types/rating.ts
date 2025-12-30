@@ -181,7 +181,7 @@ export function getFeelingInfo(feeling: FeelingType): FeelingInfo {
 /**
  * Color for unpainted route segments
  */
-export const UNPAINTED_COLOR = '#9CA3AF';
+export const UNPAINTED_COLOR = '#6B7280';
 
 /**
  * Convert local TripRating to API format

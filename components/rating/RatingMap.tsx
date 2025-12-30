@@ -22,6 +22,8 @@ import Mapbox, {
   CircleLayer,
 } from '@rnmapbox/maps';
 import { useTheme } from '@/contexts/ThemeContext';
+import { MapStyles } from '@/config/mapbox';
+import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import type { Coordinate } from '@/types/location';
 import type { RouteSegment, FeelingType } from '@/types/rating';
 import { getFeelingColor, UNPAINTED_COLOR } from '@/types/rating';
@@ -220,6 +222,7 @@ function calculateBounds(
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
   ({ route: rawRoute, segments, previewSegment, style, onMapReady }, ref) => {
     const { colors, isDark } = useTheme();
+    const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
     const cameraRef = useRef<Camera>(null);
     const [isMapReady, setIsMapReady] = useState(false);
@@ -280,9 +283,25 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       onMapReady?.();
     }, [onMapReady]);
 
-    const mapStyle = isDark
-      ? 'mapbox://styles/mapbox/dark-v11'
-      : 'mapbox://styles/mapbox/outdoors-v12';
+    // Convert selected layer to Mapbox style URL
+    const getStyleURL = (layer: typeof selectedLayer): string => {
+      switch (layer) {
+        case 'light':
+          return MapStyles.LIGHT;
+        case 'dark':
+          return MapStyles.DARK;
+        case 'streets':
+          return MapStyles.STREETS;
+        case 'outdoors':
+          return MapStyles.OUTDOORS;
+        case 'satellite':
+          return MapStyles.SATELLITE;
+        default:
+          return isDark ? MapStyles.DARK : MapStyles.LIGHT;
+      }
+    };
+
+    const mapStyle = getStyleURL(selectedLayer);
 
     return (
       <View style={[styles.container, style]}>
@@ -295,12 +314,14 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           zoomEnabled={true}
           rotateEnabled={true}
           pitchEnabled={false}
+          key={mapStyle}
         >
           <Camera
             ref={cameraRef}
-            zoomLevel={14}
-            centerCoordinate={initialCenter}
-            animationDuration={0}
+            defaultSettings={{
+              centerCoordinate: initialCenter,
+              zoomLevel: 14,
+            }}
           />
 
           {/* Route segments with different colors */}
@@ -310,9 +331,10 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
                 id="routeSegmentsLine"
                 style={{
                   lineColor: ['get', 'color'],
-                  lineWidth: 6,
+                  lineWidth: 8,
                   lineCap: 'round',
                   lineJoin: 'round',
+                  lineOpacity: 0.9,
                 }}
               />
             </ShapeSource>
