@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,78 +7,63 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import {
-  ChevronLeftIcon,
   PaperAirplaneIcon,
   HeartIcon as HeartIconOutline,
-  ChatBubbleOvalLeftIcon,
 } from 'react-native-heroicons/outline';
-import { HeartIcon as HeartIconSolid } from 'react-native-heroicons/solid';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { UserAvatar, PhotoGallery } from '@/components/feed';
-import { mockPosts } from '@/lib/utils/mockFeedData';
-import type { Comment } from '@/types/feed';
+import { useAddComment } from '@/lib/hooks/usePosts';
+import { useInfiniteFeed } from '@/lib/hooks/useFeed';
+import type { Post, PostComment } from '@/types/feed';
 
 export default function PostDetailScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, clubId } = useLocalSearchParams<{ id: string; clubId?: string }>();
 
-  const [post, setPost] = useState(mockPosts.find((p) => p.id === id));
   const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: '1',
-      user: {
-        id: 'u10',
-        name: 'Alex Kim',
-      },
-      text: 'Amazing ride! Wish I could join you next time.',
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: '2',
-      user: {
-        id: 'u11',
-        name: 'Sam Taylor',
-      },
-      text: 'Beautiful photos! What camera did you use?',
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ]);
 
-  const handleLike = useCallback(() => {
-    if (!post) return;
-    setPost({
-      ...post,
-      isLiked: !post.isLiked,
-      likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
-    });
-  }, [post]);
+  // Fetch post from feed data
+  const { data: feedData, isLoading } = useInfiniteFeed();
 
-  const handlePostComment = useCallback(() => {
-    if (!commentText.trim()) return;
+  // Find the post from feed data
+  const post = useMemo(() => {
+    if (!feedData?.pages || !id) return null;
 
-    const newComment: Comment = {
-      id: `${Date.now()}`,
-      user: {
-        id: 'current-user',
-        name: 'You',
-      },
-      text: commentText,
-      createdAt: new Date().toISOString(),
-    };
+    for (const page of feedData.pages) {
+      const found = page.results.find((p) => p.id.toString() === id);
+      if (found) return found;
+    }
+    return null;
+  }, [feedData, id]);
 
-    setComments((prev) => [newComment, ...prev]);
-    setCommentText('');
-  }, [commentText]);
+  const addCommentMutation = useAddComment();
+
+  const handlePostComment = useCallback(async () => {
+    if (!commentText.trim() || !post) return;
+
+    try {
+      await addCommentMutation.mutateAsync({
+        clubId: post.club_id,
+        postId: post.id,
+        text: commentText.trim(),
+      });
+
+      setCommentText('');
+    } catch (error) {
+      console.error('Failed to post comment:', error);
+      alert(error instanceof Error ? error.message : 'Failed to post comment');
+    }
+  }, [commentText, post, addCommentMutation]);
 
   const formatTimeAgo = (timestamp: string): string => {
     const now = new Date();
@@ -96,191 +81,195 @@ export default function PostDetailScreen() {
     return commentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const formatDistance = (km: number): string => {
+    return km < 1 ? `${(km * 1000).toFixed(0)}m` : `${km.toFixed(1)}km`;
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  if (isLoading) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: t('feed.post', 'Post'),
+          }}
+        />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </SafeAreaView>
+      </>
+    );
+  }
+
   if (!post) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-        <ThemedView style={styles.container}>
-          <ThemedText>Post not found</ThemedText>
-        </ThemedView>
-      </SafeAreaView>
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: t('feed.post', 'Post'),
+          }}
+        />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+          <View style={styles.loading}>
+            <ThemedText>{t('feed.postNotFound', 'Post not found')}</ThemedText>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top']}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: post.club || t('feed.post', 'Post'),
+        }}
+      />
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['bottom']}
       >
-        <ThemedView style={styles.container}>
-          {/* Header */}
-          <View
-            style={[
-              styles.header,
-              { backgroundColor: colors.background, borderBottomColor: colors.border },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <ChevronLeftIcon size={28} color={colors.text} />
-            </TouchableOpacity>
-
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              Post
-            </ThemedText>
-
-            <View style={styles.placeholder} />
-          </View>
-
-          {/* Content */}
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Post - Flat Design */}
-            <View style={styles.postSection}>
-              {/* User info */}
-              <View style={styles.userSection}>
-                <UserAvatar
-                  imageUri={post.user.avatarUrl}
-                  name={post.user.name}
-                  size={44}
-                />
-                <View style={styles.userInfo}>
-                  <View style={styles.userRow}>
-                    <ThemedText style={styles.userName}>{post.user.name}</ThemedText>
-                    <ThemedText style={[styles.timestamp, { color: colors.textMuted }]}>
-                      {formatTimeAgo(post.createdAt)}
-                    </ThemedText>
-                  </View>
-                  {post.location && (
-                    <ThemedText style={[styles.location, { color: colors.textSecondary }]}>
-                      {post.location}
-                    </ThemedText>
-                  )}
-                </View>
-              </View>
-
-              {/* Photos */}
-              {post.photos.length > 0 && (
-                <PhotoGallery photos={post.photos} height={300} />
-              )}
-
-              {/* Caption */}
-              {post.caption && (
-                <View style={styles.captionSection}>
-                  <ThemedText style={styles.caption}>{post.caption}</ThemedText>
-                </View>
-              )}
-
-              {/* Divider */}
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Actions */}
-              <View style={styles.actionsContainer}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={handleLike}
-                  activeOpacity={0.7}
-                >
-                  {post.isLiked ? (
-                    <HeartIconSolid size={20} color="#EF4444" />
-                  ) : (
-                    <HeartIconOutline size={20} color={colors.textSecondary} />
-                  )}
-                  <ThemedText style={[styles.actionText, { color: colors.textSecondary }]}>
-                    {post.likeCount} {post.likeCount === 1 ? 'like' : 'likes'}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <View style={styles.actionButton}>
-                  <ChatBubbleOvalLeftIcon size={20} color={colors.textSecondary} />
-                  <ThemedText style={[styles.actionText, { color: colors.textSecondary }]}>
-                    {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
-                  </ThemedText>
-                </View>
+            {/* Post Header */}
+            <View style={styles.postHeader}>
+              <UserAvatar
+                name={`${post.author.name} ${post.author.last_name}`}
+                imageUrl={post.author.profile_picture}
+                size={48}
+              />
+              <View style={styles.headerInfo}>
+                <ThemedText style={styles.userName}>
+                  {post.author.name} {post.author.last_name}
+                </ThemedText>
+                <ThemedText style={[styles.timestamp, { color: colors.textMuted }]}>
+                  {formatTimeAgo(post.created_at)}
+                </ThemedText>
               </View>
             </View>
 
-            {/* Comments Section */}
-            <View style={styles.commentsSection}>
-              <ThemedText style={styles.commentsTitle}>
-                Comments ({comments.length})
-              </ThemedText>
+            {/* Post Title */}
+            <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
 
-              {comments.length === 0 ? (
-                <View style={styles.emptyComments}>
-                  <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    No comments yet
+            {/* Photos */}
+            {post.photos.length > 0 && (
+              <PhotoGallery photos={post.photos.map((p) => p.image || '')} />
+            )}
+
+            {/* Post Content */}
+            <ThemedText style={[styles.postText, { color: colors.textSecondary }]}>
+              {post.text}
+            </ThemedText>
+
+            {/* Trip Stats (if available) */}
+            {post.trip && (
+              <View style={[styles.tripStats, { backgroundColor: colors.card }]}>
+                <View style={styles.stat}>
+                  <ThemedText style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('feed.distance', 'Distance')}
                   </ThemedText>
-                  <ThemedText style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                    Be the first to comment!
+                  <ThemedText style={styles.statValue}>
+                    {formatDistance(post.trip.distance)}
                   </ThemedText>
                 </View>
-              ) : (
-                comments.map((comment) => (
-                  <View key={comment.id} style={styles.commentItem}>
-                    <UserAvatar
-                      imageUri={comment.user.avatarUrl}
-                      name={comment.user.name}
-                      size={36}
-                    />
-                    <View style={styles.commentContent}>
-                      <View style={styles.commentHeader}>
-                        <ThemedText style={styles.commentAuthor}>
-                          {comment.user.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.commentTime, { color: colors.textMuted }]}>
-                          {formatTimeAgo(comment.createdAt)}
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
-                    </View>
-                  </View>
-                ))
-              )}
+                <View style={styles.stat}>
+                  <ThemedText style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('feed.duration', 'Duration')}
+                  </ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {formatDuration(post.trip.duration)}
+                  </ThemedText>
+                </View>
+                <View style={styles.stat}>
+                  <ThemedText style={[styles.statLabel, { color: colors.textMuted }]}>
+                    {t('feed.type', 'Type')}
+                  </ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {post.trip.type.charAt(0).toUpperCase() + post.trip.type.slice(1)}
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+
+            {/* Post Actions */}
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+                <HeartIconOutline size={24} color={colors.textMuted} />
+                <ThemedText style={[styles.actionText, { color: colors.textMuted }]}>
+                  {t('feed.like', 'Like')}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Comments Section */}
+            <View style={[styles.commentsSection, { borderTopColor: colors.border }]}>
+              <ThemedText style={styles.commentsTitle}>
+                {t('feed.comments', 'Comments')} ({post.comment_count})
+              </ThemedText>
+
+              {/* TODO: Fetch and display actual comments */}
+              <ThemedText style={[styles.emptyComments, { color: colors.textMuted }]}>
+                {t('feed.commentsComingSoon', 'Comment display coming soon. You can still add comments below.')}
+              </ThemedText>
             </View>
           </ScrollView>
 
           {/* Comment Input */}
-          <View style={[styles.commentInputContainer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+          <View style={[styles.commentInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
             <TextInput
-              style={[
-                styles.commentInput,
-                { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-              ]}
+              style={[styles.commentInput, { color: colors.text }]}
+              placeholder={t('feed.addComment', 'Add a comment...')}
+              placeholderTextColor={colors.textMuted}
               value={commentText}
               onChangeText={setCommentText}
-              placeholder="Add a comment..."
-              placeholderTextColor={colors.textSecondary}
               multiline
               maxLength={500}
+              editable={!addCommentMutation.isPending}
             />
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                {
-                  backgroundColor: commentText.trim() ? colors.primary : colors.border,
-                },
+                (!commentText.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled,
               ]}
               onPress={handlePostComment}
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || addCommentMutation.isPending}
               activeOpacity={0.7}
             >
-              <PaperAirplaneIcon size={20} color="#FFFFFF" />
+              {addCommentMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <PaperAirplaneIcon
+                  size={20}
+                  color={commentText.trim() ? colors.primary : colors.textMuted}
+                />
+              )}
             </TouchableOpacity>
           </View>
-        </ThemedView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -291,26 +280,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
+  loading: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -318,112 +291,83 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: Spacing.xl,
   },
-  postSection: {
-    paddingBottom: Spacing.md,
-  },
-  userSection: {
+  postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    gap: 12,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
-  userInfo: {
+  headerInfo: {
     flex: 1,
-    gap: 2,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: Spacing.xs,
   },
   userName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    flex: 1,
   },
   timestamp: {
     fontSize: 12,
-    fontWeight: '500',
   },
-  location: {
-    fontSize: 13,
-  },
-  captionSection: {
+  postTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
   },
-  caption: {
-    fontSize: 14,
-    lineHeight: 20,
+  postText: {
+    fontSize: 16,
+    lineHeight: 24,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
   },
-  divider: {
-    height: 1,
-    marginHorizontal: Spacing.lg,
-  },
-  actionsContainer: {
+  tripStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    borderRadius: 12,
+    gap: Spacing.lg,
+  },
+  stat: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  statLabel: {
+    fontSize: 12,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+    gap: Spacing.lg,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: Spacing.xs,
   },
   actionText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   commentsSection: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    borderTopWidth: 8,
-    borderTopColor: '#F5F5F5',
+    borderTopWidth: 1,
+    gap: Spacing.md,
   },
   commentsTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: Spacing.md,
   },
   emptyComments: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-    gap: Spacing.xs,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptySubtext: {
     fontSize: 14,
-  },
-  commentItem: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
-    gap: 12,
-  },
-  commentContent: {
-    flex: 1,
-    gap: 4,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  commentAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  commentTime: {
-    fontSize: 12,
-  },
-  commentText: {
-    fontSize: 14,
-    lineHeight: 20,
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
   },
   commentInputContainer: {
     flexDirection: 'row',
@@ -431,23 +375,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   commentInput: {
     flex: 1,
-    minHeight: 44,
+    fontSize: 16,
     maxHeight: 100,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    fontSize: 15,
+    paddingVertical: Spacing.xs,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: Spacing.sm,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
   },
 });

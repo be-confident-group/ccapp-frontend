@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UnitsProvider } from '@/contexts/UnitsContext';
 import { TrackingProvider } from '@/contexts/TrackingContext';
+import { QueryProvider } from '@/providers/QueryProvider';
 import { useProtectedRoute } from '@/contexts/useProtectedRoute';
 import { initializeMapbox } from '@/config/mapbox';
 
@@ -56,11 +57,13 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <UnitsProvider>
-          <TrackingProvider>
-            <RootLayoutNav />
-          </TrackingProvider>
-        </UnitsProvider>
+        <QueryProvider>
+          <UnitsProvider>
+            <TrackingProvider>
+              <RootLayoutNav />
+            </TrackingProvider>
+          </UnitsProvider>
+        </QueryProvider>
       </AuthProvider>
     </ThemeProvider>
   );

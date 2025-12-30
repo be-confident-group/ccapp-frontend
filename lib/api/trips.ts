@@ -389,6 +389,46 @@ class TripAPI {
       throw error;
     }
   }
+
+  /**
+   * Share a trip to a club
+   */
+  async shareTrip(
+    tripId: number,
+    clubId: number,
+    title?: string,
+    text?: string
+  ): Promise<{ message: string; post_id: number }> {
+    try {
+      console.log(`[TripAPI] Sharing trip ${tripId} to club ${clubId}`);
+      return await apiClient.post<{ message: string; post_id: number }>(
+        `/api/trips/${tripId}/share/`,
+        {
+          club_id: clubId,
+          title,
+          text,
+        }
+      );
+    } catch (error) {
+      console.error('[TripAPI] Error sharing trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unshare a trip from a club
+   */
+  async unshareTrip(tripId: number, clubId: number): Promise<void> {
+    try {
+      console.log(`[TripAPI] Unsharing trip ${tripId} from club ${clubId}`);
+      await apiClient.delete(`/api/trips/${tripId}/unshare/`, {
+        body: JSON.stringify({ club_id: clubId }),
+      } as any);
+    } catch (error) {
+      console.error('[TripAPI] Error unsharing trip:', error);
+      throw error;
+    }
+  }
 }
 
 export const tripAPI = new TripAPI();

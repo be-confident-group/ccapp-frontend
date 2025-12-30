@@ -1,22 +1,25 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { TrophyIcon, UserGroupIcon } from 'react-native-heroicons/outline';
+import { TrophyIcon, MagnifyingGlassIcon, UsersIcon } from 'react-native-heroicons/outline';
+import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import type { FeedGroup } from '@/types/feed';
 
 interface FeedHeaderProps {
   onLeaderboardPress: () => void;
-  onGroupSelectPress: () => void;
-  selectedGroup?: FeedGroup | null;
+  onMyClubsPress: () => void;
 }
 
 export function FeedHeader({
   onLeaderboardPress,
-  onGroupSelectPress,
+  onMyClubsPress,
 }: FeedHeaderProps) {
   const { colors } = useTheme();
+
+  const handleBrowseClubs = () => {
+    router.push('/clubs/browse');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -25,22 +28,31 @@ export function FeedHeader({
 
       {/* Icons - Right */}
       <View style={styles.iconsContainer}>
+        {/* Browse Clubs */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={handleBrowseClubs}
+          activeOpacity={0.7}
+        >
+          <MagnifyingGlassIcon size={24} color={colors.icon} />
+        </TouchableOpacity>
+
         {/* Leaderboard */}
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onLeaderboardPress}
           activeOpacity={0.7}
         >
-          <TrophyIcon size={26} color={colors.icon} />
+          <TrophyIcon size={24} color={colors.icon} />
         </TouchableOpacity>
 
-        {/* Group Selector */}
+        {/* My Clubs */}
         <TouchableOpacity
           style={styles.iconButton}
-          onPress={onGroupSelectPress}
+          onPress={onMyClubsPress}
           activeOpacity={0.7}
         >
-          <UserGroupIcon size={26} color={colors.icon} />
+          <UsersIcon size={24} color={colors.icon} />
         </TouchableOpacity>
       </View>
     </View>
