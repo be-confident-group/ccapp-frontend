@@ -24,6 +24,7 @@ import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
 import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
 import { trophyAPI, type Trophy, type UserProfile } from '@/lib/api/trophies';
+import { database } from '@/lib/database';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ export default function HomeScreen() {
   const [selectedTrophy, setSelectedTrophy] = useState<Trophy | null>(null);
   const [trophies, setTrophies] = useState<Trophy[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [unratedTripsCount, setUnratedTripsCount] = useState(0);
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
   const weatherIconName =
@@ -59,6 +61,15 @@ export default function HomeScreen() {
       if (cached) {
         setTrophies(cached);
       }
+    }
+
+    // Load unrated trips count
+    try {
+      await database.init();
+      const count = await database.getUnratedTripsCount();
+      setUnratedTripsCount(count);
+    } catch (err) {
+      console.error('[HomeScreen] Error loading unrated trips count:', err);
     }
   }, []);
 
@@ -198,18 +209,23 @@ export default function HomeScreen() {
             <View style={styles.tileRow}>
               <TouchableOpacity
                 style={[styles.tile, styles.tileWide, styles.buttonShadow, { backgroundColor: colors.card }]}
-                onPress={() => router.push('/home/manual-entry')}
+                onPress={() => router.push('/home/unrated-trips')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.tileIcon, { backgroundColor: colors.primary }]}>
-                  <MaterialIcons name="add" size={18} color="#FFFFFF" />
+                <View style={[styles.tileIcon, { backgroundColor: colors.accent }]}>
+                  <MaterialCommunityIcons name="star" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.tileTextContainer}>
-                  <ThemedText style={styles.tileTitle}>Add Manual Trip</ThemedText>
+                  <ThemedText style={styles.tileTitle}>Rate My Routes</ThemedText>
                   <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                    Log a ride or walk
+                    {unratedTripsCount > 0 ? `${unratedTripsCount} trips to rate` : 'All rated!'}
                   </ThemedText>
                 </View>
+                {unratedTripsCount > 0 && (
+                  <View style={[styles.tileBadge, { backgroundColor: colors.accent }]}>
+                    <ThemedText style={styles.tileBadgeText}>{unratedTripsCount}</ThemedText>
+                  </View>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -634,6 +650,22 @@ const styles = StyleSheet.create({
   tileSubtitle: {
     fontSize: 11,
     marginTop: -2,
+  },
+  tileBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tileBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   iconHighlight: {
     position: 'absolute',

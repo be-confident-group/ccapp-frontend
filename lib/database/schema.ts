@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export const SCHEMA = {
   trips: `
@@ -65,6 +65,20 @@ export const SCHEMA = {
       last_attempt INTEGER
     )
   `,
+
+  route_ratings: `
+    CREATE TABLE IF NOT EXISTS route_ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      segments TEXT NOT NULL,
+      rated_at INTEGER NOT NULL,
+      synced INTEGER DEFAULT 0,
+      backend_id INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -74,6 +88,8 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_location_synced ON locations(synced)',
   'CREATE INDEX IF NOT EXISTS idx_trip_synced ON trips(synced)',
   'CREATE INDEX IF NOT EXISTS idx_location_timestamp ON locations(timestamp)',
+  'CREATE INDEX IF NOT EXISTS idx_rating_trip ON route_ratings(trip_id)',
+  'CREATE INDEX IF NOT EXISTS idx_rating_synced ON route_ratings(synced)',
 ];
 
 export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
@@ -123,6 +139,20 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     } catch (error) {
       // Column might already exist if migration was partially run
       console.log('[Database] Migration 1->2: backend_id column may already exist', error);
+    }
+  }
+
+  // Migration from version 2 to 3: Add route_ratings table
+  if (from < 3 && to >= 3) {
+    console.log('[Database] Migration 2->3: Creating route_ratings table');
+    try {
+      await db.execAsync(SCHEMA.route_ratings);
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_rating_trip ON route_ratings(trip_id)');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_rating_synced ON route_ratings(synced)');
+      console.log('[Database] Migration 2->3: Successfully created route_ratings table');
+    } catch (error) {
+      // Table might already exist if migration was partially run
+      console.log('[Database] Migration 2->3: route_ratings table may already exist', error);
     }
   }
 

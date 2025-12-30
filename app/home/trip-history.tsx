@@ -20,6 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { syncService } from '@/lib/services/SyncService';
 import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { RatedBadge } from '@/components/rating';
 
 export default function TripHistoryScreen() {
   const { colors } = useTheme();
@@ -29,6 +30,7 @@ export default function TripHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
@@ -44,6 +46,11 @@ export default function TripHistoryScreen() {
       // Get unsynced count
       const unsynced = await syncService.getUnsyncedCount();
       setUnsyncedCount(unsynced);
+
+      // Get all ratings to determine which trips are rated
+      const ratings = await database.getAllRatings();
+      const ratedIds = new Set(ratings.map((r) => r.trip_id));
+      setRatedTripIds(ratedIds);
     } catch (error) {
       console.error('[TripHistory] Error loading trips:', error);
     } finally {
@@ -94,6 +101,8 @@ export default function TripHistoryScreen() {
     const tripName = getTripTypeName(item.type);
     const date = new Date(item.start_time);
     const isSynced = item.synced === 1;
+    const isRated = ratedTripIds.has(item.id);
+    const hasRoute = item.route_data && item.route_data.length > 0;
 
     return (
       <TouchableOpacity
@@ -123,6 +132,10 @@ export default function TripHistoryScreen() {
                 color="#FFFFFF"
               />
             </View>
+            {/* Rating Badge - only show for trips with route data */}
+            {hasRoute && (
+              <RatedBadge isRated={isRated} size="small" style={styles.ratedBadge} />
+            )}
           </View>
 
           <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
@@ -345,6 +358,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  ratedBadge: {
+    marginLeft: 8,
   },
   tripDate: {
     fontSize: 13,

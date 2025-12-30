@@ -54,6 +54,17 @@ export interface SyncQueueItem {
   last_attempt: number | null;
 }
 
+export interface RouteRating {
+  id?: number;
+  trip_id: string;
+  segments: string; // JSON stringified RouteSegment[]
+  rated_at: number;
+  synced: number;
+  backend_id: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface TripFilters {
   type?: 'walk' | 'run' | 'cycle' | 'drive';
   status?: 'active' | 'paused' | 'completed' | 'cancelled';
@@ -326,6 +337,128 @@ class Database {
     );
   }
 
+  // ===== ROUTE RATINGS CRUD =====
+
+  async createRating(rating: Partial<RouteRating>): Promise<void> {
+    const db = await this.getDb();
+    const now = Date.now();
+
+    await db.runAsync(
+      `INSERT INTO route_ratings
+       (trip_id, segments, rated_at, synced, backend_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        rating.trip_id!,
+        rating.segments!,
+        rating.rated_at || now,
+        rating.synced || 0,
+        rating.backend_id || null,
+        rating.created_at || now,
+        rating.updated_at || now,
+      ]
+    );
+  }
+
+  async getRating(tripId: string): Promise<RouteRating | null> {
+    const db = await this.getDb();
+    const result = await db.getFirstAsync<RouteRating>(
+      'SELECT * FROM route_ratings WHERE trip_id = ?',
+      [tripId]
+    );
+    return result || null;
+  }
+
+  async updateRating(tripId: string, updates: Partial<RouteRating>): Promise<void> {
+    const db = await this.getDb();
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+
+    if (fields.length === 0) return;
+
+    // Always update updated_at
+    fields.push('updated_at = ?');
+    values.push(Date.now());
+
+    values.push(tripId);
+
+    await db.runAsync(
+      `UPDATE route_ratings SET ${fields.join(', ')} WHERE trip_id = ?`,
+      values
+    );
+  }
+
+  async deleteRating(tripId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync('DELETE FROM route_ratings WHERE trip_id = ?', [tripId]);
+  }
+
+  async getUnratedTrips(): Promise<Trip[]> {
+    const db = await this.getDb();
+    // Get completed trips that have route_data and no rating
+    const results = await db.getAllAsync<Trip>(
+      `SELECT t.* FROM trips t
+       LEFT JOIN route_ratings r ON t.id = r.trip_id
+       WHERE t.status = 'completed'
+         AND t.route_data IS NOT NULL
+         AND t.route_data != ''
+         AND r.id IS NULL
+       ORDER BY t.start_time DESC`
+    );
+    return results;
+  }
+
+  async getUnratedTripsCount(): Promise<number> {
+    const db = await this.getDb();
+    const result = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM trips t
+       LEFT JOIN route_ratings r ON t.id = r.trip_id
+       WHERE t.status = 'completed'
+         AND t.route_data IS NOT NULL
+         AND t.route_data != ''
+         AND r.id IS NULL`
+    );
+    return result?.count || 0;
+  }
+
+  async getUnsyncedRatings(): Promise<RouteRating[]> {
+    const db = await this.getDb();
+    const results = await db.getAllAsync<RouteRating>(
+      'SELECT * FROM route_ratings WHERE synced = 0 ORDER BY created_at ASC'
+    );
+    return results;
+  }
+
+  async markRatingSynced(tripId: string, backendId: number): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      'UPDATE route_ratings SET synced = 1, backend_id = ?, updated_at = ? WHERE trip_id = ?',
+      [backendId, Date.now(), tripId]
+    );
+  }
+
+  async hasRating(tripId: string): Promise<boolean> {
+    const db = await this.getDb();
+    const result = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM route_ratings WHERE trip_id = ?',
+      [tripId]
+    );
+    return (result?.count || 0) > 0;
+  }
+
+  async getAllRatings(): Promise<RouteRating[]> {
+    const db = await this.getDb();
+    const results = await db.getAllAsync<RouteRating>(
+      'SELECT * FROM route_ratings ORDER BY rated_at DESC'
+    );
+    return results;
+  }
+
   // ===== UTILITY =====
 
   async clearAllData(): Promise<void> {
@@ -333,6 +466,7 @@ class Database {
     await db.execAsync('DELETE FROM trips');
     await db.execAsync('DELETE FROM locations');
     await db.execAsync('DELETE FROM sync_queue');
+    await db.execAsync('DELETE FROM route_ratings');
     console.log('[Database] All data cleared');
   }
 

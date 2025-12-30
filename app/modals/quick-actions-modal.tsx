@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import {
   MegaphoneIcon,
   PencilSquareIcon,
+  StarIcon,
   XMarkIcon,
 } from 'react-native-heroicons/solid';
 import Animated, {
@@ -28,6 +29,7 @@ export default function QuickActionsModal() {
   const opacity = useSharedValue(0);
   const scale1 = useSharedValue(0);
   const scale2 = useSharedValue(0);
+  const scale3 = useSharedValue(0);
   const closeButtonScale = useSharedValue(0);
 
   // Animate in on mount
@@ -35,7 +37,8 @@ export default function QuickActionsModal() {
     opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.ease) });
     scale1.value = withDelay(36, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
     scale2.value = withDelay(72, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
-    closeButtonScale.value = withDelay(108, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
+    scale3.value = withDelay(108, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
+    closeButtonScale.value = withDelay(144, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
   }, []);
 
   const handleClose = () => {
@@ -56,6 +59,11 @@ export default function QuickActionsModal() {
     opacity: scale2.value,
   }));
 
+  const button3Style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale3.value }],
+    opacity: scale3.value,
+  }));
+
   const closeButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: closeButtonScale.value }],
     opacity: closeButtonScale.value,
@@ -69,6 +77,16 @@ export default function QuickActionsModal() {
         router.back(); // Close the modal immediately
         setTimeout(() => {
           router.push('/home/manual-entry');
+        }, 100); // Small delay to ensure modal is closed
+      },
+    },
+    {
+      icon: StarIcon,
+      title: 'Rate My Routes',
+      onPress: () => {
+        router.back(); // Close the modal immediately
+        setTimeout(() => {
+          router.push('/home/unrated-trips');
         }, 100); // Small delay to ensure modal is closed
       },
     },
@@ -105,17 +123,31 @@ export default function QuickActionsModal() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Second Action Button */}
+        {/* Second Action Button - Rate My Routes */}
         <Animated.View style={[button2Style]}>
           <TouchableOpacity
             style={[styles.floatingButton, { backgroundColor: colors.card }]}
             onPress={actions[1].onPress}
             activeOpacity={0.8}
           >
+            <View style={[styles.floatingIconContainer, { backgroundColor: colors.accent }]}>
+              <StarIcon size={24} color="#fff" />
+            </View>
+            <ThemedText style={styles.floatingButtonText}>{actions[1].title}</ThemedText>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Third Action Button - Share Update */}
+        <Animated.View style={[button3Style]}>
+          <TouchableOpacity
+            style={[styles.floatingButton, { backgroundColor: colors.card }]}
+            onPress={actions[2].onPress}
+            activeOpacity={0.8}
+          >
             <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
               <MegaphoneIcon size={24} color="#fff" />
             </View>
-            <ThemedText style={styles.floatingButtonText}>{actions[1].title}</ThemedText>
+            <ThemedText style={styles.floatingButtonText}>{actions[2].title}</ThemedText>
           </TouchableOpacity>
         </Animated.View>
 
