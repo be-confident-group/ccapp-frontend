@@ -30,6 +30,24 @@ export interface Trophy {
 }
 
 /**
+ * Week day activity data
+ */
+export interface WeekDay {
+  day: string;
+  date: string;
+  has_activity: boolean;
+  is_today?: boolean;
+}
+
+/**
+ * Streak data with current streak and week activity
+ */
+export interface StreakData {
+  current: number;
+  week_days: WeekDay[];
+}
+
+/**
  * User profile response with stats
  */
 export interface UserProfile {
@@ -45,8 +63,8 @@ export interface UserProfile {
     total_distance_walk: number;
     total_walks: number;
     co2_saved: number;
-    current_streak: number;
   };
+  streak: StreakData;
   trophies: Trophy[];
   records?: {
     longest_distance_walk: number | null;

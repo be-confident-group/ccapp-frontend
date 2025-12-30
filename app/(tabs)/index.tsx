@@ -333,7 +333,7 @@ export default function HomeScreen() {
                     {(() => {
                       // Get the last 7 days, ending with today
                       const today = new Date();
-                      const currentStreak = userProfile?.stats.current_streak || 0;
+                      const currentStreak = userProfile?.streak?.current || 0;
                       const days = [];
 
                       for (let i = 6; i >= 0; i--) {
@@ -349,8 +349,8 @@ export default function HomeScreen() {
                             <View style={[
                               styles.dayCircle,
                               {
-                                backgroundColor: isActive ? '#EF4444' : colors.card,
-                                borderColor: isActive ? '#EF4444' : colors.border,
+                                backgroundColor: isActive ? colors.primary : colors.card,
+                                borderColor: isActive ? colors.primary : colors.border,
                               }
                             ]}>
                               <ThemedText style={[
@@ -361,7 +361,7 @@ export default function HomeScreen() {
                               </ThemedText>
                             </View>
                             {isToday && (
-                              <View style={styles.todayIndicator} />
+                              <View style={[styles.todayIndicator, { backgroundColor: colors.primary }]} />
                             )}
                           </View>
                         );
@@ -378,9 +378,9 @@ export default function HomeScreen() {
                 {/* Streak Summary */}
                 <View style={styles.streakSummary}>
                   <View style={styles.streakHeader}>
-                    <FireIcon size={18} color="#EF4444" />
+                    <FireIcon size={18} color={colors.primary} />
                     <ThemedText style={styles.streakTitle}>
-                      {t('home:streak.title', { count: userProfile?.stats.current_streak || 0 })}
+                      {t('home:streak.title', { count: userProfile?.streak?.current || 0 })}
                     </ThemedText>
                   </View>
                   <ThemedText style={[styles.callToAction, { color: colors.textSecondary }]}>
@@ -782,7 +782,6 @@ const styles = StyleSheet.create({
   todayIndicator: {
     width: 24,
     height: 3,
-    backgroundColor: '#EF4444',
     borderRadius: 2,
   },
   streakSummary: {
