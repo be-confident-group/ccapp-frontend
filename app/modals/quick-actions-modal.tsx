@@ -1,25 +1,20 @@
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
-import { useCallback, useEffect } from 'react';
-import { Pressable, StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useEffect } from 'react';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import {
-  CameraIcon,
-  LinkIcon,
   MegaphoneIcon,
   PencilSquareIcon,
-  RocketLaunchIcon,
-  UserGroupIcon,
+  XMarkIcon,
 } from 'react-native-heroicons/solid';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
+  withDelay,
+  Easing,
 } from 'react-native-reanimated';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type ActionItem = {
   icon: React.ComponentType<{ size?: number; color?: string }>;
@@ -28,71 +23,53 @@ type ActionItem = {
 };
 
 export default function QuickActionsModal() {
-  const { colors, isDark } = useTheme();
-  
-  const translateY = useSharedValue(SCREEN_HEIGHT);
-  const startY = useSharedValue(0);
+  const { colors } = useTheme();
 
-  // Animate sheet in on mount
+  const opacity = useSharedValue(0);
+  const scale1 = useSharedValue(0);
+  const scale2 = useSharedValue(0);
+  const closeButtonScale = useSharedValue(0);
+
+  // Animate in on mount
   useEffect(() => {
-    translateY.value = withSpring(0, {
-      damping: 30,
-      stiffness: 200,
-    });
+    opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.ease) });
+    scale1.value = withDelay(36, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
+    scale2.value = withDelay(72, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
+    closeButtonScale.value = withDelay(108, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
   }, []);
 
-  const handleClose = useCallback(() => {
-    // Animate out before closing
-    translateY.value = withSpring(SCREEN_HEIGHT, {
-      damping: 30,
-      stiffness: 200,
-    });
-    setTimeout(() => {
-      router.back();
-    }, 250);
-  }, []);
+  const handleClose = () => {
+    router.back();
+  };
 
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      startY.value = translateY.value;
-    })
-    .onUpdate((event) => {
-      // Only allow dragging down (positive values)
-      const newValue = startY.value + event.translationY;
-      translateY.value = Math.max(0, newValue);
-    })
-    .onEnd((event) => {
-      // Close if dragged down more than 150px or with fast velocity
-      if (translateY.value > 150 || event.velocityY > 800) {
-        runOnJS(handleClose)();
-      } else {
-        // Spring back to original position
-        translateY.value = withSpring(0, {
-          damping: 30,
-          stiffness: 200,
-        });
-      }
-    });
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+  const button1Style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale1.value }],
+    opacity: scale1.value,
+  }));
+
+  const button2Style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale2.value }],
+    opacity: scale2.value,
+  }));
+
+  const closeButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: closeButtonScale.value }],
+    opacity: closeButtonScale.value,
   }));
 
   const actions: ActionItem[] = [
     {
-      icon: RocketLaunchIcon,
-      title: 'Start a Ride',
-      onPress: () => {
-        handleClose();
-        // TODO: Navigate to tracking screen
-      },
-    },
-    {
       icon: PencilSquareIcon,
       title: 'Log Ride Manually',
       onPress: () => {
-        handleClose();
-        // TODO: Navigate to manual entry
+        router.back(); // Close the modal immediately
+        setTimeout(() => {
+          router.push('/home/manual-entry');
+        }, 100); // Small delay to ensure modal is closed
       },
     },
     {
@@ -103,76 +80,57 @@ export default function QuickActionsModal() {
         // TODO: Navigate to create post
       },
     },
-    {
-      icon: CameraIcon,
-      title: 'Share Photo',
-      onPress: () => {
-        handleClose();
-        // TODO: Navigate to photo picker
-      },
-    },
-    {
-      icon: UserGroupIcon,
-      title: 'Create Group',
-      onPress: () => {
-        handleClose();
-        // TODO: Navigate to create group
-      },
-    },
-    {
-      icon: LinkIcon,
-      title: 'Join Group',
-      onPress: () => {
-        handleClose();
-        // TODO: Show join group dialog
-      },
-    },
   ];
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={handleClose} />
-      
-      <GestureDetector gesture={gesture}>
-        <Animated.View
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.background },
-            animatedStyle,
-          ]}
-        >
-          {/* Drag Handle */}
-          <View style={styles.handleContainer}>
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          </View>
+    <View style={styles.container}>
+      {/* Backdrop */}
+      <Animated.View style={[styles.backdrop, backdropStyle]}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+      </Animated.View>
 
-          <View style={styles.content}>
-            {actions.map((action, index) => {
-              const IconComponent = action.icon;
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.actionButton,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={action.onPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-                    <IconComponent size={22} color="#fff" />
-                  </View>
-                  <ThemedText style={styles.actionText}>{action.title}</ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+      {/* Floating Action Buttons */}
+      <View style={styles.buttonsContainer}>
+        {/* First Action Button */}
+        <Animated.View style={[button1Style]}>
+          <TouchableOpacity
+            style={[styles.floatingButton, { backgroundColor: colors.card }]}
+            onPress={actions[0].onPress}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
+              <PencilSquareIcon size={24} color="#fff" />
+            </View>
+            <ThemedText style={styles.floatingButtonText}>{actions[0].title}</ThemedText>
+          </TouchableOpacity>
         </Animated.View>
-      </GestureDetector>
-    </GestureHandlerRootView>
+
+        {/* Second Action Button */}
+        <Animated.View style={[button2Style]}>
+          <TouchableOpacity
+            style={[styles.floatingButton, { backgroundColor: colors.card }]}
+            onPress={actions[1].onPress}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
+              <MegaphoneIcon size={24} color="#fff" />
+            </View>
+            <ThemedText style={styles.floatingButtonText}>{actions[1].title}</ThemedText>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Close Button */}
+        <Animated.View style={[closeButtonStyle]}>
+          <TouchableOpacity
+            style={[styles.closeButton, { backgroundColor: colors.primary }]}
+            onPress={handleClose}
+            activeOpacity={0.8}
+          >
+            <XMarkIcon size={28} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 
@@ -180,53 +138,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
-  sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '60%',
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  handleContainer: {
+  buttonsContainer: {
     alignItems: 'center',
-    paddingVertical: 8,
+    gap: 12,
+    paddingBottom: 100,
   },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
-  content: {
-    gap: 8,
-    paddingBottom: 4,
-  },
-  actionButton: {
+  floatingButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    minWidth: 216,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  iconContainer: {
+  floatingIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 13,
   },
-  actionText: {
-    fontSize: 15,
+  floatingButtonText: {
+    fontSize: 14,
     fontWeight: '600',
+  },
+  closeButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });
