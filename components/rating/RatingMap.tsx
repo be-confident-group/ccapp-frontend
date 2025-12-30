@@ -30,24 +30,34 @@ import { getFeelingColor, UNPAINTED_COLOR } from '@/types/rating';
 
 /**
  * Validate a coordinate has valid numeric values
+ * Handles both {latitude, longitude} and {lat, lng} formats
  */
-function isValidCoordinate(coord: Coordinate): boolean {
+function isValidCoordinate(coord: any): boolean {
+  // Support both formats: {latitude, longitude} and {lat, lng}
+  const lat = coord.latitude ?? coord.lat;
+  const lng = coord.longitude ?? coord.lng;
+
   return (
     coord &&
-    typeof coord.longitude === 'number' &&
-    typeof coord.latitude === 'number' &&
-    !isNaN(coord.longitude) &&
-    !isNaN(coord.latitude) &&
-    isFinite(coord.longitude) &&
-    isFinite(coord.latitude)
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    isFinite(lat) &&
+    isFinite(lng)
   );
 }
 
 /**
- * Filter route to only include valid coordinates
+ * Filter route to only include valid coordinates and normalize to standard format
  */
-function filterValidCoordinates(route: Coordinate[]): Coordinate[] {
-  return route.filter(isValidCoordinate);
+function filterValidCoordinates(route: any[]): Coordinate[] {
+  return route
+    .filter(isValidCoordinate)
+    .map((coord) => ({
+      latitude: coord.latitude ?? coord.lat,
+      longitude: coord.longitude ?? coord.lng,
+    }));
 }
 
 export interface RatingMapRef {
@@ -314,7 +324,8 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           zoomEnabled={true}
           rotateEnabled={true}
           pitchEnabled={false}
-          key={mapStyle}
+          compassEnabled={false}
+          logoEnabled={false}
         >
           <Camera
             ref={cameraRef}

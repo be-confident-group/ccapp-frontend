@@ -13,6 +13,8 @@ import { database } from '@/lib/database';
 import { TripManager } from '@/lib/services';
 import { formatDistance, formatDuration, formatSpeed } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import { MapStyles } from '@/config/mapbox';
+import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -23,8 +25,9 @@ import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { unitSystem, formatElevation, formatWeight } = useUnits();
+  const { selectedLayer } = useMapLayer(isDark);
   const [tripDetails, setTripDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,6 +101,26 @@ export default function TripDetailScreen() {
   const tripName = getTripTypeName(trip.type);
   const date = new Date(trip.start_time);
 
+  // Convert selected layer to Mapbox style URL
+  const getStyleURL = (): string => {
+    switch (selectedLayer) {
+      case 'light':
+        return MapStyles.LIGHT;
+      case 'dark':
+        return MapStyles.DARK;
+      case 'streets':
+        return MapStyles.STREETS;
+      case 'outdoors':
+        return MapStyles.OUTDOORS;
+      case 'satellite':
+        return MapStyles.SATELLITE;
+      default:
+        return isDark ? MapStyles.DARK : MapStyles.LIGHT;
+    }
+  };
+
+  const mapStyle = getStyleURL();
+
   // Create GeoJSON for route
   const routeGeoJSON = route.length > 0 ? {
     type: 'Feature',
@@ -139,32 +162,37 @@ export default function TripDetailScreen() {
         {/* Map */}
         {route.length > 0 && (
           <View style={styles.mapContainer}>
-            <Mapbox.MapView
-              style={styles.map}
-              styleURL="mapbox://styles/mapbox/outdoors-v12"
-              zoomEnabled={true}
-              scrollEnabled={true}
-            >
-              <Camera
-                zoomLevel={13}
-                centerCoordinate={center as [number, number]}
-                animationDuration={0}
-              />
+            <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
+              <Mapbox.MapView
+                style={styles.map}
+                styleURL={mapStyle}
+                zoomEnabled={true}
+                scrollEnabled={true}
+                compassEnabled={false}
+                logoEnabled={false}
+              >
+                <Camera
+                  zoomLevel={13}
+                  centerCoordinate={center as [number, number]}
+                  animationDuration={0}
+                />
 
-              {routeGeoJSON && (
-                <ShapeSource id="routeSource" shape={routeGeoJSON as any}>
-                  <LineLayer
-                    id="routeLine"
-                    style={{
-                      lineColor: tripColor,
-                      lineWidth: 4,
-                      lineCap: 'round',
-                      lineJoin: 'round',
-                    }}
-                  />
-                </ShapeSource>
-              )}
-            </Mapbox.MapView>
+                {routeGeoJSON && (
+                  <ShapeSource id="routeSource" shape={routeGeoJSON as any}>
+                    <LineLayer
+                      id="routeLine"
+                      style={{
+                        lineColor: tripColor,
+                        lineWidth: 6,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        lineOpacity: 0.9,
+                      }}
+                    />
+                  </ShapeSource>
+                )}
+              </Mapbox.MapView>
+            </View>
           </View>
         )}
 
@@ -281,6 +309,17 @@ const styles = StyleSheet.create({
   mapContainer: {
     height: 300,
     width: '100%',
+    padding: Spacing.md,
+  },
+  mapWrapper: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   map: {
     flex: 1,
