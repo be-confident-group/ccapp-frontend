@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -7,23 +7,38 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useMyClubs } from '@/lib/hooks/useClubs';
-import { UsersIcon, PlusCircleIcon } from 'react-native-heroicons/outline';
+import { UsersIcon, PlusCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
 export default function MyClubsScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
 
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: clubs, isLoading, refetch, isRefetching } = useMyClubs();
+
+  // Filter clubs based on search query
+  const filteredClubs = useMemo(() => {
+    if (!clubs) return [];
+    if (!searchQuery.trim()) return clubs;
+    const query = searchQuery.toLowerCase();
+    return clubs.filter(
+      (club) =>
+        club.name.toLowerCase().includes(query) ||
+        club.description?.toLowerCase().includes(query)
+    );
+  }, [clubs, searchQuery]);
 
   const handleClubPress = useCallback((clubId: number) => {
     router.push(`/clubs/${clubId}`);
@@ -111,44 +126,53 @@ export default function MyClubsScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: t('clubs.myClubs', 'My Clubs'),
-          headerRight: () => (
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      <ThemedView style={styles.container}>
+        <Header
+          title={t('clubs.myClubs', 'My Clubs')}
+          showBack
+          rightElement={
             <TouchableOpacity onPress={handleCreateClub} style={styles.headerButton}>
-              <PlusCircleIcon size={24} color={colors.primary} />
+              <PlusCircleIcon size={22} color={colors.primary} />
             </TouchableOpacity>
-          ),
-        }}
-      />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <ThemedView style={styles.container}>
-          <FlatList
-            data={clubs || []}
-            renderItem={renderClubItem}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={[
-              styles.listContent,
-              (!clubs || clubs.length === 0) && styles.emptyListContent,
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={refetch}
-                tintColor={colors.primary}
-              />
-            }
-            ListEmptyComponent={renderEmptyState}
+          }
+        />
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <MagnifyingGlassIcon size={20} color={colors.textMuted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('clubs.searchMyClubs', 'Search my clubs...')}
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-        </ThemedView>
-      </SafeAreaView>
-    </>
+        </View>
+        <FlatList
+          data={filteredClubs}
+          renderItem={renderClubItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredClubs.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+        />
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -162,6 +186,22 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: Spacing.sm,
     marginRight: Spacing.sm,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: Spacing.xs,
   },
   listContent: {
     padding: Spacing.lg,

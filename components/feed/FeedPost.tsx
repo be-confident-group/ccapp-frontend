@@ -92,6 +92,13 @@ export function FeedPost({
             />
           )}
 
+          {/* Title */}
+          {post.title && (
+            <View style={styles.titleSection}>
+              <ThemedText style={styles.title}>{post.title}</ThemedText>
+            </View>
+          )}
+
           {/* Caption */}
           {post.caption && (
             <View style={styles.captionSection}>
@@ -168,6 +175,15 @@ const styles = StyleSheet.create({
   },
   location: {
     fontSize: 13,
+  },
+  titleSection: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 22,
   },
   captionSection: {
     paddingHorizontal: Spacing.md,

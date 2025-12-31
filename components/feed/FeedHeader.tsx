@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { TrophyIcon, MagnifyingGlassIcon, UsersIcon } from 'react-native-heroicons/outline';
-import { router } from 'expo-router';
+import { TrophyIcon, UsersIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -17,10 +16,6 @@ export function FeedHeader({
 }: FeedHeaderProps) {
   const { colors } = useTheme();
 
-  const handleBrowseClubs = () => {
-    router.push('/clubs/browse');
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title - Left */}
@@ -28,15 +23,6 @@ export function FeedHeader({
 
       {/* Icons - Right */}
       <View style={styles.iconsContainer}>
-        {/* Browse Clubs */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={handleBrowseClubs}
-          activeOpacity={0.7}
-        >
-          <MagnifyingGlassIcon size={24} color={colors.icon} />
-        </TouchableOpacity>
-
         {/* Leaderboard */}
         <TouchableOpacity
           style={styles.iconButton}

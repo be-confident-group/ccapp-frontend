@@ -19,7 +19,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useCreateClub } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
-import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { PhotoIcon, XMarkIcon, ChevronLeftIcon } from 'react-native-heroicons/outline';
 import type { ClubCreateRequest } from '@/types/feed';
 
 export default function CreateClubScreen() {
@@ -97,6 +97,16 @@ export default function CreateClubScreen() {
         options={{
           headerShown: true,
           title: t('clubs.createClub', 'Create Club'),
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 17,
+          },
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeftIcon size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <SafeAreaView
@@ -244,6 +254,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  backButton: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
   scrollView: {
     flex: 1,
   },
@@ -263,33 +277,40 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     position: 'relative',
-    alignSelf: 'center',
+    width: '100%',
+    aspectRatio: 16 / 9,
+    maxHeight: 200,
   },
   photo: {
-    width: 200,
-    height: 200,
+    width: '100%',
+    height: '100%',
     borderRadius: 12,
   },
   removePhotoButton: {
     position: 'absolute',
     top: Spacing.sm,
     right: Spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   photoPlaceholder: {
-    width: 200,
-    height: 200,
+    width: '100%',
+    aspectRatio: 16 / 9,
+    maxHeight: 200,
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    alignSelf: 'center',
   },
   photoPlaceholderText: {
     fontSize: 14,

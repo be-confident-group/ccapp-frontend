@@ -78,6 +78,7 @@ export interface Post {
   updated_at: string;
   photos: PostPhoto[];
   comment_count: number;
+  comments?: PostComment[]; // Only included in detail response
 }
 
 /**
@@ -144,6 +145,7 @@ export interface ActivityPost {
   user: FeedUser;
   location?: string;
   photos: string[];
+  title?: string;
   caption: string;
   activityType: 'walk' | 'ride' | 'run';
   distance?: number;

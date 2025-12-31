@@ -3,7 +3,6 @@
  */
 
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 /**
@@ -24,21 +23,22 @@ export async function requestImagePermissions(): Promise<boolean> {
 export async function pickImage(options?: {
   allowsMultiple?: boolean;
   maxImages?: number;
-}): Promise<string[] | null> {
+}): Promise<ImagePicker.ImagePickerAsset[] | null> {
   const hasPermission = await requestImagePermissions();
   if (!hasPermission) return null;
 
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    mediaTypes: ['images'],
     allowsMultipleSelection: options?.allowsMultiple || false,
     quality: 0.8,
     allowsEditing: !options?.allowsMultiple,
     aspect: [4, 3],
+    base64: true, // Get base64 data directly from ImagePicker
   });
 
   if (result.canceled) return null;
 
-  return result.assets.map((asset) => asset.uri);
+  return result.assets;
 }
 
 /**
@@ -67,20 +67,17 @@ export async function compressImage(
 }
 
 /**
- * Convert image URI to base64 string
+ * Convert ImagePicker asset to base64 data URI
  */
-export async function imageToBase64(uri: string): Promise<string> {
-  try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    // Return with data URI prefix
-    return `data:image/jpeg;base64,${base64}`;
-  } catch (error) {
-    console.error('Error converting image to base64:', error);
-    throw new Error('Failed to convert image');
+export function assetToBase64(asset: ImagePicker.ImagePickerAsset): string {
+  if (asset.base64) {
+    // Determine mime type from uri
+    const extension = asset.uri.split('.').pop()?.toLowerCase() || 'jpeg';
+    const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+    return `data:${mimeType};base64,${asset.base64}`;
   }
+
+  throw new Error('No base64 data available from image picker');
 }
 
 /**
@@ -91,13 +88,11 @@ export async function pickAndProcessImage(options?: {
   maxHeight?: number;
   quality?: number;
 }): Promise<string | null> {
-  const uris = await pickImage({ allowsMultiple: false });
-  if (!uris || uris.length === 0) return null;
+  const assets = await pickImage({ allowsMultiple: false });
+  if (!assets || assets.length === 0) return null;
 
-  const compressedUri = await compressImage(uris[0], options);
-  const base64 = await imageToBase64(compressedUri);
-
-  return base64;
+  // Use the base64 from picker directly (already compressed by quality: 0.8)
+  return assetToBase64(assets[0]);
 }
 
 /**
@@ -109,19 +104,14 @@ export async function pickAndProcessMultipleImages(options?: {
   maxHeight?: number;
   quality?: number;
 }): Promise<string[]> {
-  const { maxImages = 5, ...compressOptions } = options || {};
+  const { maxImages = 5 } = options || {};
 
-  const uris = await pickImage({ allowsMultiple: true, maxImages });
-  if (!uris || uris.length === 0) return [];
+  const assets = await pickImage({ allowsMultiple: true, maxImages });
+  if (!assets || assets.length === 0) return [];
 
   // Limit to maxImages
-  const limitedUris = uris.slice(0, maxImages);
+  const limitedAssets = assets.slice(0, maxImages);
 
-  // Process all images in parallel
-  const base64Promises = limitedUris.map(async (uri) => {
-    const compressedUri = await compressImage(uri, compressOptions);
-    return imageToBase64(compressedUri);
-  });
-
-  return Promise.all(base64Promises);
+  // Convert all to base64 (ImagePicker already provides base64)
+  return limitedAssets.map(assetToBase64);
 }

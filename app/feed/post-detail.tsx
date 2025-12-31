@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams, Stack } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   PaperAirplaneIcon,
   HeartIcon as HeartIconOutline,
@@ -21,9 +21,10 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { UserAvatar, PhotoGallery } from '@/components/feed';
-import { useAddComment } from '@/lib/hooks/usePosts';
+import { useAddComment, usePost } from '@/lib/hooks/usePosts';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
 import type { Post, PostComment } from '@/types/feed';
+import Header from '@/components/layout/Header';
 
 export default function PostDetailScreen() {
   const { t } = useTranslation('groups');
@@ -32,11 +33,11 @@ export default function PostDetailScreen() {
 
   const [commentText, setCommentText] = useState('');
 
-  // Fetch post from feed data
-  const { data: feedData, isLoading } = useInfiniteFeed();
+  // First get basic post info from feed to find clubId
+  const { data: feedData } = useInfiniteFeed();
 
-  // Find the post from feed data
-  const post = useMemo(() => {
+  // Find the post from feed data to get clubId
+  const feedPost = useMemo(() => {
     if (!feedData?.pages || !id) return null;
 
     for (const page of feedData.pages) {
@@ -45,6 +46,13 @@ export default function PostDetailScreen() {
     }
     return null;
   }, [feedData, id]);
+
+  // Use clubId from route params or from feed post
+  const resolvedClubId = clubId ? parseInt(clubId, 10) : feedPost?.club_id;
+  const postId = id ? parseInt(id, 10) : 0;
+
+  // Fetch full post with comments using usePost
+  const { data: post, isLoading } = usePost(resolvedClubId || 0, postId);
 
   const addCommentMutation = useAddComment();
 
@@ -97,67 +105,59 @@ export default function PostDetailScreen() {
 
   if (isLoading) {
     return (
-      <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: t('feed.post', 'Post'),
-          }}
-        />
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Header title={t('feed.post', 'Post')} showBack />
+        <ThemedView style={styles.container}>
           <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        </SafeAreaView>
-      </>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   if (!post) {
     return (
-      <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: t('feed.post', 'Post'),
-          }}
-        />
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Header title={t('feed.post', 'Post')} showBack />
+        <ThemedView style={styles.container}>
           <View style={styles.loading}>
             <ThemedText>{t('feed.postNotFound', 'Post not found')}</ThemedText>
           </View>
-        </SafeAreaView>
-      </>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
+  const headerTitle = post.club || t('feed.post', 'Post');
+
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: post.club || t('feed.post', 'Post'),
-        }}
-      />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      <Header title={headerTitle} showBack />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
             {/* Post Header */}
             <View style={styles.postHeader}>
               <UserAvatar
                 name={`${post.author.name} ${post.author.last_name}`}
-                imageUrl={post.author.profile_picture}
+                imageUri={post.author.profile_picture || undefined}
                 size={48}
               />
               <View style={styles.headerInfo}>
@@ -229,10 +229,36 @@ export default function PostDetailScreen() {
                 {t('feed.comments', 'Comments')} ({post.comment_count})
               </ThemedText>
 
-              {/* TODO: Fetch and display actual comments */}
-              <ThemedText style={[styles.emptyComments, { color: colors.textMuted }]}>
-                {t('feed.commentsComingSoon', 'Comment display coming soon. You can still add comments below.')}
-              </ThemedText>
+              {post.comments && post.comments.length > 0 ? (
+                <View style={styles.commentsList}>
+                  {post.comments.map((comment) => (
+                    <View key={comment.id} style={[styles.commentItem, { borderBottomColor: colors.border }]}>
+                      <UserAvatar
+                        name={`${comment.author.name} ${comment.author.last_name}`}
+                        imageUri={comment.author.profile_picture || undefined}
+                        size={36}
+                      />
+                      <View style={styles.commentContent}>
+                        <View style={styles.commentHeader}>
+                          <ThemedText style={styles.commentAuthor}>
+                            {comment.author.name} {comment.author.last_name}
+                          </ThemedText>
+                          <ThemedText style={[styles.commentTime, { color: colors.textMuted }]}>
+                            {formatTimeAgo(comment.created_at)}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={[styles.commentText, { color: colors.textSecondary }]}>
+                          {comment.text}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <ThemedText style={[styles.emptyComments, { color: colors.textMuted }]}>
+                  {t('feed.noComments', 'No comments yet. Be the first to comment!')}
+                </ThemedText>
+              )}
             </View>
           </ScrollView>
 
@@ -269,7 +295,6 @@ export default function PostDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </>
   );
 }
 
@@ -368,6 +393,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: Spacing.lg,
+  },
+  commentsList: {
+    gap: Spacing.md,
+  },
+  commentItem: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  commentContent: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  commentTime: {
+    fontSize: 12,
+  },
+  commentText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   commentInputContainer: {
     flexDirection: 'row',

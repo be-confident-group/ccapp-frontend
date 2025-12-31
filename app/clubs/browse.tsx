@@ -17,7 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClubs, useJoinClub, useMyClubs } from '@/lib/hooks/useClubs';
-import { UsersIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
+import { UsersIcon, MagnifyingGlassIcon, ChevronLeftIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
 export default function BrowseClubsScreen() {
@@ -197,6 +197,16 @@ export default function BrowseClubsScreen() {
         options={{
           headerShown: true,
           title: t('clubs.browseClubs', 'Browse Clubs'),
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 17,
+          },
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeftIcon size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <SafeAreaView
@@ -235,6 +245,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  backButton: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
   },
   searchContainer: {
     flexDirection: 'row',

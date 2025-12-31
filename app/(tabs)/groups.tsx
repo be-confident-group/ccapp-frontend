@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +9,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import {
   FeedHeader,
-  FeedSearchBar,
   FeedPost,
 } from '@/components/feed';
-import type { ActivityPost, Post, Club } from '@/types/feed';
+import type { ActivityPost, Post } from '@/types/feed';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
-import { useMyClubs } from '@/lib/hooks/useClubs';
 import { NewspaperIcon } from 'react-native-heroicons/outline';
 
 // Helper function to transform backend Post to ActivityPost for legacy component
@@ -28,6 +26,7 @@ function transformPostToActivityPost(post: Post): ActivityPost {
     },
     location: undefined, // Not in backend schema
     photos: post.photos.map((p) => p.image || ''),
+    title: post.title,
     caption: post.text,
     activityType: post.trip?.type === 'cycle' ? 'ride' : (post.trip?.type || 'walk') as 'walk' | 'ride' | 'run',
     distance: post.trip?.distance,
@@ -43,8 +42,6 @@ function transformPostToActivityPost(post: Post): ActivityPost {
 export default function FeedScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
-
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch data from API
   const {
@@ -93,19 +90,6 @@ export default function FeedScreen() {
     // TODO: Open full-screen photo viewer
     console.log('View photo:', index, 'of', photos.length);
   }, []);
-
-  // Filter posts based on search
-  const filteredPosts = posts.filter((post) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        post.user.name.toLowerCase().includes(query) ||
-        post.caption.toLowerCase().includes(query) ||
-        post.location?.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
 
   const renderPost = useCallback(
     ({ item }: { item: ActivityPost }) => (
@@ -160,14 +144,6 @@ export default function FeedScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const renderListHeader = () => (
-    <FeedSearchBar
-      value={searchQuery}
-      onChangeText={setSearchQuery}
-      placeholder="Search posts..."
-    />
-  );
-
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -180,14 +156,13 @@ export default function FeedScreen() {
         />
 
         <FlatList
-          data={filteredPosts}
+          data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderListHeader}
           ListFooterComponent={renderFooter}
           contentContainerStyle={[
             styles.listContent,
-            filteredPosts.length === 0 && styles.emptyListContent,
+            posts.length === 0 && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={

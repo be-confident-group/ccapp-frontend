@@ -20,7 +20,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useCreatePost } from '@/lib/hooks/usePosts';
 import { pickAndProcessMultipleImages } from '@/lib/utils/imageHelpers';
-import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { PhotoIcon, XMarkIcon, ChevronLeftIcon } from 'react-native-heroicons/outline';
 import type { PostCreateRequest } from '@/types/feed';
 
 export default function CreatePostScreen() {
@@ -123,6 +123,16 @@ export default function CreatePostScreen() {
         options={{
           headerShown: true,
           title: t('posts.createPost', 'Create Post'),
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 17,
+          },
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeftIcon size={24} color={colors.text} />
+            </TouchableOpacity>
+          ),
         }}
       />
       <SafeAreaView
@@ -275,6 +285,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  backButton: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
   },
   scrollView: {
     flex: 1,

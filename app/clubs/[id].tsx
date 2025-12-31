@@ -10,20 +10,22 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClub, useJoinClub, useLeaveClub } from '@/lib/hooks/useClubs';
 import { useClubPosts } from '@/lib/hooks/usePosts';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import { FeedPost } from '@/components/feed';
 import {
   UsersIcon,
   PlusIcon,
   ArrowLeftStartOnRectangleIcon,
-  Cog6ToothIcon,
+  PencilSquareIcon,
 } from 'react-native-heroicons/outline';
 import type { Post } from '@/types/feed';
 import type { ActivityPost } from '@/types/feed';
@@ -39,6 +41,7 @@ function transformPostToActivityPost(post: Post): ActivityPost {
     },
     location: undefined,
     photos: post.photos.map((p) => p.image || ''),
+    title: post.title,
     caption: post.text,
     activityType:
       post.trip?.type === 'cycle' ? 'ride' : ((post.trip?.type || 'walk') as 'walk' | 'ride' | 'run'),
@@ -60,17 +63,24 @@ export default function ClubDetailScreen() {
 
   const { data: club, isLoading, refetch, isRefetching } = useClub(clubId);
   const { data: posts, isLoading: isLoadingPosts, refetch: refetchPosts } = useClubPosts(clubId);
+  const { data: currentUser } = useCurrentUser();
   const joinClubMutation = useJoinClub();
   const leaveClubMutation = useLeaveClub();
 
-  // Transform posts to legacy format
+  // Transform posts to legacy format and sort by newest first
   const activityPosts = useMemo(() => {
     if (!posts) return [];
-    return posts.map(transformPostToActivityPost);
+    return [...posts]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map(transformPostToActivityPost);
   }, [posts]);
 
-  // TODO: Get current user info from auth context to check ownership
-  const isOwner = false; // club?.owner.email === currentUser.email
+  // Check if current user is the club owner
+  const isOwner = useMemo(() => {
+    if (!club || !currentUser) return false;
+    // Compare by name since SimpleProfile doesn't have email/id
+    return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
+  }, [club, currentUser]);
   const isMember = true; // For now, assume user is member if they can view the club
 
   const handleJoinLeave = useCallback(async () => {
@@ -93,10 +103,10 @@ export default function ClubDetailScreen() {
     router.push(`/posts/create?clubId=${club.id}`);
   }, [club]);
 
-  const handleSettings = useCallback(() => {
-    // TODO: Navigate to club settings
-    console.log('Club settings');
-  }, []);
+  const handleEditClub = useCallback(() => {
+    if (!club) return;
+    router.push(`/clubs/edit?id=${club.id}`);
+  }, [club]);
 
   const handleLike = useCallback((postId: string) => {
     console.log('Like post:', postId);
@@ -149,13 +159,6 @@ export default function ClubDetailScreen() {
               {club.description}
             </ThemedText>
           )}
-
-          <View style={styles.clubMeta}>
-            <UsersIcon size={16} color={colors.textMuted} />
-            <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-              {club.members_count} {club.members_count === 1 ? 'member' : 'members'}
-            </ThemedText>
-          </View>
         </View>
 
         {/* Action Buttons */}
@@ -201,9 +204,14 @@ export default function ClubDetailScreen() {
         {/* Members Preview */}
         {club.members && club.members.length > 0 && (
           <View style={styles.membersSection}>
-            <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-              {t('clubs.members', 'Members')}
-            </ThemedText>
+            <View style={styles.membersSectionHeader}>
+              <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                {t('clubs.members', 'Members')}
+              </ThemedText>
+              <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
+                {club.members.length} {club.members.length === 1 ? 'member' : 'members'}
+              </ThemedText>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -252,82 +260,74 @@ export default function ClubDetailScreen() {
 
   if (isLoading) {
     return (
-      <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: t('clubs.loading', 'Loading...'),
-          }}
-        />
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Header title={t('clubs.loading', 'Loading...')} showBack />
+        <ThemedView style={styles.container}>
           <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        </SafeAreaView>
-      </>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   if (!club) {
     return (
-      <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: t('clubs.notFound', 'Club Not Found'),
-          }}
-        />
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Header title={t('clubs.notFound', 'Club Not Found')} showBack />
+        <ThemedView style={styles.container}>
           <View style={styles.loading}>
             <ThemedText>{t('clubs.notFoundMessage', 'This club does not exist.')}</ThemedText>
           </View>
-        </SafeAreaView>
-      </>
+        </ThemedView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: club.name,
-          headerRight: isOwner
-            ? () => (
-                <TouchableOpacity onPress={handleSettings} style={styles.headerButton}>
-                  <Cog6ToothIcon size={24} color={colors.primary} />
-                </TouchableOpacity>
-              )
-            : undefined,
-        }}
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      <Header
+        title={club.name}
+        showBack
+        rightElement={
+          isOwner ? (
+            <TouchableOpacity onPress={handleEditClub} style={styles.headerButton}>
+              <PencilSquareIcon size={22} color={colors.primary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
       />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <ThemedView style={styles.container}>
-          <FlatList
-            data={activityPosts}
-            renderItem={renderPost}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={renderHeader}
-            ListEmptyComponent={renderEmptyPosts}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={() => {
-                  refetch();
-                  refetchPosts();
-                }}
-                tintColor={colors.primary}
-              />
-            }
-          />
-        </ThemedView>
-      </SafeAreaView>
-    </>
+      <ThemedView style={styles.container}>
+        <FlatList
+          data={activityPosts}
+          renderItem={renderPost}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyPosts}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                refetch();
+                refetchPosts();
+              }}
+              tintColor={colors.primary}
+            />
+          }
+        />
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -349,9 +349,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
   },
   header: {
-    padding: Spacing.lg,
+    paddingTop: Spacing.md,
     gap: Spacing.lg,
   },
   clubPhoto: {
@@ -383,7 +384,8 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   memberCount: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
   },
   actions: {
     flexDirection: 'row',
@@ -394,9 +396,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
+    paddingVertical: Spacing.md + 2,
+    borderRadius: 10,
     gap: Spacing.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   actionButtonText: {
     fontSize: 16,
@@ -404,6 +411,11 @@ const styles = StyleSheet.create({
   },
   membersSection: {
     gap: Spacing.sm,
+  },
+  membersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
     fontSize: 16,
@@ -439,6 +451,7 @@ const styles = StyleSheet.create({
   },
   postsHeader: {
     paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
