@@ -10,7 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
-import { formatDistance, formatDuration } from '@/lib/utils/geoCalculations';
+import { formatDistance as formatDistanceUtil, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -21,29 +21,30 @@ import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { syncService } from '@/lib/services/SyncService';
 import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 import { RatedBadge } from '@/components/rating';
+import { useTrips } from '@/lib/hooks/useTrips';
+import type { ApiTrip } from '@/lib/api/trips';
 
 export default function TripHistoryScreen() {
   const { colors } = useTheme();
   const { unitSystem, formatWeight } = useUnits();
-  const [trips, setTrips] = useState<DBTrip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch trips from backend API
+  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
+
   const [syncing, setSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
-    loadTrips();
+    loadLocalData();
   }, []);
 
-  async function loadTrips() {
+  async function loadLocalData() {
     try {
       await database.init();
-      const allTrips = await database.getAllTrips({ status: 'completed' });
-      setTrips(allTrips);
 
-      // Get unsynced count
+      // Get unsynced count from local database
       const unsynced = await syncService.getUnsyncedCount();
       setUnsyncedCount(unsynced);
 
@@ -52,16 +53,15 @@ export default function TripHistoryScreen() {
       const ratedIds = new Set(ratings.map((r) => r.trip_id));
       setRatedTripIds(ratedIds);
     } catch (error) {
-      console.error('[TripHistory] Error loading trips:', error);
-    } finally {
-      setLoading(false);
+      console.error('[TripHistory] Error loading local data:', error);
     }
   }
 
   async function onRefresh() {
-    setRefreshing(true);
-    await loadTrips();
-    setRefreshing(false);
+    await Promise.all([
+      refetch(),
+      loadLocalData(),
+    ]);
   }
 
   async function handleSyncAll() {
@@ -80,10 +80,10 @@ export default function TripHistoryScreen() {
         Alert.alert(
           'Sync Complete',
           `Successfully synced ${result.syncedCount} trip${result.syncedCount !== 1 ? 's' : ''}.${
-            result.failedCount > 0 ? `\n${result.failedCount} trip${result.failedCount !== 1 ? 's' : ''} failed to sync.` : ''
+            result.failedCount > 0 ? `\n${result.failedCount !== 1 ? 's' : ''} failed to sync.` : ''
           }`
         );
-        await loadTrips(); // Reload to update sync status
+        await Promise.all([refetch(), loadLocalData()]); // Reload to update sync status
       } else {
         Alert.alert('Sync Failed', 'Failed to sync trips. Please try again.');
       }
@@ -95,14 +95,14 @@ export default function TripHistoryScreen() {
     }
   }
 
-  function renderTrip({ item }: { item: DBTrip }) {
+  function renderTrip({ item }: { item: ApiTrip }) {
     const tripColor = getTripTypeColor(item.type);
     const tripIcon = getTripTypeIcon(item.type);
     const tripName = getTripTypeName(item.type);
-    const date = new Date(item.start_time);
-    const isSynced = item.synced === 1;
-    const isRated = ratedTripIds.has(item.id);
-    const hasRoute = item.route_data && item.route_data.length > 0;
+    const date = new Date(item.start_timestamp);
+    const isSynced = true; // Backend trips are always synced
+    const isRated = ratedTripIds.has(item.client_id);
+    const hasRoute = item.route && item.route.length > 0;
 
     return (
       <TouchableOpacity
@@ -119,7 +119,7 @@ export default function TripHistoryScreen() {
         <View style={styles.tripDetails}>
           <View style={styles.tripHeader}>
             <ThemedText style={styles.tripType}>{tripName}</ThemedText>
-            {item.is_manual === 1 && (
+            {item.is_manual && (
               <View style={[styles.manualBadge, { backgroundColor: colors.border }]}>
                 <ThemedText style={styles.manualText}>Manual</ThemedText>
               </View>
@@ -145,7 +145,7 @@ export default function TripHistoryScreen() {
           <View style={styles.tripStats}>
             <View style={styles.stat}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDistance(item.distance, unitSystem)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatDistanceUtil(item.distance * 1000, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.stat}>
@@ -163,7 +163,7 @@ export default function TripHistoryScreen() {
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
         <ThemedView style={styles.container}>
@@ -222,7 +222,7 @@ export default function TripHistoryScreen() {
           {unsyncedCount === 0 && <View style={styles.placeholder} />}
         </View>
 
-      {trips.length === 0 ? (
+      {!backendTrips || backendTrips.length === 0 ? (
         <View style={styles.empty}>
           <MaterialCommunityIcons name="map-marker-off" size={64} color={colors.textSecondary} />
           <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -234,12 +234,12 @@ export default function TripHistoryScreen() {
         </View>
       ) : (
         <FlatList
-          data={trips}
+          data={backendTrips}
           renderItem={renderTrip}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
           }
         />
       )}

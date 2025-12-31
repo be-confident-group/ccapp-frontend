@@ -5,7 +5,7 @@
  * Users select a feeling, then swipe along the route to paint.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -36,15 +36,23 @@ import {
   RouteSegment,
   mergeSegments,
 } from '@/types/rating';
+import { useTrip } from '@/lib/hooks/useTrips';
 
 export default function RateRouteScreen() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const mapRef = useRef<RatingMapRef>(null);
 
-  const [trip, setTrip] = useState<Trip | null>(null);
+  // Parse trip ID as number for backend API
+  const tripId = useMemo(() => {
+    const numId = parseInt(id as string, 10);
+    return !isNaN(numId) ? numId : 0;
+  }, [id]);
+
+  // Fetch trip from backend
+  const { data: backendTrip, isLoading: isFetchingTrip } = useTrip(tripId);
+
   const [route, setRoute] = useState<Coordinate[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedFeeling, setSelectedFeeling] = useState<FeelingType | null>(null);
   const [segments, setSegments] = useState<RouteSegment[]>([]);
@@ -55,6 +63,33 @@ export default function RateRouteScreen() {
   const [isPainting, setIsPainting] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
+  // Transform backend trip to local format
+  const trip = useMemo(() => {
+    if (!backendTrip) return null;
+
+    return {
+      id: backendTrip.client_id,
+      user_id: backendTrip.user.toString(),
+      type: backendTrip.type,
+      status: backendTrip.status,
+      is_manual: backendTrip.is_manual ? 1 : 0,
+      start_time: new Date(backendTrip.start_timestamp).getTime(),
+      end_time: new Date(backendTrip.end_timestamp).getTime(),
+      distance: backendTrip.distance * 1000, // Convert km to meters
+      duration: backendTrip.duration,
+      avg_speed: backendTrip.average_speed,
+      max_speed: 0,
+      elevation_gain: backendTrip.elevation_gain || 0,
+      calories: 0,
+      co2_saved: backendTrip.co2_saved,
+      notes: backendTrip.notes || null,
+      route_data: backendTrip.route ? JSON.stringify(backendTrip.route) : null,
+      created_at: new Date(backendTrip.created_at).getTime(),
+      updated_at: new Date(backendTrip.updated_at).getTime(),
+      synced: 1,
+    };
+  }, [backendTrip]);
+
   // Load trip data
   useEffect(() => {
     async function loadTrip() {
@@ -64,35 +99,39 @@ export default function RateRouteScreen() {
         return;
       }
 
+      if (isFetchingTrip) return;
+
+      if (!backendTrip) {
+        Alert.alert('Error', 'Trip not found');
+        router.back();
+        return;
+      }
+
+      if (!backendTrip.route || backendTrip.route.length === 0) {
+        Alert.alert('Error', 'This trip has no route data');
+        router.back();
+        return;
+      }
+
       try {
-        await database.init();
-        const tripData = await database.getTrip(id);
+        // Transform backend route format {lat, lng} to {latitude, longitude}
+        const routeData: Coordinate[] = backendTrip.route.map(coord => ({
+          latitude: coord.lat,
+          longitude: coord.lng,
+          timestamp: coord.timestamp,
+        }));
 
-        if (!tripData) {
-          Alert.alert('Error', 'Trip not found');
-          router.back();
-          return;
-        }
-
-        if (!tripData.route_data) {
-          Alert.alert('Error', 'This trip has no route data');
-          router.back();
-          return;
-        }
-
-        // Parse route data
-        const routeData = JSON.parse(tripData.route_data) as Coordinate[];
         if (routeData.length < 2) {
           Alert.alert('Error', 'Route is too short to rate');
           router.back();
           return;
         }
 
-        setTrip(tripData);
         setRoute(routeData);
 
-        // Load existing rating if any
-        const existingRating = await database.getRating(id);
+        // Load existing rating if any (use client_id for local database)
+        await database.init();
+        const existingRating = await database.getRating(backendTrip.client_id);
         if (existingRating) {
           const existingSegments = JSON.parse(
             existingRating.segments
@@ -103,13 +142,11 @@ export default function RateRouteScreen() {
         console.error('[RateRoute] Error loading trip:', error);
         Alert.alert('Error', 'Failed to load trip data');
         router.back();
-      } finally {
-        setLoading(false);
       }
     }
 
     loadTrip();
-  }, [id]);
+  }, [id, backendTrip, isFetchingTrip]);
 
   // Update route screen points when map is ready
   const updateScreenPoints = useCallback(async () => {
@@ -164,7 +201,7 @@ export default function RateRouteScreen() {
 
   // Handle save
   const handleSave = useCallback(async () => {
-    if (!trip || !id) return;
+    if (!trip) return;
 
     if (segments.length === 0) {
       Alert.alert(
@@ -178,20 +215,21 @@ export default function RateRouteScreen() {
 
     try {
       const now = Date.now();
+      const clientId = trip.id; // Use client_id for local database operations
 
       // Check if rating already exists
-      const existingRating = await database.getRating(id);
+      const existingRating = await database.getRating(clientId);
 
       if (existingRating) {
         // Update existing rating
-        await database.updateRating(id, {
+        await database.updateRating(clientId, {
           segments: JSON.stringify(segments),
           synced: 0, // Mark as unsynced
         });
       } else {
         // Create new rating
         await database.createRating({
-          trip_id: id,
+          trip_id: clientId,
           segments: JSON.stringify(segments),
           rated_at: now,
           synced: 0,
@@ -213,9 +251,9 @@ export default function RateRouteScreen() {
     } finally {
       setSaving(false);
     }
-  }, [trip, id, segments]);
+  }, [trip, segments]);
 
-  if (loading) {
+  if (isFetchingTrip || !trip || route.length === 0) {
     return (
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: colors.background }]}

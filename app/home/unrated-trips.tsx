@@ -5,7 +5,7 @@
  * Users can select a trip to rate from this list.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -28,53 +28,104 @@ import { UnratedTripCard } from '@/components/rating';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { database, type Trip } from '@/lib/database';
+import { useTrips } from '@/lib/hooks/useTrips';
+import type { ApiTrip } from '@/lib/api/trips';
+
+// Transform backend ApiTrip to local Trip format for the card component
+function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
+  return {
+    id: apiTrip.client_id,
+    user_id: apiTrip.user.toString(),
+    type: apiTrip.type,
+    status: apiTrip.status,
+    is_manual: apiTrip.is_manual ? 1 : 0,
+    start_time: new Date(apiTrip.start_timestamp).getTime(),
+    end_time: new Date(apiTrip.end_timestamp).getTime(),
+    distance: apiTrip.distance * 1000, // Convert km to meters
+    duration: apiTrip.duration,
+    avg_speed: apiTrip.average_speed,
+    max_speed: 0, // Not available from backend
+    elevation_gain: apiTrip.elevation_gain || 0,
+    calories: 0, // Not available from backend
+    co2_saved: apiTrip.co2_saved,
+    notes: apiTrip.notes || null,
+    route_data: apiTrip.route ? JSON.stringify(apiTrip.route) : null,
+    created_at: new Date(apiTrip.created_at).getTime(),
+    updated_at: new Date(apiTrip.updated_at).getTime(),
+    synced: 1,
+  };
+}
 
 export default function UnratedTripsScreen() {
   const { colors } = useTheme();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  const loadTrips = useCallback(async () => {
+  // Fetch all trips from backend
+  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
+
+  // Load rated trip IDs from local database
+  const loadRatedTrips = useCallback(async () => {
     try {
       await database.init();
-      const unratedTrips = await database.getUnratedTrips();
-      setTrips(unratedTrips);
+      const ratings = await database.getAllRatings();
+      const ratedIds = new Set(ratings.map((r) => r.trip_id));
+      setRatedTripIds(ratedIds);
     } catch (error) {
-      console.error('[UnratedTrips] Error loading trips:', error);
-    } finally {
-      setLoading(false);
+      console.error('[UnratedTrips] Error loading ratings:', error);
     }
   }, []);
 
-  // Load trips on mount
+  // Load on mount and when screen comes into focus
   useEffect(() => {
-    loadTrips();
-  }, [loadTrips]);
+    loadRatedTrips();
+  }, [loadRatedTrips]);
 
-  // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadTrips();
-    }, [loadTrips])
+      loadRatedTrips();
+      refetch();
+    }, [loadRatedTrips, refetch])
   );
 
+  // Filter for unrated trips with route data
+  const unratedTrips = useMemo(() => {
+    if (!backendTrips) return [];
+
+    return backendTrips
+      .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
+      .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
+      .map(transformApiTripToLocal);
+  }, [backendTrips, ratedTripIds]);
+
+  // Keep a mapping of client_id to backend ID for navigation
+  const clientIdToBackendId = useMemo(() => {
+    if (!backendTrips) return new Map<string, number>();
+    
+    return new Map(
+      backendTrips.map(trip => [trip.client_id, trip.id])
+    );
+  }, [backendTrips]);
+
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadTrips();
-    setRefreshing(false);
+    await Promise.all([refetch(), loadRatedTrips()]);
   };
 
   const handleTripPress = (trip: Trip) => {
-    router.push(`/home/rate-route?id=${trip.id}`);
+    // Use the backend ID for navigation
+    const backendId = clientIdToBackendId.get(trip.id);
+    if (backendId) {
+      router.push(`/home/rate-route?id=${backendId}`);
+    } else {
+      console.error('[UnratedTrips] Backend ID not found for client_id:', trip.id);
+    }
   };
 
   const renderTrip = ({ item }: { item: Trip }) => (
     <UnratedTripCard trip={item} onPress={() => handleTripPress(item)} />
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -114,9 +165,9 @@ export default function UnratedTripsScreen() {
             <ThemedText type="subtitle" style={styles.headerTitle}>
               Rate My Routes
             </ThemedText>
-            {trips.length > 0 && (
+            {unratedTrips.length > 0 && (
               <View style={[styles.countBadge, { backgroundColor: colors.accent }]}>
-                <ThemedText style={styles.countText}>{trips.length}</ThemedText>
+                <ThemedText style={styles.countText}>{unratedTrips.length}</ThemedText>
               </View>
             )}
           </View>
@@ -125,7 +176,7 @@ export default function UnratedTripsScreen() {
         </View>
 
         {/* Content */}
-        {trips.length === 0 ? (
+        {unratedTrips.length === 0 ? (
           <View style={styles.empty}>
             <MaterialCommunityIcons
               name="check-circle-outline"
@@ -142,13 +193,13 @@ export default function UnratedTripsScreen() {
           </View>
         ) : (
           <FlatList
-            data={trips}
+            data={unratedTrips}
             renderItem={renderTrip}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             refreshControl={
               <RefreshControl
-                refreshing={refreshing}
+                refreshing={isRefetching}
                 onRefresh={onRefresh}
                 tintColor={colors.primary}
               />

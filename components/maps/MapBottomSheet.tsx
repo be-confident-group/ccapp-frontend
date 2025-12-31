@@ -1,7 +1,7 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ClockIcon } from 'react-native-heroicons/outline';
@@ -13,7 +13,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TripManager } from '@/lib/services/TripManager';
 import { getTripTypeIcon, getTripTypeColor, type TripType } from '@/types/trip';
 import { formatDurationHuman, parseRouteData } from '@/lib/utils/geoCalculations';
 import type { Trip } from '@/lib/database/db';
@@ -26,36 +25,18 @@ interface MapBottomSheetProps {
   onTripPress?: (tripId: string) => void;
   onExpandChange?: (isExpanded: boolean) => void;
   selectedTripId?: string | null;
+  trips?: Trip[];
 }
 
-export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: MapBottomSheetProps) {
+export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, trips = [] }: MapBottomSheetProps) {
   const { colors, isDark } = useTheme();
   const { formatDistance } = useUnits();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const translateY = useSharedValue(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const context = useSharedValue({ y: 0 });
-
-  // Fetch recent trips from database
-  useEffect(() => {
-    loadRecentTrips();
-  }, []);
-
-  const loadRecentTrips = async () => {
-    try {
-      setLoading(true);
-      const trips = await TripManager.getRecentTrips(10);
-      setRecentTrips(trips);
-    } catch (error) {
-      console.error('[MapBottomSheet] Error loading recent trips:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExpandChange = useCallback((expanded: boolean) => {
     setIsExpanded(expanded);
@@ -189,7 +170,7 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: 
                 Recent Journeys
               </Text>
               <Text style={[styles.tripCount, { color: colors.textSecondary }]}>
-                {loading ? '...' : `${recentTrips.length} trips`}
+                {`${trips.length} trips`}
               </Text>
             </View>
             <Pressable
@@ -208,13 +189,7 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: 
             showsVerticalScrollIndicator={!isExpanded}
             scrollEnabled={isExpanded}
           >
-            {loading ? (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  Loading trips...
-                </Text>
-              </View>
-            ) : recentTrips.length === 0 ? (
+            {trips.length === 0 ? (
               <View style={styles.emptyState}>
                 <MaterialIcons name="route" size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -225,7 +200,7 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId }: 
                 </Text>
               </View>
             ) : (
-              recentTrips.map((trip, index) => {
+              trips.map((trip, index) => {
                 const tripColor = getTripTypeColor(trip.type);
                 const isSelected = selectedTripId === trip.id;
 

@@ -14,13 +14,41 @@ import { useMapMode } from '@/lib/hooks/useMapMode';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import { mockUserLocation } from '@/lib/utils/mockMapData';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { TripManager } from '@/lib/services/TripManager';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
 import type { Trip as DBTrip } from '@/lib/database/db';
+import { useTrips } from '@/lib/hooks/useTrips';
+import type { ApiTrip } from '@/lib/api/trips';
+import { useFocusEffect } from 'expo-router';
+
+// Transform backend ApiTrip to local Trip format
+function transformApiTripToLocal(apiTrip: ApiTrip): DBTrip {
+  return {
+    id: apiTrip.client_id,
+    user_id: apiTrip.user.toString(),
+    type: apiTrip.type,
+    status: apiTrip.status,
+    is_manual: apiTrip.is_manual ? 1 : 0,
+    start_time: new Date(apiTrip.start_timestamp).getTime(),
+    end_time: new Date(apiTrip.end_timestamp).getTime(),
+    distance: apiTrip.distance * 1000, // Convert km to meters
+    duration: apiTrip.duration,
+    avg_speed: apiTrip.average_speed,
+    max_speed: 0,
+    elevation_gain: apiTrip.elevation_gain || 0,
+    calories: 0,
+    co2_saved: apiTrip.co2_saved,
+    notes: apiTrip.notes || null,
+    route_data: apiTrip.route ? JSON.stringify(apiTrip.route) : null,
+    created_at: new Date(apiTrip.created_at).getTime(),
+    updated_at: new Date(apiTrip.updated_at).getTime(),
+    synced: 1,
+  };
+}
 
 export default function MapsScreen() {
   const { colors, isDark } = useTheme();
@@ -39,22 +67,28 @@ export default function MapsScreen() {
 
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
-  const [recentTrips, setRecentTrips] = useState<DBTrip[]>([]);
   const mapViewRef = useRef<any>(null);
 
-  // Load recent trips for map display
-  useEffect(() => {
-    loadRecentTrips();
-  }, []);
+  // Fetch trips from backend
+  const { data: backendTrips, refetch } = useTrips({ status: 'completed' });
 
-  const loadRecentTrips = async () => {
-    try {
-      const trips = await TripManager.getRecentTrips(10);
-      setRecentTrips(trips);
-    } catch (error) {
-      console.error('[MapsScreen] Error loading recent trips:', error);
-    }
-  };
+  // Refetch trips when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
+  // Transform and get recent trips (last 10)
+  const recentTrips = useMemo(() => {
+    if (!backendTrips) return [];
+
+    return backendTrips
+      .filter((trip) => trip.route && trip.route.length > 0) // Only trips with routes
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10)
+      .map(transformApiTripToLocal);
+  }, [backendTrips]);
 
   // Handle layer change from user interaction
   const handleLayerChange = (layer: MapLayer) => {
@@ -161,6 +195,7 @@ export default function MapsScreen() {
           onTripPress={handleTripPress}
           onExpandChange={setIsBottomSheetExpanded}
           selectedTripId={selectedTripId}
+          trips={recentTrips}
         />
       </MapContainer>
     </GestureHandlerRootView>

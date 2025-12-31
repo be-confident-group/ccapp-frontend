@@ -6,7 +6,7 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
 import {
   ArrowsPointingOutIcon,
@@ -25,6 +25,7 @@ import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
 import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
 import { trophyAPI, type Trophy, type UserProfile } from '@/lib/api/trophies';
 import { database } from '@/lib/database';
+import { useTrips } from '@/lib/hooks/useTrips';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -38,11 +39,24 @@ export default function HomeScreen() {
   const [selectedTrophy, setSelectedTrophy] = useState<Trophy | null>(null);
   const [trophies, setTrophies] = useState<Trophy[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [unratedTripsCount, setUnratedTripsCount] = useState(0);
+  const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const toggleRef = useRef<any>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
   const weatherIconName =
     (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
+
+  // Fetch trips from backend
+  const { data: backendTrips, refetch: refetchTrips } = useTrips({ status: 'completed' });
+
+  // Calculate unrated trips count
+  const unratedTripsCount = useMemo(() => {
+    if (!backendTrips) return 0;
+
+    return backendTrips
+      .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
+      .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
+      .length;
+  }, [backendTrips, ratedTripIds]);
 
   // Load user profile and trophies from backend
   const loadUserData = useCallback(async () => {
@@ -63,13 +77,14 @@ export default function HomeScreen() {
       }
     }
 
-    // Load unrated trips count
+    // Load rated trip IDs from local database
     try {
       await database.init();
-      const count = await database.getUnratedTripsCount();
-      setUnratedTripsCount(count);
+      const ratings = await database.getAllRatings();
+      const ratedIds = new Set(ratings.map((r) => r.trip_id));
+      setRatedTripIds(ratedIds);
     } catch (err) {
-      console.error('[HomeScreen] Error loading unrated trips count:', err);
+      console.error('[HomeScreen] Error loading ratings:', err);
     }
   }, []);
 
@@ -77,7 +92,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadUserData();
-    }, [loadUserData])
+      refetchTrips();
+    }, [loadUserData, refetchTrips])
   );
 
   const openMenu = () => {
