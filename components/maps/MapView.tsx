@@ -30,6 +30,7 @@ interface MapViewProps {
   selectedLayer?: MapLayer;
   style?: any;
   onHeadingChange?: (heading: number) => void;
+  onLongPress?: (event: any) => void;
 }
 
 export const MapView = forwardRef<MapViewRef, MapViewProps>(({
@@ -41,6 +42,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
   selectedLayer,
   style,
   onHeadingChange,
+  onLongPress,
 }, ref) => {
   const { isDark } = useTheme();
   const mapRef = useRef<RNMapboxMapView>(null);
@@ -141,6 +143,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
       onMapLoadingError={() => {
         console.warn('[MapView] Failed to load map');
       }}
+      onLongPress={onLongPress}
     >
       <Camera
         ref={cameraRef}

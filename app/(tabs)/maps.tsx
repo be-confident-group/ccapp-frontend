@@ -8,6 +8,7 @@ import { MapContainer } from '@/components/maps/MapContainer';
 import { MapControls } from '@/components/maps/MapControls';
 import { MapLayer } from '@/components/maps/MapLayerSelector';
 import { MapView } from '@/components/maps/MapView';
+import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useMapMode } from '@/lib/hooks/useMapMode';
@@ -67,6 +68,8 @@ export default function MapsScreen() {
 
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapViewRef = useRef<any>(null);
 
   // Fetch trips from backend
@@ -154,6 +157,15 @@ export default function MapsScreen() {
     }
   };
 
+  const handleMapLongPress = useCallback((event: any) => {
+    const { geometry } = event;
+    if (geometry && geometry.coordinates) {
+      const [longitude, latitude] = geometry.coordinates;
+      setReportCoordinates({ latitude, longitude });
+      setIsReportModalVisible(true);
+    }
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <MapContainer>
@@ -168,6 +180,7 @@ export default function MapsScreen() {
           showUserLocation
           followUserLocation={false}
           selectedLayer={selectedLayer}
+          onLongPress={handleMapLongPress}
         >
           {/* Render recent trips from database */}
           {recentTrips.map((trip) => (
@@ -196,6 +209,13 @@ export default function MapsScreen() {
           onExpandChange={setIsBottomSheetExpanded}
           selectedTripId={selectedTripId}
           trips={recentTrips}
+        />
+
+        {/* Report Issue Modal */}
+        <ReportIssueModal
+          visible={isReportModalVisible}
+          coordinates={reportCoordinates}
+          onClose={() => setIsReportModalVisible(false)}
         />
       </MapContainer>
     </GestureHandlerRootView>
