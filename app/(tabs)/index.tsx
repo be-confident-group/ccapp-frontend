@@ -577,7 +577,7 @@ export default function HomeScreen() {
           onClose={() => setIsWeatherModalOpen(false)}
           weather={weather}
         />
-
+ 
         {/* Trophy Details Modal */}
         <TrophyDetailsModal
           visible={isTrophyModalOpen}

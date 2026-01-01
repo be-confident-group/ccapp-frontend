@@ -24,8 +24,9 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { TextInput } from '@/components/ui';
 import { Button } from '@/components/ui';
-
-type FeedbackCategory = 'bug' | 'feature' | 'general';
+import { useSubmitFeedback } from '@/lib/hooks/useFeedback';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
+import type { FeedbackCategory } from '@/lib/api/feedback';
 
 interface CategoryOption {
   value: FeedbackCategory;
@@ -45,7 +46,9 @@ export default function FeedbackScreen() {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitFeedbackMutation = useSubmitFeedback();
+  const { data: currentUser } = useCurrentUser();
 
   const handlePickImage = async () => {
     try {
@@ -100,11 +103,13 @@ export default function FeedbackScreen() {
       return;
     }
 
-    setIsSubmitting(true);
+    try {
+      await submitFeedbackMutation.mutateAsync({
+        text: message.trim(),
+        category,
+        email: currentUser?.email,
+      });
 
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      setIsSubmitting(false);
       Alert.alert(
         'Thank You!',
         'Your feedback has been submitted successfully. We appreciate your input!',
@@ -115,7 +120,14 @@ export default function FeedbackScreen() {
           },
         ]
       );
-    }, 1500);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      Alert.alert(
+        'Error',
+        'Failed to submit feedback. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const selectedCategory = categories.find((cat) => cat.value === category);
@@ -206,22 +218,15 @@ export default function FeedbackScreen() {
             {/* Message Input */}
             <View style={styles.section}>
               <Text style={[styles.label, { color: colors.text }]}>Message</Text>
-              <View
-                style={[
-                  styles.messageInput,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
-                <TextInput
-                  value={message}
-                  onChangeText={setMessage}
-                  placeholder="Tell us what's on your mind..."
-                  multiline
-                  numberOfLines={8}
-                  textAlignVertical="top"
-                  style={styles.messageTextInput}
-                />
-              </View>
+              <TextInput
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Tell us what's on your mind..."
+                multiline
+                numberOfLines={10}
+                textAlignVertical="top"
+                style={styles.messageTextInput}
+              />
             </View>
 
             {/* Attachments */}
@@ -280,7 +285,7 @@ export default function FeedbackScreen() {
               variant="primary"
               size="large"
               fullWidth
-              loading={isSubmitting}
+              loading={submitFeedbackMutation.isPending}
             />
           </View>
         </KeyboardAvoidingView>
@@ -377,14 +382,11 @@ const styles = StyleSheet.create({
   categoryOptionBorder: {
     borderBottomWidth: 1,
   },
-  messageInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    minHeight: 160,
-  },
   messageTextInput: {
-    paddingHorizontal: 0,
-    paddingTop: 16,
+    minHeight: 200,
+    maxHeight: 300,
+    fontSize: 16,
+    lineHeight: 24,
   },
   attachmentList: {
     flexDirection: 'row',
