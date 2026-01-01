@@ -1,5 +1,10 @@
-// Load environment variables from .env file
-require('dotenv').config();
+// Load environment variables from .env file (for local development)
+// In EAS builds, environment variables are injected automatically
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv not available in EAS build environment, which is fine
+}
 
 export default {
   expo: {
@@ -90,7 +95,10 @@ export default {
       eas: {
         projectId: "377c486d-066c-4fa6-a11f-98195f1b848e",
       },
+      // These are available via Constants.expoConfig.extra
       mapboxPublicToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
+      openWeatherMapApiKey: process.env.EXPO_PUBLIC_OPENWEATHERMAP_API_KEY,
+      apiUrl: process.env.EXPO_PUBLIC_API_URL,
     },
   },
 };
