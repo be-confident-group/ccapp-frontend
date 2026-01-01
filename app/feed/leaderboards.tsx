@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import {
@@ -13,13 +14,12 @@ import {
   GenderToggle,
   LeaderboardTable,
 } from '@/components/leaderboard';
-import {
-  mockLeaderboardData,
-  getLeaderboardWithCurrentUser,
-} from '@/lib/utils/mockLeaderboardData';
 import { Spacing } from '@/constants/theme';
-import type { FeedGroup } from '@/types/feed';
-import type { LeaderboardCategory } from '@/types/leaderboard';
+import { useLeaderboard } from '@/lib/hooks/useLeaderboards';
+import { useMyClubs } from '@/lib/hooks/useClubs';
+import { leaderboardApi } from '@/lib/api/leaderboard';
+import type { LeaderboardUser } from '@/types/leaderboard';
+import type { Club } from '@/types/feed';
 
 type ActivityType = 'walks' | 'rides';
 type SortBy = 'distance' | 'trips';
@@ -28,76 +28,72 @@ type GenderFilter = 'all' | 'male' | 'female';
 export default function LeaderboardsScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
-  const { distanceUnit } = useUnits();
+  const { distanceUnit, kmToDistance } = useUnits();
 
   // Filter state
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(
-    // Default to current month
-    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
-  );
-  const [selectedGroup, setSelectedGroup] = useState<FeedGroup | null>(null);
-  const [activityType, setActivityType] = useState<ActivityType>('rides'); // Default to rides
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = All Time
+  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [activityType, setActivityType] = useState<ActivityType>('rides');
   const [sortBy, setSortBy] = useState<SortBy>('distance');
   const [genderFilter, setGenderFilter] = useState<GenderFilter>('all');
 
-  // Determine the category key based on current selections
-  const categoryKey: LeaderboardCategory = useMemo(() => {
-    if (genderFilter === 'male') {
-      return 'male_rider';
-    } else if (genderFilter === 'female') {
-      return 'female_rider';
-    } else {
-      // All genders
-      return `${activityType}_${sortBy}` as LeaderboardCategory;
-    }
-  }, [activityType, sortBy, genderFilter]);
+  // Fetch user's clubs for the dropdown
+  const { data: myClubs } = useMyClubs();
 
-  // Get leaderboard data
-  const leaderboardData = useMemo(() => {
-    const data = mockLeaderboardData[categoryKey];
-    if (!data) return null;
+  // Determine leaderboard type
+  const leaderboardType = useMemo(() => {
+    return leaderboardApi.getLeaderboardType(activityType, sortBy);
+  }, [activityType, sortBy]);
 
-    // Get users with current user highlighted
-    const users = getLeaderboardWithCurrentUser(categoryKey, 5);
+  // Fetch leaderboard data
+  const { data: backendData, isLoading } = useLeaderboard(
+    leaderboardType,
+    selectedClub?.id || null
+  );
 
-    return {
-      ...data,
-      users,
-    };
-  }, [categoryKey]);
+  // Transform backend data to frontend format
+  const leaderboardUsers = useMemo((): LeaderboardUser[] => {
+    if (!backendData?.results) return [];
+
+    return backendData.results.map((entry, index) => ({
+      id: entry.id.toString(),
+      rank: index + 1,
+      firstName: entry.name,
+      lastName: entry.last_name,
+      avatarUrl: entry.profile_picture || undefined,
+      value: sortBy === 'distance' ? kmToDistance(entry.value) : entry.value,
+    }));
+  }, [backendData, sortBy, kmToDistance]);
 
   // Get title and value label
   const { title, valueType, valueLabel } = useMemo(() => {
-    const data = leaderboardData;
-    if (!data) {
-      return { title: '', valueType: 'distance' as const, valueLabel: 'Distance' };
-    }
-
-    let label = 'Distance';
-    if (data.valueType === 'trips') {
-      label = 'Trips';
-    } else {
-      label = distanceUnit === 'km' ? 'Distance (km)' : 'Distance (mi)';
-    }
-
-    // Custom title based on filters
     let customTitle = '';
+
+    // Gender-specific titles
     if (genderFilter === 'male') {
       customTitle = activityType === 'rides' ? 'Top Male Riders' : 'Top Male Walkers';
     } else if (genderFilter === 'female') {
       customTitle = activityType === 'rides' ? 'Top Female Riders' : 'Top Female Walkers';
     } else {
+      // All genders
       const activityLabel = activityType === 'rides' ? 'Riders' : 'Walkers';
       const sortLabel = sortBy === 'distance' ? 'Distance' : 'Trips';
       customTitle = `Top ${activityLabel} - ${sortLabel}`;
     }
 
+    let label = '';
+    if (sortBy === 'trips') {
+      label = 'Trips';
+    } else {
+      label = distanceUnit === 'km' ? 'Distance (km)' : 'Distance (mi)';
+    }
+
     return {
       title: customTitle,
-      valueType: data.valueType,
+      valueType: sortBy,
       valueLabel: label,
     };
-  }, [leaderboardData, distanceUnit, activityType, sortBy, genderFilter]);
+  }, [activityType, sortBy, distanceUnit, genderFilter]);
 
   return (
     <SafeAreaView
@@ -124,17 +120,27 @@ export default function LeaderboardsScreen() {
         <FilterRow
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
-          selectedGroup={selectedGroup}
-          onGroupChange={setSelectedGroup}
+          selectedGroup={selectedClub}
+          onGroupChange={setSelectedClub}
+          myClubs={myClubs || []}
         />
 
         <View style={styles.tableContainer}>
-          <LeaderboardTable
-            title={title}
-            users={leaderboardData?.users || []}
-            valueType={valueType}
-            valueLabel={valueLabel}
-          />
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Loading leaderboard...
+              </ThemedText>
+            </View>
+          ) : (
+            <LeaderboardTable
+              title={title}
+              users={leaderboardUsers}
+              valueType={valueType}
+              valueLabel={valueLabel}
+            />
+          )}
         </View>
       </ThemedView>
     </SafeAreaView>
@@ -167,5 +173,14 @@ const styles = StyleSheet.create({
   },
   tableContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: 14,
   },
 });

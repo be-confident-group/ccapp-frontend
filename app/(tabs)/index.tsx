@@ -360,7 +360,7 @@ export default function HomeScreen() {
                     {(() => {
                       // Get the last 7 days, ending with today
                       const today = new Date();
-                      const currentStreak = userProfile?.streak?.current || 0;
+                      const weekDays = userProfile?.streak?.week_days || [];
                       const days = [];
 
                       for (let i = 6; i >= 0; i--) {
@@ -368,8 +368,9 @@ export default function HomeScreen() {
                         date.setDate(today.getDate() - i);
                         const dayLetter = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
                         const isToday = i === 0;
-                        // Highlight if within current streak (counting back from today)
-                        const isActive = i < currentStreak;
+                        // Use the has_activity data from backend
+                        const dayIndex = 6 - i; // Convert from reverse index to forward index
+                        const isActive = weekDays[dayIndex]?.has_activity || false;
 
                         days.push(
                           <View key={i} style={styles.dayContainer}>

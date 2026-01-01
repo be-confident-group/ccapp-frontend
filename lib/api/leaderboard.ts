@@ -1,62 +1,104 @@
 import { apiClient } from './client';
 
-export interface LeaderboardEntry {
-  user_id: string;
-  rank: number;
-  first_name: string;
+/**
+ * Backend response for a single leaderboard entry
+ */
+export interface BackendLeaderboardEntry {
+  id: number;
+  name: string;
   last_name: string;
-  profile_picture?: string;
+  profile_picture?: string | null;
   value: number; // distance in km OR trip count
-  gender?: 'M' | 'F' | 'O' | '';
-  joined_at?: string; // ISO date string
 }
 
-export interface LeaderboardResponse {
-  category: string;
-  month?: string; // "2025-12" or null for all time
-  group_id?: string | null;
-  entries: LeaderboardEntry[];
+/**
+ * Backend response for a single leaderboard (paginated)
+ */
+export interface BackendLeaderboardResponse {
+  count?: number;
+  next?: string | null;
+  previous?: string | null;
+  results: BackendLeaderboardEntry[];
 }
 
-export type ActivityType = 'walks' | 'rides';
-export type SortBy = 'distance' | 'trips';
-export type GenderFilter = 'all' | 'male' | 'female';
+/**
+ * Backend response when fetching all leaderboards
+ */
+export interface BackendAllLeaderboardsItem {
+  name: string; // e.g., "top_riders_distance"
+  user_rank: number | null;
+  results: BackendLeaderboardEntry[];
+}
+
+export type BackendAllLeaderboardsResponse = BackendAllLeaderboardsItem[];
+
+/**
+ * Leaderboard type mapping
+ */
+export type LeaderboardType =
+  | 'top_riders_distance'
+  | 'top_riders_count'
+  | 'top_walkers_distance'
+  | 'top_walkers_count';
 
 export interface LeaderboardParams {
-  activity_type: ActivityType;
-  sort_by: SortBy;
-  gender_filter?: GenderFilter;
-  month?: string | null; // "2025-12" or null for all time
-  group_id?: string | null;
-  limit?: number; // Default 20
+  leaderboard_type: LeaderboardType;
+  club_id?: number | null;
 }
 
 class LeaderboardApi {
   /**
-   * Fetch leaderboard data from the backend
+   * Fetch a specific leaderboard from the backend
    */
-  async getLeaderboard(params: LeaderboardParams): Promise<LeaderboardResponse> {
-    const queryParams = new URLSearchParams();
+  async getLeaderboard(params: LeaderboardParams): Promise<BackendLeaderboardResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('leaderboard_type', params.leaderboard_type);
 
-    queryParams.append('activity_type', params.activity_type);
-    queryParams.append('sort_by', params.sort_by);
+      if (params.club_id) {
+        queryParams.append('club_id', params.club_id.toString());
+      }
 
-    if (params.gender_filter && params.gender_filter !== 'all') {
-      queryParams.append('gender', params.gender_filter);
+      return await apiClient.get<BackendLeaderboardResponse>(
+        `/api/leaderboards/?${queryParams.toString()}`
+      );
+    } catch (error) {
+      console.error('[LeaderboardAPI] Error fetching leaderboard:', error);
+      throw error;
     }
+  }
 
-    if (params.month) {
-      queryParams.append('month', params.month);
+  /**
+   * Fetch all leaderboards at once
+   */
+  async getAllLeaderboards(club_id?: number | null): Promise<BackendAllLeaderboardsResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+
+      if (club_id) {
+        queryParams.append('club_id', club_id.toString());
+      }
+
+      const endpoint = queryParams.toString()
+        ? `/api/leaderboards/?${queryParams.toString()}`
+        : '/api/leaderboards/';
+
+      return await apiClient.get<BackendAllLeaderboardsResponse>(endpoint);
+    } catch (error) {
+      console.error('[LeaderboardAPI] Error fetching all leaderboards:', error);
+      throw error;
     }
+  }
 
-    if (params.group_id) {
-      queryParams.append('group_id', params.group_id);
+  /**
+   * Helper to determine leaderboard type from activity and sort
+   */
+  getLeaderboardType(activity: 'rides' | 'walks', sortBy: 'distance' | 'trips'): LeaderboardType {
+    if (activity === 'rides') {
+      return sortBy === 'distance' ? 'top_riders_distance' : 'top_riders_count';
+    } else {
+      return sortBy === 'distance' ? 'top_walkers_distance' : 'top_walkers_count';
     }
-
-    queryParams.append('limit', String(params.limit || 20));
-
-    const response = await apiClient.get(`/leaderboards/?${queryParams.toString()}`);
-    return response.data;
   }
 }
 

@@ -170,3 +170,110 @@ export function useDeleteComment() {
     },
   });
 }
+
+/**
+ * Hook to toggle like/unlike on a post
+ */
+export function useTogglePostLike() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      clubId,
+      postId,
+      isLiked,
+    }: {
+      clubId: number;
+      postId: number;
+      isLiked: boolean;
+    }) => {
+      // Call the appropriate API based on current state
+      if (isLiked) {
+        await postAPI.unlikePost(clubId, postId);
+      } else {
+        await postAPI.likePost(clubId, postId);
+      }
+    },
+    onMutate: async ({ clubId, postId, isLiked }) => {
+      // Cancel all outgoing refetches for this post
+      await queryClient.cancelQueries({ queryKey: postKeys.detail(clubId, postId) });
+      await queryClient.cancelQueries({ queryKey: postKeys.list(clubId) });
+      await queryClient.cancelQueries({ queryKey: ['feed'] });
+
+      // Helper to update a post's like status
+      const updatePost = (post: Post) => ({
+        ...post,
+        is_liked: !isLiked,
+        likes_count: isLiked ? post.likes_count - 1 : post.likes_count + 1,
+      });
+
+      // Snapshot previous values for rollback
+      const previousDetail = queryClient.getQueryData<Post>(postKeys.detail(clubId, postId));
+      const previousLists: Array<{ queryKey: unknown[]; data: Post[] }> = [];
+      const previousFeed: Array<{ queryKey: unknown[]; data: any }> = [];
+
+      // Optimistically update post detail
+      queryClient.setQueryData<Post>(postKeys.detail(clubId, postId), (old) => {
+        if (!old) return old;
+        return updatePost(old);
+      });
+
+      // Optimistically update all club post lists that contain this post
+      queryClient.setQueriesData<Post[]>({ queryKey: postKeys.lists() }, (oldPosts) => {
+        if (!oldPosts) return oldPosts;
+        const updated = oldPosts.map((post) =>
+          post.id === postId ? updatePost(post) : post
+        );
+        // Store snapshot
+        previousLists.push({
+          queryKey: postKeys.lists(),
+          data: oldPosts,
+        });
+        return updated;
+      });
+
+      // Optimistically update infinite feed queries
+      queryClient.setQueriesData<{ pages: Array<{ results: Post[] }> }>(
+        { queryKey: ['feed'] },
+        (oldData) => {
+          if (!oldData?.pages) return oldData;
+          const updated = {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              results: page.results.map((post) =>
+                post.id === postId ? updatePost(post) : post
+              ),
+            })),
+          };
+          // Store snapshot
+          previousFeed.push({
+            queryKey: ['feed'],
+            data: oldData,
+          });
+          return updated;
+        }
+      );
+
+      // Return context for rollback
+      return { previousDetail, previousLists, previousFeed };
+    },
+    onError: (err, { clubId, postId }, context) => {
+      // Rollback all optimistic updates on error
+      if (context?.previousDetail) {
+        queryClient.setQueryData<Post>(postKeys.detail(clubId, postId), context.previousDetail);
+      }
+      if (context?.previousLists) {
+        context.previousLists.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousFeed) {
+        context.previousFeed.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    // No need to invalidate on success - optimistic updates handle everything
+  });
+}

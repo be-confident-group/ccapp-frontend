@@ -13,6 +13,7 @@ import {
 } from '@/components/feed';
 import type { ActivityPost, Post } from '@/types/feed';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
+import { useTogglePostLike } from '@/lib/hooks/usePosts';
 import { NewspaperIcon } from 'react-native-heroicons/outline';
 
 // Helper function to transform backend Post to ActivityPost for legacy component
@@ -31,9 +32,9 @@ function transformPostToActivityPost(post: Post): ActivityPost {
     activityType: post.trip?.type === 'cycle' ? 'ride' : (post.trip?.type || 'walk') as 'walk' | 'ride' | 'run',
     distance: post.trip?.distance,
     duration: post.trip?.duration,
-    likeCount: 0, // TODO: Add likes feature later
+    likeCount: post.likes_count,
     commentCount: post.comment_count,
-    isLiked: false, // TODO: Add likes feature later
+    isLiked: post.is_liked,
     createdAt: post.created_at,
     groupId: post.club_id.toString(),
   };
@@ -54,11 +55,19 @@ export default function FeedScreen() {
     isRefetching,
   } = useInfiniteFeed();
 
+  // Like mutation
+  const { mutate: toggleLike } = useTogglePostLike();
+
+  // Store raw backend posts for like handler
+  const backendPosts = useMemo(() => {
+    if (!feedData?.pages) return [];
+    return feedData.pages.flatMap((page) => page.results);
+  }, [feedData]);
+
   // Transform backend data to legacy format
   const posts = useMemo(() => {
-    if (!feedData?.pages) return [];
-    return feedData.pages.flatMap((page) => page.results.map(transformPostToActivityPost));
-  }, [feedData]);
+    return backendPosts.map(transformPostToActivityPost);
+  }, [backendPosts]);
 
   const handleLeaderboardPress = useCallback(() => {
     router.push('/feed/leaderboards');
@@ -73,9 +82,16 @@ export default function FeedScreen() {
   }, [refetch]);
 
   const handleLike = useCallback((postId: string) => {
-    // TODO: Implement like functionality with backend
-    console.log('Like post:', postId);
-  }, []);
+    // Find the backend post to get club_id and is_liked
+    const post = backendPosts.find((p) => p.id.toString() === postId);
+    if (!post) return;
+
+    toggleLike({
+      clubId: post.club_id,
+      postId: post.id,
+      isLiked: post.is_liked,
+    });
+  }, [backendPosts, toggleLike]);
 
   const handleComment = useCallback((postId: string) => {
     router.push(`/feed/post-detail?id=${postId}`);

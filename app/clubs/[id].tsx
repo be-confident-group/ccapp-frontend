@@ -18,7 +18,7 @@ import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClub, useJoinClub, useLeaveClub } from '@/lib/hooks/useClubs';
-import { useClubPosts } from '@/lib/hooks/usePosts';
+import { useClubPosts, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import { FeedPost } from '@/components/feed';
 import {
@@ -47,9 +47,9 @@ function transformPostToActivityPost(post: Post): ActivityPost {
       post.trip?.type === 'cycle' ? 'ride' : ((post.trip?.type || 'walk') as 'walk' | 'ride' | 'run'),
     distance: post.trip?.distance,
     duration: post.trip?.duration,
-    likeCount: 0,
+    likeCount: post.likes_count,
     commentCount: post.comment_count,
-    isLiked: false,
+    isLiked: post.is_liked,
     createdAt: post.created_at,
     groupId: post.club_id.toString(),
   };
@@ -66,14 +66,18 @@ export default function ClubDetailScreen() {
   const { data: currentUser } = useCurrentUser();
   const joinClubMutation = useJoinClub();
   const leaveClubMutation = useLeaveClub();
+  const { mutate: toggleLike } = useTogglePostLike();
 
-  // Transform posts to legacy format and sort by newest first
-  const activityPosts = useMemo(() => {
+  // Store sorted backend posts for like handler
+  const sortedPosts = useMemo(() => {
     if (!posts) return [];
-    return [...posts]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .map(transformPostToActivityPost);
+    return [...posts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [posts]);
+
+  // Transform posts to legacy format
+  const activityPosts = useMemo(() => {
+    return sortedPosts.map(transformPostToActivityPost);
+  }, [sortedPosts]);
 
   // Check if current user is the club owner
   const isOwner = useMemo(() => {
@@ -109,8 +113,16 @@ export default function ClubDetailScreen() {
   }, [club]);
 
   const handleLike = useCallback((postId: string) => {
-    console.log('Like post:', postId);
-  }, []);
+    // Find the backend post to get club_id and is_liked
+    const post = sortedPosts.find((p) => p.id.toString() === postId);
+    if (!post) return;
+
+    toggleLike({
+      clubId: post.club_id,
+      postId: post.id,
+      isLiked: post.is_liked,
+    });
+  }, [sortedPosts, toggleLike]);
 
   const handleComment = useCallback((postId: string) => {
     router.push(`/feed/post-detail?id=${postId}`);

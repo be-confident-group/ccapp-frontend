@@ -78,6 +78,8 @@ export interface Post {
   updated_at: string;
   photos: PostPhoto[];
   comment_count: number;
+  likes_count: number;
+  is_liked: boolean;
   comments?: PostComment[]; // Only included in detail response
 }
 

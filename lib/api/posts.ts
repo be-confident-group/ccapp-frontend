@@ -170,6 +170,32 @@ class PostAPI {
       throw error;
     }
   }
+
+  /**
+   * Like a post
+   */
+  async likePost(clubId: number, postId: number): Promise<void> {
+    try {
+      console.log('[PostAPI] Liking post:', { clubId, postId });
+      await apiClient.post(`/api/clubs/${clubId}/posts/${postId}/like/`, {});
+    } catch (error) {
+      console.error('[PostAPI] Error liking post:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unlike a post
+   */
+  async unlikePost(clubId: number, postId: number): Promise<void> {
+    try {
+      console.log('[PostAPI] Unliking post:', { clubId, postId });
+      await apiClient.post(`/api/clubs/${clubId}/posts/${postId}/unlike/`, {});
+    } catch (error) {
+      console.error('[PostAPI] Error unliking post:', error);
+      throw error;
+    }
+  }
 }
 
 export const postAPI = new PostAPI();

@@ -4,15 +4,15 @@ import { ChevronDownIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
-import { mockGroups } from '@/lib/utils/mockFeedData';
 import { generateMonthOptions } from '@/lib/utils/mockLeaderboardData';
-import type { FeedGroup } from '@/types/feed';
+import type { Club } from '@/types/feed';
 
 interface FilterRowProps {
   selectedMonth: string | null;
   onMonthChange: (month: string | null) => void;
-  selectedGroup: FeedGroup | null;
-  onGroupChange: (group: FeedGroup | null) => void;
+  selectedGroup: Club | null;
+  onGroupChange: (group: Club | null) => void;
+  myClubs: Club[];
 }
 
 export function FilterRow({
@@ -20,6 +20,7 @@ export function FilterRow({
   onMonthChange,
   selectedGroup,
   onGroupChange,
+  myClubs,
 }: FilterRowProps) {
   const { colors } = useTheme();
 
@@ -30,7 +31,7 @@ export function FilterRow({
     return option?.label || 'All Time';
   }, [monthOptions, selectedMonth]);
 
-  const selectedGroupLabel = selectedGroup?.name || 'All Groups';
+  const selectedGroupLabel = selectedGroup?.name || 'Global';
 
   const handleMonthPress = () => {
     if (Platform.OS === 'ios') {
@@ -63,7 +64,7 @@ export function FilterRow({
   };
 
   const handleGroupPress = () => {
-    const groupOptions = [{ id: null, name: 'All Groups' }, ...mockGroups];
+    const groupOptions = [{ id: null, name: 'Global' }, ...myClubs];
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -74,7 +75,7 @@ export function FilterRow({
         (buttonIndex) => {
           if (buttonIndex > 0) {
             const selected = groupOptions[buttonIndex - 1];
-            onGroupChange(selected.id ? selected as FeedGroup : null);
+            onGroupChange(selected.id ? selected as Club : null);
           }
         }
       );
@@ -85,7 +86,7 @@ export function FilterRow({
         [
           ...groupOptions.map((g) => ({
             text: g.name,
-            onPress: () => onGroupChange(g.id ? g as FeedGroup : null),
+            onPress: () => onGroupChange(g.id ? g as Club : null),
           })),
           { text: 'Cancel', style: 'cancel' },
         ]
