@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import {
   ChevronLeftIcon,
   ChevronDownIcon,
@@ -40,11 +41,17 @@ const categories: CategoryOption[] = [
   { value: 'general', label: 'General Feedback', description: 'Share your thoughts' },
 ];
 
+interface Attachment {
+  uri: string; // Local URI for display
+  base64?: string; // Base64 data for upload
+}
+
 export default function FeedbackScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [category, setCategory] = useState<FeedbackCategory>('general');
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const submitFeedbackMutation = useSubmitFeedback();
@@ -69,15 +76,17 @@ export default function FeedbackScreen() {
         return;
       }
 
-      // Launch image picker
+      // Launch image picker with base64 enabled
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsMultipleSelection: false,
         quality: 0.8,
+        base64: true, // Get base64 data
       });
 
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
+        const asset = result.assets[0];
+        const uri = asset.uri;
 
         // Validate file type (PNG or JPG)
         if (!uri.toLowerCase().match(/\.(png|jpg|jpeg)$/)) {
@@ -85,7 +94,15 @@ export default function FeedbackScreen() {
           return;
         }
 
-        setAttachments([...attachments, uri]);
+        // Create base64 data URI if base64 is available
+        let base64Data: string | undefined;
+        if (asset.base64) {
+          const extension = uri.split('.').pop()?.toLowerCase() || 'jpeg';
+          const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+          base64Data = `data:${mimeType};base64,${asset.base64}`;
+        }
+
+        setAttachments([...attachments, { uri, base64: base64Data }]);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -104,10 +121,34 @@ export default function FeedbackScreen() {
     }
 
     try {
+      // Collect device and app metadata
+      const metadata = {
+        appVersion: Constants.expoConfig?.version || '1.0.0',
+        platform: Platform.OS,
+        platformVersion: String(Platform.Version),
+        deviceName: Constants.deviceName || 'Unknown',
+        expoVersion: Constants.expoVersion || 'Unknown',
+        ...(Platform.OS === 'ios' && Platform.constants && {
+          systemName: (Platform.constants as any).systemName,
+          osVersion: (Platform.constants as any).osVersion,
+        }),
+        ...(Platform.OS === 'android' && {
+          androidApiLevel: Platform.Version,
+        }),
+      };
+
+      // Get the first attachment's base64 data if available (backend only supports one photo)
+      const photo = attachments.length > 0 && attachments[0].base64
+        ? attachments[0].base64
+        : null;
+
       await submitFeedbackMutation.mutateAsync({
+        subject: subject.trim() || null,
         text: message.trim(),
         category,
-        email: currentUser?.email,
+        email: currentUser?.email || null,
+        metadata,
+        photo,
       });
 
       Alert.alert(
@@ -215,6 +256,17 @@ export default function FeedbackScreen() {
               )}
             </View>
 
+            {/* Subject Input */}
+            <View style={styles.section}>
+              <Text style={[styles.label, { color: colors.text }]}>Subject (Optional)</Text>
+              <TextInput
+                value={subject}
+                onChangeText={setSubject}
+                placeholder="Brief summary of your feedback"
+                style={styles.subjectTextInput}
+              />
+            </View>
+
             {/* Message Input */}
             <View style={styles.section}>
               <Text style={[styles.label, { color: colors.text }]}>Message</Text>
@@ -241,12 +293,12 @@ export default function FeedbackScreen() {
               {/* Attachment List */}
               {attachments.length > 0 && (
                 <View style={styles.attachmentList}>
-                  {attachments.map((uri, index) => (
+                  {attachments.map((attachment, index) => (
                     <View
                       key={index}
                       style={[styles.attachmentItem, { backgroundColor: colors.card }]}
                     >
-                      <Image source={{ uri }} style={styles.attachmentImage} />
+                      <Image source={{ uri: attachment.uri }} style={styles.attachmentImage} />
                       <TouchableOpacity
                         onPress={() => handleRemoveAttachment(index)}
                         style={[styles.removeButton, { backgroundColor: colors.error }]}
@@ -381,6 +433,10 @@ const styles = StyleSheet.create({
   },
   categoryOptionBorder: {
     borderBottomWidth: 1,
+  },
+  subjectTextInput: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   messageTextInput: {
     minHeight: 200,

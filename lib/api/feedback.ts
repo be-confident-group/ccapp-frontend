@@ -9,10 +9,12 @@ export type FeedbackCategory = 'bug' | 'feature' | 'general' | 'other';
  * Request payload for submitting feedback
  */
 export interface FeedbackRequest {
+  subject?: string | null; // Short summary of the feedback
   text: string;
   category: FeedbackCategory;
-  email?: string; // Required for unauthenticated users
+  email?: string | null; // Required for unauthenticated users
   metadata?: Record<string, any>;
+  photo?: string | null; // Base64 encoded image (data URI format)
 }
 
 /**
