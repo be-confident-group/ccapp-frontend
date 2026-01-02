@@ -23,7 +23,7 @@ import type { Club } from '@/types/feed';
 
 type ActivityType = 'walks' | 'rides';
 type SortBy = 'distance' | 'trips';
-type GenderFilter = 'all' | 'male' | 'female';
+type GenderFilter = 'all' | 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
 export default function LeaderboardsScreen() {
   const { t } = useTranslation('groups');
@@ -45,10 +45,23 @@ export default function LeaderboardsScreen() {
     return leaderboardApi.getLeaderboardType(activityType, sortBy);
   }, [activityType, sortBy]);
 
+  // Map frontend gender filter to backend codes
+  const backendGenderCode = useMemo(() => {
+    if (genderFilter === 'all') return null;
+    const genderMap: Record<Exclude<GenderFilter, 'all'>, 'M' | 'F' | 'O' | 'P'> = {
+      male: 'M',
+      female: 'F',
+      other: 'O',
+      prefer_not_to_say: 'P',
+    };
+    return genderMap[genderFilter];
+  }, [genderFilter]);
+
   // Fetch leaderboard data
   const { data: backendData, isLoading } = useLeaderboard(
     leaderboardType,
-    selectedClub?.id || null
+    selectedClub?.id || null,
+    backendGenderCode
   );
 
   // Transform backend data to frontend format
@@ -74,6 +87,10 @@ export default function LeaderboardsScreen() {
       customTitle = activityType === 'rides' ? 'Top Male Riders' : 'Top Male Walkers';
     } else if (genderFilter === 'female') {
       customTitle = activityType === 'rides' ? 'Top Female Riders' : 'Top Female Walkers';
+    } else if (genderFilter === 'other') {
+      customTitle = activityType === 'rides' ? 'Top Other Riders' : 'Top Other Walkers';
+    } else if (genderFilter === 'prefer_not_to_say') {
+      customTitle = activityType === 'rides' ? 'Top Riders (Prefer Not To Say)' : 'Top Walkers (Prefer Not To Say)';
     } else {
       // All genders
       const activityLabel = activityType === 'rides' ? 'Riders' : 'Walkers';

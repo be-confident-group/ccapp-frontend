@@ -44,6 +44,7 @@ export type LeaderboardType =
 export interface LeaderboardParams {
   leaderboard_type: LeaderboardType;
   club_id?: number | null;
+  gender?: 'M' | 'F' | 'O' | 'P' | null;
 }
 
 class LeaderboardApi {
@@ -57,6 +58,10 @@ class LeaderboardApi {
 
       if (params.club_id) {
         queryParams.append('club_id', params.club_id.toString());
+      }
+
+      if (params.gender) {
+        queryParams.append('gender', params.gender);
       }
 
       return await apiClient.get<BackendLeaderboardResponse>(
