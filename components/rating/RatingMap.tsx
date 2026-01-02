@@ -71,6 +71,7 @@ interface RatingMapProps {
   previewSegment?: RouteSegment | null;
   style?: ViewStyle;
   onMapReady?: () => void;
+  disableInteraction?: boolean; // Disable map scrolling when painting
 }
 
 /**
@@ -230,7 +231,7 @@ function calculateBounds(
 }
 
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
-  ({ route: rawRoute, segments, previewSegment, style, onMapReady }, ref) => {
+  ({ route: rawRoute, segments, previewSegment, style, onMapReady, disableInteraction = false }, ref) => {
     const { colors, isDark } = useTheme();
     const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
@@ -320,9 +321,9 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           style={styles.map}
           styleURL={mapStyle}
           onDidFinishLoadingMap={handleMapLoaded}
-          scrollEnabled={true}
-          zoomEnabled={true}
-          rotateEnabled={true}
+          scrollEnabled={!disableInteraction}
+          zoomEnabled={!disableInteraction}
+          rotateEnabled={!disableInteraction}
           pitchEnabled={false}
           compassEnabled={false}
           logoEnabled={false}

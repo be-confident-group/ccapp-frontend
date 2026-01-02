@@ -23,6 +23,7 @@ interface SegmentPainterProps {
   selectedFeeling: FeelingType | null;
   onSegmentPainted: (segment: RouteSegment) => void;
   onPaintingStateChange?: (isPainting: boolean) => void;
+  onLongPress?: (coordinate: Coordinate) => void;
   enabled: boolean;
   style?: ViewStyle;
   children?: React.ReactNode;
@@ -107,6 +108,7 @@ export default function SegmentPainter({
   selectedFeeling,
   onSegmentPainted,
   onPaintingStateChange,
+  onLongPress,
   enabled,
   style,
   children,
@@ -114,6 +116,10 @@ export default function SegmentPainter({
   const [isPainting, setIsPainting] = useState(false);
   const startIndexRef = useRef<number | null>(null);
   const currentIndexRef = useRef<number | null>(null);
+
+  // Store a fresh copy of screen points for use in gesture handlers
+  const screenPointsRef = useRef(routeScreenPoints);
+  screenPointsRef.current = routeScreenPoints;
 
   // Visual feedback for painting
   const paintIndicatorOpacity = useSharedValue(0);
@@ -154,47 +160,94 @@ export default function SegmentPainter({
     onPaintingStateChange?.(false);
   }, [selectedFeeling, onSegmentPainted, onPaintingStateChange]);
 
-  // Pan gesture for painting
+  // JS thread handlers for gesture events - use ref for fresh screen points
+  const handleGestureStart = useCallback(
+    (x: number, y: number) => {
+      console.log('[SegmentPainter] Gesture start at:', { x, y });
+      console.log('[SegmentPainter] Screen points count:', screenPointsRef.current.length);
+      const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+      console.log('[SegmentPainter] Found segment index:', index);
+      if (index !== null) {
+        handlePaintStart(index);
+      }
+    },
+    [handlePaintStart]
+  );
+
+  const handleGestureUpdate = useCallback(
+    (x: number, y: number) => {
+      const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+      if (index !== null) {
+        handlePaintUpdate(index);
+      }
+    },
+    [handlePaintUpdate]
+  );
+
+  // Handle long press - find nearest coordinate and trigger callback
+  const handleLongPressEvent = useCallback(
+    (x: number, y: number) => {
+      if (!onLongPress || screenPointsRef.current.length === 0) return;
+
+      // Find nearest point on route
+      let minDist = Infinity;
+      let nearestIdx = 0;
+
+      for (let i = 0; i < screenPointsRef.current.length; i++) {
+        const pt = screenPointsRef.current[i];
+        const dist = Math.sqrt(Math.pow(pt.x - x, 2) + Math.pow(pt.y - y, 2));
+        if (dist < minDist) {
+          minDist = dist;
+          nearestIdx = i;
+        }
+      }
+
+      // Only trigger if within threshold
+      if (minDist < TOUCH_THRESHOLD && route[nearestIdx]) {
+        console.log('[SegmentPainter] Long press at coordinate:', route[nearestIdx]);
+        onLongPress(route[nearestIdx]);
+      }
+    },
+    [onLongPress, route]
+  );
+
+  // Pan gesture for painting - only active when feeling is selected
   const panGesture = Gesture.Pan()
     .enabled(enabled && selectedFeeling !== null)
-    .onStart((event) => {
-      if (!selectedFeeling) return;
-
-      const index = findNearestSegmentIndex(
-        { x: event.x, y: event.y },
-        routeScreenPoints
-      );
-
-      if (index !== null) {
-        runOnJS(handlePaintStart)(index);
-        paintIndicatorOpacity.value = withTiming(1, { duration: 100 });
-        paintIndicatorX.value = event.x;
-        paintIndicatorY.value = event.y;
-      }
-    })
-    .onUpdate((event) => {
-      if (startIndexRef.current === null) return;
-
-      const index = findNearestSegmentIndex(
-        { x: event.x, y: event.y },
-        routeScreenPoints
-      );
-
-      if (index !== null) {
-        runOnJS(handlePaintUpdate)(index);
-      }
-
+    .minDistance(5)
+    .onBegin((event) => {
+      'worklet';
       paintIndicatorX.value = event.x;
       paintIndicatorY.value = event.y;
     })
-    .onEnd(() => {
-      runOnJS(handlePaintEnd)();
-      paintIndicatorOpacity.value = withTiming(0, { duration: 200 });
+    .onStart((event) => {
+      'worklet';
+      paintIndicatorOpacity.value = withTiming(1, { duration: 100 });
+      runOnJS(handleGestureStart)(event.x, event.y);
     })
-    .onFinalize(() => {
-      runOnJS(handlePaintEnd)();
+    .onUpdate((event) => {
+      'worklet';
+      paintIndicatorX.value = event.x;
+      paintIndicatorY.value = event.y;
+      runOnJS(handleGestureUpdate)(event.x, event.y);
+    })
+    .onEnd(() => {
+      'worklet';
       paintIndicatorOpacity.value = withTiming(0, { duration: 200 });
+      runOnJS(handlePaintEnd)();
     });
+
+  // Long press gesture - only active when NOT painting (no feeling selected)
+  const longPressGesture = Gesture.LongPress()
+    .enabled(enabled && selectedFeeling === null && !!onLongPress)
+    .minDuration(500)
+    .onStart((event) => {
+      'worklet';
+      runOnJS(handleLongPressEvent)(event.x, event.y);
+    });
+
+  // Combine gestures - they are mutually exclusive based on enabled state
+  const composedGesture = Gesture.Exclusive(longPressGesture, panGesture);
 
   // Animated style for paint indicator
   const paintIndicatorStyle = useAnimatedStyle(() => ({
@@ -206,7 +259,7 @@ export default function SegmentPainter({
   }));
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={composedGesture}>
       <View style={[styles.container, style]}>
         {children}
 

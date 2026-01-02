@@ -80,7 +80,17 @@ class MapFeedbackApi {
    */
   async createFeedback(data: CreateMapFeedbackRequest): Promise<MapFeedback> {
     try {
-      return await apiClient.post<MapFeedback>('/api/map-feedback/', data);
+      // Log the full request payload for backend debugging
+      console.log('[MapFeedbackAPI] ========================================');
+      console.log('[MapFeedbackAPI] Creating map feedback report');
+      console.log('[MapFeedbackAPI] Request payload:', JSON.stringify(data, null, 2));
+      console.log('[MapFeedbackAPI] Endpoint: POST /api/map-feedback/');
+      console.log('[MapFeedbackAPI] ========================================');
+
+      const response = await apiClient.post<MapFeedback>('/api/map-feedback/', data);
+
+      console.log('[MapFeedbackAPI] Success! Response:', JSON.stringify(response, null, 2));
+      return response;
     } catch (error) {
       console.error('[MapFeedbackAPI] Error creating feedback:', error);
       throw error;

@@ -212,6 +212,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '85%',
+    minHeight: 500, // Ensure minimum height for content
   },
   header: {
     flexDirection: 'row',

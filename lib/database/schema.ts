@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 export const SCHEMA = {
   trips: `
@@ -75,8 +75,7 @@ export const SCHEMA = {
       synced INTEGER DEFAULT 0,
       backend_id INTEGER,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      updated_at INTEGER NOT NULL
     )
   `,
 };
@@ -153,6 +152,42 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     } catch (error) {
       // Table might already exist if migration was partially run
       console.log('[Database] Migration 2->3: route_ratings table may already exist', error);
+    }
+  }
+
+  // Migration from version 3 to 4: Remove FOREIGN KEY constraint from route_ratings
+  // This allows ratings for backend-only trips that don't exist in local trips table
+  if (from < 4 && to >= 4) {
+    console.log('[Database] Migration 3->4: Removing FOREIGN KEY constraint from route_ratings');
+    try {
+      // SQLite doesn't support dropping constraints, so we recreate the table
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS route_ratings_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trip_id TEXT NOT NULL,
+          segments TEXT NOT NULL,
+          rated_at INTEGER NOT NULL,
+          synced INTEGER DEFAULT 0,
+          backend_id INTEGER,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `);
+      // Copy existing data
+      await db.execAsync(`
+        INSERT INTO route_ratings_new (id, trip_id, segments, rated_at, synced, backend_id, created_at, updated_at)
+        SELECT id, trip_id, segments, rated_at, synced, backend_id, created_at, updated_at
+        FROM route_ratings
+      `);
+      // Drop old table and rename new one
+      await db.execAsync('DROP TABLE route_ratings');
+      await db.execAsync('ALTER TABLE route_ratings_new RENAME TO route_ratings');
+      // Recreate indexes
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_rating_trip ON route_ratings(trip_id)');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_rating_synced ON route_ratings(synced)');
+      console.log('[Database] Migration 3->4: Successfully removed FOREIGN KEY constraint');
+    } catch (error) {
+      console.log('[Database] Migration 3->4: Error during migration', error);
     }
   }
 

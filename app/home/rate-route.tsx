@@ -37,6 +37,7 @@ import {
   mergeSegments,
 } from '@/types/rating';
 import { useTrip } from '@/lib/hooks/useTrips';
+import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 
 export default function RateRouteScreen() {
   const { colors } = useTheme();
@@ -62,6 +63,8 @@ export default function RateRouteScreen() {
   >([]);
   const [isPainting, setIsPainting] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [issueCoordinate, setIssueCoordinate] = useState<Coordinate | null>(null);
 
   // Transform backend trip to local format
   const trip = useMemo(() => {
@@ -168,15 +171,48 @@ export default function RateRouteScreen() {
   // Handle segment painted
   const handleSegmentPainted = useCallback(
     (segment: RouteSegment) => {
-      setSegments((prev) => mergeSegments(prev, segment));
+      console.log('[RateRoute] Segment painted:', {
+        startIndex: segment.startIndex,
+        endIndex: segment.endIndex,
+        feeling: segment.feeling,
+        routeLength: route.length,
+      });
+      setSegments((prev) => {
+        const merged = mergeSegments(prev, segment);
+        console.log('[RateRoute] After merge - segments:', merged.length);
+        return merged;
+      });
       setPreviewSegment(null);
     },
-    []
+    [route.length]
   );
+
+  // Handle feeling selection - refresh screen points when selecting a feeling
+  const handleFeelingSelect = useCallback(async (feeling: FeelingType | null) => {
+    setSelectedFeeling(feeling);
+    // Refresh screen points when entering painting mode for accuracy
+    if (feeling !== null && mapRef.current) {
+      const points = await mapRef.current.getRouteScreenPoints();
+      console.log('[RateRoute] Refreshed screen points for feeling:', feeling, 'count:', points.length);
+      setRouteScreenPoints(points);
+    }
+  }, []);
 
   // Handle painting state change
   const handlePaintingStateChange = useCallback((painting: boolean) => {
     setIsPainting(painting);
+  }, []);
+
+  // Handle long press to report issue
+  const handleLongPress = useCallback((coordinate: Coordinate) => {
+    setIssueCoordinate(coordinate);
+    setShowIssueModal(true);
+  }, []);
+
+  // Handle close issue modal
+  const handleCloseIssueModal = useCallback(() => {
+    setShowIssueModal(false);
+    setIssueCoordinate(null);
   }, []);
 
   // Handle clear all
@@ -355,7 +391,8 @@ export default function RateRouteScreen() {
                 selectedFeeling={selectedFeeling}
                 onSegmentPainted={handleSegmentPainted}
                 onPaintingStateChange={handlePaintingStateChange}
-                enabled={isMapReady && selectedFeeling !== null}
+                onLongPress={handleLongPress}
+                enabled={isMapReady}
                 style={styles.painter}
               >
                 <RatingMap
@@ -364,6 +401,7 @@ export default function RateRouteScreen() {
                   segments={segments}
                   previewSegment={previewSegment}
                   onMapReady={handleMapReady}
+                  disableInteraction={selectedFeeling !== null}
                   style={styles.map}
                 />
               </SegmentPainter>
@@ -399,7 +437,7 @@ export default function RateRouteScreen() {
             {/* Feeling selector - compact single row */}
             <FeelingSelector
               selectedFeeling={selectedFeeling}
-              onSelect={setSelectedFeeling}
+              onSelect={handleFeelingSelect}
               disabled={saving}
               compact
             />
@@ -418,6 +456,13 @@ export default function RateRouteScreen() {
             </View>
           </View>
         </ThemedView>
+
+        {/* Report Issue Modal */}
+        <ReportIssueModal
+          visible={showIssueModal}
+          coordinates={issueCoordinate}
+          onClose={handleCloseIssueModal}
+        />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
