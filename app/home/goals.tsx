@@ -1,3 +1,12 @@
+/**
+ * ===========================================
+ * GOALS PAGE - PLANNED FOR NEXT VERSION
+ * ===========================================
+ * This page is hidden from the main navigation but kept
+ * functional for future release. The Goals section on the
+ * home page is commented out to hide this feature from users.
+ */
+
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';

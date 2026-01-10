@@ -58,6 +58,41 @@ export default function HomeScreen() {
       .length;
   }, [backendTrips, ratedTripIds]);
 
+  /**
+   * Generate encouraging trophy message based on earned trophies
+   * NOTE: This will be replaced with AI-generated personalized messages in a future version
+   */
+  const trophySummaryMessage = useMemo(() => {
+    const earnedCount = trophies.filter((t) => t.is_earned).length;
+    const totalCount = trophies.length;
+    const unearnedCount = totalCount - earnedCount;
+
+    if (totalCount === 0) {
+      return "Start your journey to earn amazing trophies!";
+    }
+
+    if (earnedCount === 0) {
+      return `${totalCount} trophies are waiting for you. Start riding to earn your first one!`;
+    }
+
+    if (earnedCount === totalCount) {
+      return `Amazing! You've earned all ${totalCount} trophies! You're a true champion! 🏆`;
+    }
+
+    // Different messages based on progress
+    const percentageEarned = (earnedCount / totalCount) * 100;
+
+    if (percentageEarned >= 75) {
+      return `You're almost there! ${earnedCount} down, only ${unearnedCount} more trophy${unearnedCount === 1 ? '' : 'ies'} to go!`;
+    } else if (percentageEarned >= 50) {
+      return `Great progress! You've earned ${earnedCount} out of ${totalCount} trophies. Keep it up!`;
+    } else if (percentageEarned >= 25) {
+      return `You've unlocked ${earnedCount} trophy${earnedCount === 1 ? '' : 'ies'}! ${unearnedCount} more to discover. Keep riding!`;
+    } else {
+      return `You've earned ${earnedCount} trophy${earnedCount === 1 ? '' : 'ies'}! ${unearnedCount} more waiting to be unlocked. You've got this! 🚴`;
+    }
+  }, [trophies]);
+
   // Load user profile and trophies from backend
   const loadUserData = useCallback(async () => {
     try {
@@ -485,7 +520,7 @@ export default function HomeScreen() {
                       <TrophyIcon size={18} color="#F59E0B" />
                       <ThemedText style={styles.trophiesSummaryTitle}>Trophies</ThemedText>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.expandIconButton}
                       onPress={() => router.push('/home/trophies')}
                     >
@@ -493,19 +528,22 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                   <ThemedText style={[styles.trophiesSummaryText, { color: colors.textSecondary }]}>
-                    You've got September challenge done! You need 4 more rides to complete the October challenge.
+                    {trophySummaryMessage}
                   </ThemedText>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* Goals */}
-          <View style={styles.goalsSection}>
-            {/* Goals Card */}
+          {/* ===========================================
+              GOALS SECTION - HIDDEN FOR NEXT VERSION
+              ===========================================
+              This section is planned for release in the next version.
+              Keeping the code commented out for future implementation.
+          */}
+          {/* <View style={styles.goalsSection}>
             <View style={[styles.goalsCardContainer, styles.cardShadow]}>
               <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {/* Top highlight for 3D effect - only in light mode */}
                 {!isDark && (
                   <LinearGradient
                     pointerEvents="none"
@@ -516,7 +554,6 @@ export default function HomeScreen() {
                   />
                 )}
 
-                {/* Goals List */}
                 <View style={styles.goalsContent}>
                   {[
                     { id: 1, title: `Ride ${formatDistance(50)} this week`, current: 32, target: 50, color: '#3B82F6', bg: '#DBEAFE' },
@@ -545,10 +582,8 @@ export default function HomeScreen() {
                   })}
                 </View>
 
-                {/* Divider */}
                 <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
 
-                {/* Goals Summary */}
                 <View style={styles.goalsSummary}>
                   <View style={styles.goalsHeader}>
                     <View style={styles.goalsTitleRow}>
@@ -567,7 +602,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </View> */}
 
         </ScrollView>
 
@@ -908,68 +943,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  goalsSection: {
-    marginBottom: Spacing.md,
-  },
-  goalsCardContainer: {
-    borderRadius: 20,
-  },
-  goalsContent: {
-    padding: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-    gap: Spacing.lg,
-  },
-  goalItem: {
-    gap: Spacing.xs,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
-  },
-  goalTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-  },
-  goalProgress: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  progressBarBg: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  goalsSummary: {
-    padding: Spacing.md,
-    paddingTop: Spacing.md,
-    gap: Spacing.sm,
-  },
-  goalsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  goalsTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  goalsSummaryTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  goalsSummaryText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
+  // ===========================================
+  // GOALS STYLES - HIDDEN FOR NEXT VERSION
+  // ===========================================
+  // Keeping styles commented out for future implementation
+  // goalsSection: {
+  //   marginBottom: Spacing.md,
+  // },
+  // goalsCardContainer: {
+  //   borderRadius: 20,
+  // },
+  // goalsContent: {
+  //   padding: Spacing.lg,
+  //   paddingTop: Spacing.lg,
+  //   paddingBottom: Spacing.md,
+  //   gap: Spacing.lg,
+  // },
+  // goalItem: {
+  //   gap: Spacing.xs,
+  // },
+  // goalHeader: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   justifyContent: 'space-between',
+  //   marginBottom: Spacing.xs,
+  // },
+  // goalTitle: {
+  //   fontSize: 14,
+  //   fontWeight: '600',
+  //   flex: 1,
+  // },
+  // goalProgress: {
+  //   fontSize: 14,
+  //   fontWeight: '700',
+  // },
+  // progressBarBg: {
+  //   height: 8,
+  //   borderRadius: 4,
+  //   overflow: 'hidden',
+  // },
+  // progressBarFill: {
+  //   height: '100%',
+  //   borderRadius: 4,
+  // },
+  // goalsSummary: {
+  //   padding: Spacing.md,
+  //   paddingTop: Spacing.md,
+  //   gap: Spacing.sm,
+  // },
+  // goalsHeader: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   justifyContent: 'space-between',
+  // },
+  // goalsTitleRow: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   gap: 8,
+  // },
+  // goalsSummaryTitle: {
+  //   fontSize: 15,
+  //   fontWeight: '600',
+  // },
+  // goalsSummaryText: {
+  //   fontSize: 14,
+  //   lineHeight: 20,
+  // },
   // Dropdown styles
   backdrop: {
     flex: 1,
