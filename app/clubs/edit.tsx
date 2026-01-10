@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -18,7 +19,7 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { useClub, useUpdateClub } from '@/lib/hooks/useClubs';
+import { useClub, useUpdateClub, useDeleteClub } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
 import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import type { ClubUpdateRequest } from '@/types/feed';
@@ -31,6 +32,7 @@ export default function EditClubScreen() {
 
   const { data: club, isLoading } = useClub(clubId);
   const updateClubMutation = useUpdateClub();
+  const deleteClubMutation = useDeleteClub();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -109,6 +111,35 @@ export default function EditClubScreen() {
       alert(error instanceof Error ? error.message : 'Failed to update group');
     }
   }, [clubId, name, description, photoBase64, photoChanged, validateForm, updateClubMutation]);
+
+  const handleDelete = useCallback(() => {
+    if (!clubId || !club) return;
+
+    Alert.alert(
+      t('clubs.deleteClub', 'Delete Group'),
+      t('clubs.deleteConfirmMessage', `Are you sure you want to delete "${club.name}"? This action cannot be undone.`),
+      [
+        {
+          text: t('common:buttons.cancel', 'Cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('clubs.delete', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteClubMutation.mutateAsync(clubId);
+              // Navigate to groups tab after successful deletion
+              router.replace('/(tabs)/groups');
+            } catch (error) {
+              console.error('Error deleting group:', error);
+              alert(error instanceof Error ? error.message : 'Failed to delete group');
+            }
+          },
+        },
+      ]
+    );
+  }, [clubId, club, deleteClubMutation, t]);
 
   // Get current photo to display (new photo or existing)
   const displayPhoto = photoChanged ? photoBase64 : club?.photo;
@@ -247,6 +278,39 @@ export default function EditClubScreen() {
                 {description.length}/500
               </ThemedText>
             </View>
+
+            {/* Danger Zone */}
+            <View style={styles.dangerZone}>
+              <View style={[styles.dangerZoneHeader, { borderBottomColor: colors.border }]}>
+                <ThemedText style={[styles.dangerZoneTitle, { color: colors.error }]}>
+                  {t('clubs.dangerZone', 'Danger Zone')}
+                </ThemedText>
+              </View>
+              <View style={[styles.dangerZoneContent, { backgroundColor: colors.card }]}>
+                <View style={styles.dangerZoneTextContainer}>
+                  <ThemedText style={styles.dangerZoneLabel}>
+                    {t('clubs.deleteClub', 'Delete Group')}
+                  </ThemedText>
+                  <ThemedText style={[styles.dangerZoneDescription, { color: colors.textMuted }]}>
+                    {t('clubs.deleteWarning', 'Once you delete a group, there is no going back. Please be certain.')}
+                  </ThemedText>
+                </View>
+                <TouchableOpacity
+                  style={[styles.deleteButton, { backgroundColor: colors.error }]}
+                  onPress={handleDelete}
+                  disabled={deleteClubMutation.isPending}
+                  activeOpacity={0.8}
+                >
+                  {deleteClubMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <ThemedText style={[styles.deleteButtonText, { color: '#fff' }]}>
+                      {t('clubs.delete', 'Delete')}
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           </ThemedView>
         </ScrollView>
 
@@ -308,8 +372,7 @@ const styles = StyleSheet.create({
   photoContainer: {
     position: 'relative',
     width: '100%',
-    aspectRatio: 16 / 9,
-    maxHeight: 200,
+    height: 200,
   },
   photo: {
     width: '100%',
@@ -350,8 +413,7 @@ const styles = StyleSheet.create({
   },
   photoPlaceholder: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    maxHeight: 200,
+    height: 200,
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
@@ -398,6 +460,55 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  dangerZone: {
+    marginTop: Spacing.xl,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    overflow: 'hidden',
+  },
+  dangerZoneHeader: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  dangerZoneTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dangerZoneContent: {
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  dangerZoneTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  dangerZoneLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dangerZoneDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  deleteButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

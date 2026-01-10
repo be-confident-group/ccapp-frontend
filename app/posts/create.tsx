@@ -12,15 +12,16 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useCreatePost } from '@/lib/hooks/usePosts';
 import { pickAndProcessMultipleImages } from '@/lib/utils/imageHelpers';
-import { PhotoIcon, XMarkIcon, ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import type { PostCreateRequest } from '@/types/feed';
 
 export default function CreatePostScreen() {
@@ -118,39 +119,23 @@ export default function CreatePostScreen() {
   );
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: t('posts.createPost', 'Create Post'),
-          headerTitleStyle: {
-            fontWeight: '600',
-            fontSize: 17,
-          },
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeftIcon size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['bottom']}
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      <Header title={t('posts.createPost', 'Create Post')} showBack />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <ThemedView style={styles.content}>
+          <ThemedView style={styles.content}>
               {/* Title Field */}
               <View style={styles.section}>
                 <ThemedText style={styles.label}>
@@ -273,9 +258,8 @@ export default function CreatePostScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -285,10 +269,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginLeft: Spacing.xs,
   },
   scrollView: {
     flex: 1,

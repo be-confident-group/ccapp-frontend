@@ -258,8 +258,7 @@ const styles = StyleSheet.create({
   photoContainer: {
     position: 'relative',
     width: '100%',
-    aspectRatio: 16 / 9,
-    maxHeight: 200,
+    height: 200,
   },
   photo: {
     width: '100%',
@@ -283,8 +282,7 @@ const styles = StyleSheet.create({
   },
   photoPlaceholder: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    maxHeight: 200,
+    height: 200,
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
