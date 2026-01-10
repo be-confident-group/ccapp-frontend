@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
+// NOTE: ActivityChart is hidden for next version release but import kept for future use
 import { ActivityChart } from '@/components/profile/ActivityChart';
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
@@ -280,8 +281,13 @@ export default function YouScreen() {
               </ThemedText>
             </View>
 
-          {/* Activity Chart Card */}
-          <View style={styles.chartSection}>
+          {/* ===========================================
+              ACTIVITY CHART - HIDDEN FOR NEXT VERSION
+              ===========================================
+              This section contains dummy data and is planned for release in
+              the next version. Keeping the code commented out for future implementation.
+          */}
+          {/* <View style={styles.chartSection}>
             <View style={[styles.chartCard, styles.cardShadow]}>
               <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
                 {!isDark && (
@@ -298,7 +304,7 @@ export default function YouScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </View> */}
 
           {/* Account Section */}
           <View style={styles.settingsSection}>
@@ -527,13 +533,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
-  chartSection: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  chartCard: {
-    borderRadius: 16,
-  },
+  // ===========================================
+  // ACTIVITY CHART STYLES - HIDDEN FOR NEXT VERSION
+  // ===========================================
+  // Keeping styles commented out for future implementation
+  // chartSection: {
+  //   paddingHorizontal: 24,
+  //   marginBottom: 32,
+  // },
+  // chartCard: {
+  //   borderRadius: 16,
+  // },
   cardShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -549,9 +559,9 @@ const styles = StyleSheet.create({
     height: '30%',
     zIndex: 1,
   },
-  chartContent: {
-    padding: 20,
-  },
+  // chartContent: {
+  //   padding: 20,
+  // },
   settingsSection: {
     paddingHorizontal: 24,
     marginBottom: 24,
