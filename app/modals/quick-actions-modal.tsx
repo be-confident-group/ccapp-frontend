@@ -100,7 +100,7 @@ export default function QuickActionsModal() {
     },
     {
       icon: UserGroupIcon,
-      title: 'Create Club',
+      title: 'Create Group',
       onPress: () => {
         router.back(); // Close the modal immediately
         setTimeout(() => {
@@ -155,7 +155,7 @@ export default function QuickActionsModal() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Third Action Button - Create Club */}
+        {/* Third Action Button - Create Group */}
         <Animated.View style={[button3Style]}>
           <TouchableOpacity
             style={[styles.floatingButton, { backgroundColor: colors.card }]}

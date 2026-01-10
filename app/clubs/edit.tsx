@@ -75,9 +75,9 @@ export default function EditClubScreen() {
     const newErrors: { name?: string; description?: string } = {};
 
     if (!name.trim()) {
-      newErrors.name = t('clubs.errors.nameRequired', 'Club name is required');
+      newErrors.name = t('clubs.errors.nameRequired', 'Group name is required');
     } else if (name.trim().length < 3) {
-      newErrors.name = t('clubs.errors.nameTooShort', 'Club name must be at least 3 characters');
+      newErrors.name = t('clubs.errors.nameTooShort', 'Group name must be at least 3 characters');
     }
 
     if (description.trim().length > 500) {
@@ -105,8 +105,8 @@ export default function EditClubScreen() {
       await updateClubMutation.mutateAsync({ id: clubId, data: clubData });
       router.back();
     } catch (error) {
-      console.error('Error updating club:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update club');
+      console.error('Error updating group:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update group');
     }
   }, [clubId, name, description, photoBase64, photoChanged, validateForm, updateClubMutation]);
 
@@ -116,7 +116,7 @@ export default function EditClubScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <Header title={t('clubs.editClub', 'Edit Club')} showBack />
+        <Header title={t('clubs.editClub', 'Edit Group')} showBack />
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -127,9 +127,9 @@ export default function EditClubScreen() {
   if (!club) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <Header title={t('clubs.editClub', 'Edit Club')} showBack />
+        <Header title={t('clubs.editClub', 'Edit Group')} showBack />
         <View style={styles.loading}>
-          <ThemedText>{t('clubs.notFoundMessage', 'This club does not exist.')}</ThemedText>
+          <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
         </View>
       </SafeAreaView>
     );
@@ -140,7 +140,7 @@ export default function EditClubScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'bottom']}
     >
-      <Header title={t('clubs.editClub', 'Edit Club')} showBack />
+      <Header title={t('clubs.editClub', 'Edit Group')} showBack />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -156,7 +156,7 @@ export default function EditClubScreen() {
             {/* Photo Section */}
             <View style={styles.section}>
               <ThemedText style={styles.label}>
-                {t('clubs.photo', 'Club Photo')} {t('clubs.optional', '(Optional)')}
+                {t('clubs.photo', 'Group Photo')} {t('clubs.optional', '(Optional)')}
               </ThemedText>
               {displayPhoto ? (
                 <View style={styles.photoContainer}>
@@ -195,14 +195,14 @@ export default function EditClubScreen() {
             {/* Name Field */}
             <View style={styles.section}>
               <ThemedText style={styles.label}>
-                {t('clubs.name', 'Club Name')} *
+                {t('clubs.name', 'Group Name')} *
               </ThemedText>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: colors.card, color: colors.text, borderColor: errors.name ? colors.error : colors.border },
                 ]}
-                placeholder={t('clubs.namePlaceholder', 'Enter club name')}
+                placeholder={t('clubs.namePlaceholder', 'Enter group name')}
                 placeholderTextColor={colors.textMuted}
                 value={name}
                 onChangeText={setName}
@@ -228,7 +228,7 @@ export default function EditClubScreen() {
                   styles.textArea,
                   { backgroundColor: colors.card, color: colors.text, borderColor: errors.description ? colors.error : colors.border },
                 ]}
-                placeholder={t('clubs.descriptionPlaceholder', 'Describe your club...')}
+                placeholder={t('clubs.descriptionPlaceholder', 'Describe your group...')}
                 placeholderTextColor={colors.textMuted}
                 value={description}
                 onChangeText={setDescription}

@@ -80,7 +80,7 @@ export default function CreatePostScreen() {
   const handleCreate = useCallback(async () => {
     if (!validateForm()) return;
     if (!clubId) {
-      alert('Invalid club ID');
+      alert('Invalid group ID');
       return;
     }
 
@@ -93,7 +93,7 @@ export default function CreatePostScreen() {
     try {
       await createPostMutation.mutateAsync({ clubId, data: postData });
 
-      // Navigate back to club detail
+      // Navigate back to group detail
       router.back();
     } catch (error) {
       console.error('Error creating post:', error);
@@ -246,7 +246,7 @@ export default function CreatePostScreen() {
               {/* Info Box */}
               <View style={[styles.infoBox, { backgroundColor: colors.primary + '15' }]}>
                 <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
-                  {t('posts.createInfo', 'Your post will be visible to all members of this club.')}
+                  {t('posts.createInfo', 'Your post will be visible to all members of this group.')}
                 </ThemedText>
               </View>
             </ThemedView>

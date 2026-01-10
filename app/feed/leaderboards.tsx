@@ -118,7 +118,7 @@ export default function LeaderboardsScreen() {
       edges={['top']}
     >
       <ThemedView style={styles.container}>
-        <LeaderboardHeader title={t('leaderboards.title')} />
+        <LeaderboardHeader title={t('leaderboards.title', 'Community Board')} />
 
         <View style={styles.topControlsRow}>
           <View style={styles.activityToggle}>
@@ -147,7 +147,7 @@ export default function LeaderboardsScreen() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-                Loading leaderboard...
+                Loading community board...
               </ThemedText>
             </View>
           ) : (

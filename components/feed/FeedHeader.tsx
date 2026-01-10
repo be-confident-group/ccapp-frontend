@@ -23,7 +23,7 @@ export function FeedHeader({
 
       {/* Icons - Right */}
       <View style={styles.iconsContainer}>
-        {/* Leaderboard */}
+        {/* Community Board */}
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onLeaderboardPress}
@@ -32,7 +32,7 @@ export function FeedHeader({
           <TrophyIcon size={24} color={colors.icon} />
         </TouchableOpacity>
 
-        {/* My Clubs */}
+        {/* My Groups */}
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onMyClubsPress}

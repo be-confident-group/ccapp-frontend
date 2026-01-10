@@ -292,10 +292,10 @@ export default function ClubDetailScreen() {
         style={[styles.safeArea, { backgroundColor: colors.background }]}
         edges={['top', 'bottom']}
       >
-        <Header title={t('clubs.notFound', 'Club Not Found')} showBack />
+        <Header title={t('clubs.notFound', 'Group Not Found')} showBack />
         <ThemedView style={styles.container}>
           <View style={styles.loading}>
-            <ThemedText>{t('clubs.notFoundMessage', 'This club does not exist.')}</ThemedText>
+            <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
           </View>
         </ThemedView>
       </SafeAreaView>

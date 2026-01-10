@@ -200,7 +200,7 @@ export function PrivacySettingsModal({ visible, onClose }: PrivacySettingsModalP
                 />
                 <SettingsItem
                   icon={<UserGroupIcon size={22} color={colors.text} />}
-                  title="Show in Leaderboards"
+                  title="Show in Community Board"
                   subtitle={showInLeaderboards ? 'Visible in rankings' : 'Hidden from rankings'}
                   toggleValue={showInLeaderboards}
                   onToggleChange={setShowInLeaderboards}

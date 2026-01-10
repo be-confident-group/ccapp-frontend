@@ -10,14 +10,15 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClubs, useJoinClub, useMyClubs } from '@/lib/hooks/useClubs';
-import { UsersIcon, MagnifyingGlassIcon, ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { UsersIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
 export default function BrowseClubsScreen() {
@@ -54,11 +55,11 @@ export default function BrowseClubsScreen() {
       try {
         await joinClubMutation.mutateAsync(clubId);
         // Show success feedback (you can add a toast/alert here)
-        console.log(`Joined club: ${clubName}`);
+        console.log(`Joined group: ${clubName}`);
       } catch (error) {
         // Show error feedback
-        console.error('Failed to join club:', error);
-        alert(error instanceof Error ? error.message : 'Failed to join club');
+        console.error('Failed to join group:', error);
+        alert(error instanceof Error ? error.message : 'Failed to join group');
       }
     },
     [joinClubMutation]
@@ -143,7 +144,7 @@ export default function BrowseClubsScreen() {
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-            {t('clubs.searching', 'Searching clubs...')}
+            {t('clubs.searching', 'Searching groups...')}
           </ThemedText>
         </View>
       );
@@ -154,7 +155,7 @@ export default function BrowseClubsScreen() {
         <View style={styles.emptyState}>
           <MagnifyingGlassIcon size={64} color={colors.textMuted} />
           <ThemedText style={[styles.emptyTitle, { color: colors.textSecondary }]}>
-            {t('clubs.noResults', 'No clubs found')}
+            {t('clubs.noResults', 'No groups found')}
           </ThemedText>
           <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
             {t('clubs.noResultsMessage', 'Try a different search term')}
@@ -167,10 +168,10 @@ export default function BrowseClubsScreen() {
       <View style={styles.emptyState}>
         <UsersIcon size={64} color={colors.textMuted} />
         <ThemedText style={[styles.emptyTitle, { color: colors.textSecondary }]}>
-          {t('clubs.noClubsAvailable', 'No clubs available')}
+          {t('clubs.noClubsAvailable', 'No groups available')}
         </ThemedText>
         <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-          {t('clubs.createFirst', 'Be the first to create a club!')}
+          {t('clubs.createFirst', 'Be the first to create a group!')}
         </ThemedText>
       </View>
     );
@@ -181,7 +182,7 @@ export default function BrowseClubsScreen() {
       <MagnifyingGlassIcon size={20} color={colors.textMuted} />
       <TextInput
         style={[styles.searchInput, { color: colors.text }]}
-        placeholder={t('clubs.searchPlaceholder', 'Search clubs...')}
+        placeholder={t('clubs.searchPlaceholder', 'Search groups...')}
         placeholderTextColor={colors.textMuted}
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -192,50 +193,33 @@ export default function BrowseClubsScreen() {
   );
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: t('clubs.browseClubs', 'Browse Clubs'),
-          headerTitleStyle: {
-            fontWeight: '600',
-            fontSize: 17,
-          },
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeftIcon size={24} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <ThemedView style={styles.container}>
-          {renderSearchBar()}
-          <FlatList
-            data={allClubs || []}
-            renderItem={renderClubItem}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={[
-              styles.listContent,
-              (!allClubs || allClubs.length === 0) && styles.emptyListContent,
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={refetch}
-                tintColor={colors.primary}
-              />
-            }
-            ListEmptyComponent={renderEmptyState}
-          />
-        </ThemedView>
-      </SafeAreaView>
-    </>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
+      <Header title={t('clubs.browseClubs', 'Browse Groups')} showBack />
+      <ThemedView style={styles.container}>
+        {renderSearchBar()}
+        <FlatList
+          data={allClubs || []}
+          renderItem={renderClubItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={[
+            styles.listContent,
+            (!allClubs || allClubs.length === 0) && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+        />
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -245,10 +229,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginLeft: Spacing.xs,
   },
   searchContainer: {
     flexDirection: 'row',

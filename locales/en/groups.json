@@ -12,14 +12,14 @@
   },
   "header": {
     "settings": "Settings",
-    "leaderboards": "Leaderboards"
+    "leaderboards": "Community Board"
   },
   "buttons": {
     "createGroup": "Create Group",
     "joinGroup": "Join Group",
     "leaveGroup": "Leave Group",
     "createPost": "Create Post",
-    "viewLeaderboard": "Leaderboard"
+    "viewLeaderboard": "Community Board"
   },
   "post": {
     "like": "Like",
@@ -57,8 +57,8 @@
     "comingSoon": "Settings coming soon"
   },
   "leaderboards": {
-    "title": "Leaderboards",
-    "comingSoon": "Leaderboards coming soon",
+    "title": "Community Board",
+    "comingSoon": "Community Board coming soon",
     "selectMonth": "Select Month",
     "allTime": "All Time",
     "tabs": {

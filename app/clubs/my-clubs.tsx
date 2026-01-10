@@ -97,7 +97,7 @@ export default function MyClubsScreen() {
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-            {t('clubs.loading', 'Loading your clubs...')}
+            {t('clubs.loading', 'Loading your groups...')}
           </ThemedText>
         </View>
       );
@@ -107,10 +107,10 @@ export default function MyClubsScreen() {
       <View style={styles.emptyState}>
         <UsersIcon size={64} color={colors.textMuted} />
         <ThemedText style={[styles.emptyTitle, { color: colors.textSecondary }]}>
-          {t('clubs.noClubs', 'No Clubs Yet')}
+          {t('clubs.noClubs', 'No Groups Yet')}
         </ThemedText>
         <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-          {t('clubs.noClubsMessage', 'Join or create a club to connect with others!')}
+          {t('clubs.noClubsMessage', 'Join or create a group to connect with others!')}
         </ThemedText>
         <TouchableOpacity
           style={[styles.browseButton, { backgroundColor: colors.primary }]}
@@ -118,7 +118,7 @@ export default function MyClubsScreen() {
           activeOpacity={0.8}
         >
           <ThemedText style={[styles.browseButtonText, { color: '#fff' }]}>
-            {t('clubs.browseClubs', 'Browse Clubs')}
+            {t('clubs.browseClubs', 'Browse Groups')}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -132,7 +132,7 @@ export default function MyClubsScreen() {
     >
       <ThemedView style={styles.container}>
         <Header
-          title={t('clubs.myClubs', 'My Clubs')}
+          title={t('clubs.myClubs', 'My Groups')}
           showBack
           rightElement={
             <TouchableOpacity onPress={handleCreateClub} style={styles.headerButton}>
@@ -145,7 +145,7 @@ export default function MyClubsScreen() {
           <MagnifyingGlassIcon size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('clubs.searchMyClubs', 'Search my clubs...')}
+            placeholder={t('clubs.searchMyClubs', 'Search my groups...')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
