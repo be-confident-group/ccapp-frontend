@@ -25,12 +25,28 @@ let lastStationaryTime: number | null = null;
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
-    console.error('[LocationTracking] Task error:', error);
-    return;
+    // Check if it's a transient iOS location acquisition error (kCLErrorDomain Code=0)
+    // This is normal during GPS initialization and shouldn't stop processing
+    const errorCode = (error as any)?.code;
+    if (errorCode === 0) {
+      console.warn('[LocationTracking] Transient GPS acquisition (normal during startup)');
+      // Don't return - continue processing if we have location data
+    } else {
+      // Real error - log and exit
+      console.error('[LocationTracking] Task error:', error);
+      return;
+    }
   }
 
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
+
+    // Check if locations array exists (might be undefined during transient errors)
+    if (!locations || locations.length === 0) {
+      console.log('[LocationTracking] No location data available');
+      return;
+    }
+
     console.log(`[LocationTracking] Received ${locations.length} location updates`);
 
     try {
