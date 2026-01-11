@@ -29,7 +29,7 @@ import {
 import { Button } from '@/components/ui';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { database, type Trip } from '@/lib/database';
+import { database } from '@/lib/database';
 import type { Coordinate } from '@/types/location';
 import {
   FeelingType,
@@ -61,14 +61,9 @@ function densifyRoute(route: Coordinate[], targetPointsPerSegment: number = 5): 
       });
     }
 
-    // Add the end point (except for the last iteration)
-    if (i < route.length - 1) {
-      densified.push(end);
-    }
+    // Add the end point
+    densified.push(end);
   }
-
-  // Add final point
-  densified.push(route[route.length - 1]);
 
   return densified;
 }
@@ -171,7 +166,6 @@ export default function RateRouteScreen() {
         setOriginalRoute(routeData);
         // Increase densification for smoother painting (10 points between each GPS point)
         const densifiedRoute = densifyRoute(routeData, 10);
-        console.log('[RateRoute] Route densified:', routeData.length, '→', densifiedRoute.length, 'points');
         setRoute(densifiedRoute);
 
         // Load existing rating if any (use client_id for local database)
@@ -184,15 +178,17 @@ export default function RateRouteScreen() {
           ) as RouteSegment[];
 
           // Map segments from original route indices to densified route indices
-          // Each original segment gets multiplied by the densification factor
-          const densificationFactor = densifiedRoute.length / routeData.length;
+          // Each original index maps to densified via: index * (pointsPerSegment + 1)
+          const pointsPerSegment = 10;
           const mappedSegments = existingSegments.map(seg => ({
-            startIndex: Math.round(seg.startIndex * densificationFactor),
-            endIndex: Math.round(seg.endIndex * densificationFactor),
+            startIndex: seg.startIndex * (pointsPerSegment + 1),
+            endIndex: Math.min(
+              seg.endIndex * (pointsPerSegment + 1),
+              densifiedRoute.length - 1
+            ),
             feeling: seg.feeling,
           }));
 
-          console.log('[RateRoute] Mapped existing segments from', existingSegments.length, 'to densified route');
           setSegments(mappedSegments);
         }
       } catch (error) {
@@ -217,7 +213,6 @@ export default function RateRouteScreen() {
       const points = await mapRef.current.getRouteScreenPoints();
       // Only update if we got valid points
       if (points.length > 0) {
-        console.log('[RateRoute] Camera idle - screen points updated:', points.length);
         setRouteScreenPoints(points);
         setIsCameraSettled(true);
       }
@@ -227,16 +222,8 @@ export default function RateRouteScreen() {
   // Handle segment painted
   const handleSegmentPainted = useCallback(
     (segment: RouteSegment) => {
-      console.log('[RateRoute] Segment painted:', {
-        startIndex: segment.startIndex,
-        endIndex: segment.endIndex,
-        feeling: segment.feeling,
-        routeLength: route.length,
-      });
       setSegments((prev) => {
-        console.log('[RateRoute] Before merge - existing segments:', JSON.stringify(prev));
         const merged = mergeSegments(prev, segment);
-        console.log('[RateRoute] After merge - segments:', JSON.stringify(merged));
         return merged;
       });
       setPreviewSegment(null);
@@ -254,7 +241,6 @@ export default function RateRouteScreen() {
     // Refresh screen points when entering painting mode for accuracy
     if (newFeeling !== null && mapRef.current && isCameraSettled) {
       const points = await mapRef.current.getRouteScreenPoints();
-      console.log('[RateRoute] Refreshed screen points for feeling:', newFeeling, 'count:', points.length);
       setRouteScreenPoints(points);
     }
   }, [selectedFeeling, isCameraSettled]);
@@ -334,14 +320,16 @@ export default function RateRouteScreen() {
       const clientId = trip.id; // Use client_id for local database operations
 
       // Map segments back from densified indices to original route indices for storage
-      const densificationFactor = route.length / originalRoute.length;
+      // Each original segment has 10 interpolated points, so densified index maps to original via floor(index / 11)
+      const pointsPerSegment = 10;
       const originalSegments = segments.map(seg => ({
-        startIndex: Math.round(seg.startIndex / densificationFactor),
-        endIndex: Math.round(seg.endIndex / densificationFactor),
+        startIndex: Math.floor(seg.startIndex / (pointsPerSegment + 1)),
+        endIndex: Math.min(
+          Math.floor(seg.endIndex / (pointsPerSegment + 1)),
+          originalRoute.length - 1
+        ),
         feeling: seg.feeling,
       }));
-
-      console.log('[RateRoute] Saving segments - densified:', segments.length, '→ original:', originalSegments.length);
 
       // Check if rating already exists
       const existingRating = await database.getRating(clientId);
@@ -377,7 +365,7 @@ export default function RateRouteScreen() {
     } finally {
       setSaving(false);
     }
-  }, [trip, segments]);
+  }, [trip, segments, route.length, originalRoute.length]);
 
   if (isFetchingTrip || !trip || route.length === 0) {
     return (

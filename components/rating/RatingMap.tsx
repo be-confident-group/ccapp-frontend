@@ -106,8 +106,8 @@ function buildSegmentFeatures(
     const startIdx = Math.max(0, Math.min(segment.startIndex, route.length - 1));
     const endIdx = Math.max(0, Math.min(segment.endIndex, route.length - 1));
 
-    // Add unpainted section before this segment
-    if (currentIndex < startIdx) {
+    // Add unpainted section before this segment (only if there's actually a gap)
+    if (currentIndex + 1 < startIdx) {
       features.push({
         type: 'Feature',
         properties: { color: UNPAINTED_COLOR, type: 'unpainted' },
@@ -122,6 +122,10 @@ function buildSegmentFeatures(
 
     // Add painted segment
     if (startIdx <= endIdx) {
+      // If this segment is adjacent to the previous one (no gap), start from the previous
+      // end point to create an overlap and ensure smooth visual connection
+      const actualStartIdx = (currentIndex === startIdx - 1) ? currentIndex : startIdx;
+
       features.push({
         type: 'Feature',
         properties: {
@@ -132,7 +136,7 @@ function buildSegmentFeatures(
         geometry: {
           type: 'LineString',
           coordinates: route
-            .slice(startIdx, endIdx + 1)
+            .slice(actualStartIdx, endIdx + 1)
             .map((c) => [c.longitude, c.latitude]),
         },
       });
@@ -261,7 +265,6 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       getRouteScreenPoints: async () => {
         // Ensure map is ready and ref is valid
         if (!mapRef.current || !isMapReady) {
-          console.log('[RatingMap] Map not ready for getRouteScreenPoints');
           return [];
         }
 
@@ -314,7 +317,6 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
         clearTimeout(cameraIdleTimeoutRef.current);
       }
       cameraIdleTimeoutRef.current = setTimeout(() => {
-        console.log('[RatingMap] Camera idle - notifying parent');
         onCameraIdle?.();
       }, 300);
     }, [onCameraIdle, isMapReady]);

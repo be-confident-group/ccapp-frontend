@@ -157,7 +157,6 @@ export default function SegmentPainter({
         feeling: selectedFeeling,
       };
 
-      console.log('[SegmentPainter] Paint end - painting from', minIndex, 'to', maxIndex);
       onSegmentPainted(segment);
     }
 
@@ -170,10 +169,7 @@ export default function SegmentPainter({
   // JS thread handlers for gesture events - use ref for fresh screen points
   const handleGestureStart = useCallback(
     (x: number, y: number) => {
-      console.log('[SegmentPainter] Gesture start at:', { x, y });
-      console.log('[SegmentPainter] Screen points count:', screenPointsRef.current.length);
       const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
-      console.log('[SegmentPainter] Found segment index:', index);
       if (index !== null) {
         handlePaintStart(index);
       }
@@ -230,7 +226,6 @@ export default function SegmentPainter({
 
       // Only trigger if within threshold
       if (minDist < TOUCH_THRESHOLD && route[nearestIdx]) {
-        console.log('[SegmentPainter] Long press at coordinate:', route[nearestIdx]);
         onLongPress(route[nearestIdx]);
       }
     },
