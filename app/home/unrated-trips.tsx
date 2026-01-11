@@ -61,8 +61,8 @@ export default function UnratedTripsScreen() {
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // Fetch all trips from backend
-  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
+  // Fetch all trips from backend (including active trips that weren't properly stopped)
+  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips();
 
   // Load rated trip IDs from local database
   const loadRatedTrips = useCallback(async () => {

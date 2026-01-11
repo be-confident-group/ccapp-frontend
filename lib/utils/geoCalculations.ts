@@ -85,7 +85,10 @@ export function formatDistance(meters: number, unit: 'metric' | 'imperial' = 'me
 /**
  * Format speed for display
  */
-export function formatSpeed(kmh: number, unit: 'metric' | 'imperial' = 'metric'): string {
+export function formatSpeed(kmh: number | null | undefined, unit: 'metric' | 'imperial' = 'metric'): string {
+  if (kmh == null || isNaN(kmh)) {
+    return unit === 'imperial' ? '0.0 mph' : '0.0 km/h';
+  }
   if (unit === 'imperial') {
     const mph = kmh * 0.621371;
     return `${mph.toFixed(1)} mph`;

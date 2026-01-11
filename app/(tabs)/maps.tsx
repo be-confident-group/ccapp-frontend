@@ -72,8 +72,8 @@ export default function MapsScreen() {
   const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapViewRef = useRef<any>(null);
 
-  // Fetch trips from backend
-  const { data: backendTrips, refetch } = useTrips({ status: 'completed' });
+  // Fetch trips from backend (including active trips that weren't properly stopped)
+  const { data: backendTrips, refetch } = useTrips();
 
   // Refetch trips when screen comes into focus
   useFocusEffect(

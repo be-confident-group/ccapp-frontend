@@ -45,8 +45,8 @@ export default function HomeScreen() {
   const weatherIconName =
     (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
 
-  // Fetch trips from backend
-  const { data: backendTrips, refetch: refetchTrips } = useTrips({ status: 'completed' });
+  // Fetch trips from backend (including active trips that weren't properly stopped)
+  const { data: backendTrips, refetch: refetchTrips } = useTrips();
 
   // Calculate unrated trips count
   const unratedTripsCount = useMemo(() => {
