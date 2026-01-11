@@ -69,8 +69,10 @@ interface RatingMapProps {
   route: Coordinate[];
   segments: RouteSegment[];
   previewSegment?: RouteSegment | null;
+  pendingReportLocation?: Coordinate | null; // Temporary marker for report confirmation
   style?: ViewStyle;
   onMapReady?: () => void;
+  onCameraIdle?: () => void; // Fires when camera stops moving (for screen point sync)
   disableInteraction?: boolean; // Disable map scrolling when painting
 }
 
@@ -231,11 +233,12 @@ function calculateBounds(
 }
 
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
-  ({ route: rawRoute, segments, previewSegment, style, onMapReady, disableInteraction = false }, ref) => {
+  ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false }, ref) => {
     const { colors, isDark } = useTheme();
     const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
     const cameraRef = useRef<Camera>(null);
+    const cameraIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isMapReady, setIsMapReady] = useState(false);
 
     // Filter out invalid coordinates to prevent Mapbox errors
@@ -256,7 +259,11 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
       getRouteScreenPoints: async () => {
-        if (!mapRef.current) return [];
+        // Ensure map is ready and ref is valid
+        if (!mapRef.current || !isMapReady) {
+          console.log('[RatingMap] Map not ready for getRouteScreenPoints');
+          return [];
+        }
 
         try {
           const points: { x: number; y: number }[] = [];
@@ -265,7 +272,9 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
               coord.longitude,
               coord.latitude,
             ]);
-            points.push({ x: point[0], y: point[1] });
+            if (point) {
+              points.push({ x: point[0], y: point[1] });
+            }
           }
           return points;
         } catch (error) {
@@ -280,11 +289,13 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       },
     }));
 
-    // Fit to route on mount
+    // Fit to route on initial mount only
+    const hasFitRef = useRef(false);
     useEffect(() => {
-      if (isMapReady && bounds && cameraRef.current) {
+      if (isMapReady && bounds && cameraRef.current && !hasFitRef.current) {
         setTimeout(() => {
           cameraRef.current?.fitBounds(bounds[0], bounds[1], [80, 80, 80, 80], 500);
+          hasFitRef.current = true;
         }, 100);
       }
     }, [isMapReady, bounds]);
@@ -293,6 +304,20 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       setIsMapReady(true);
       onMapReady?.();
     }, [onMapReady]);
+
+    // Handle camera changes - debounce to detect when camera settles
+    // Only trigger after map is ready to avoid premature calls
+    const handleCameraChanged = useCallback(() => {
+      if (!isMapReady) return;
+
+      if (cameraIdleTimeoutRef.current) {
+        clearTimeout(cameraIdleTimeoutRef.current);
+      }
+      cameraIdleTimeoutRef.current = setTimeout(() => {
+        console.log('[RatingMap] Camera idle - notifying parent');
+        onCameraIdle?.();
+      }, 300);
+    }, [onCameraIdle, isMapReady]);
 
     // Convert selected layer to Mapbox style URL
     const getStyleURL = (layer: typeof selectedLayer): string => {
@@ -321,6 +346,7 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           style={styles.map}
           styleURL={mapStyle}
           onDidFinishLoadingMap={handleMapLoaded}
+          onCameraChanged={handleCameraChanged}
           scrollEnabled={!disableInteraction}
           zoomEnabled={!disableInteraction}
           rotateEnabled={!disableInteraction}
@@ -370,6 +396,32 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
                   ],
                   circleStrokeColor: '#FFFFFF',
                   circleStrokeWidth: 3,
+                }}
+              />
+            </ShapeSource>
+          )}
+
+          {/* Pending report location marker */}
+          {pendingReportLocation && (
+            <ShapeSource
+              id="pendingReportMarker"
+              shape={{
+                type: 'Feature',
+                properties: { type: 'pending-report' },
+                geometry: {
+                  type: 'Point',
+                  coordinates: [pendingReportLocation.longitude, pendingReportLocation.latitude],
+                },
+              }}
+            >
+              <CircleLayer
+                id="pendingReportCircle"
+                style={{
+                  circleRadius: 14,
+                  circleColor: '#FF6B6B',
+                  circleStrokeColor: '#FFFFFF',
+                  circleStrokeWidth: 3,
+                  circleOpacity: 0.9,
                 }}
               />
             </ShapeSource>

@@ -301,8 +301,10 @@ export function mergeSegments(
   const merged: RouteSegment[] = [];
   for (const seg of result) {
     const last = merged[merged.length - 1];
-    if (last && last.feeling === seg.feeling && last.endIndex + 1 === seg.startIndex) {
-      // Merge adjacent segments with same feeling
+    // Merge adjacent segments OR close small gaps (≤3 points) between same feelings
+    const gap = seg.startIndex - (last?.endIndex ?? -999);
+    if (last && last.feeling === seg.feeling && gap >= 1 && gap <= 4) {
+      // Extend last segment to cover the gap and include this segment
       last.endIndex = seg.endIndex;
     } else {
       merged.push({ ...seg });

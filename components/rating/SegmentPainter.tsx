@@ -30,7 +30,8 @@ interface SegmentPainterProps {
 }
 
 // Touch threshold in pixels - how close the finger needs to be to a route segment
-const TOUCH_THRESHOLD = 50;
+// Increased to make it easier to paint routes, especially with sparse GPS points
+const TOUCH_THRESHOLD = 80;
 
 /**
  * Calculate perpendicular distance from point to line segment
@@ -146,11 +147,17 @@ export default function SegmentPainter({
       currentIndexRef.current !== null &&
       selectedFeeling
     ) {
+      const minIndex = Math.min(startIndexRef.current, currentIndexRef.current);
+      const maxIndex = Math.max(startIndexRef.current, currentIndexRef.current);
+
+      // Ensure we paint at least a small segment even for single taps
       const segment: RouteSegment = {
-        startIndex: Math.min(startIndexRef.current, currentIndexRef.current),
-        endIndex: Math.max(startIndexRef.current, currentIndexRef.current),
+        startIndex: minIndex,
+        endIndex: Math.max(minIndex, maxIndex),
         feeling: selectedFeeling,
       };
+
+      console.log('[SegmentPainter] Paint end - painting from', minIndex, 'to', maxIndex);
       onSegmentPainted(segment);
     }
 
@@ -176,7 +183,26 @@ export default function SegmentPainter({
 
   const handleGestureUpdate = useCallback(
     (x: number, y: number) => {
-      const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+      // Always find and update nearest index, even if beyond threshold
+      // This prevents gaps when finger moves slightly off route during painting
+      let index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+
+      // If no index within threshold, find the absolute nearest point (ignoring threshold)
+      if (index === null && screenPointsRef.current.length > 0) {
+        let minDist = Infinity;
+        for (let i = 0; i < screenPointsRef.current.length - 1; i++) {
+          const distance = pointToLineDistance(
+            { x, y },
+            screenPointsRef.current[i],
+            screenPointsRef.current[i + 1]
+          );
+          if (distance < minDist) {
+            minDist = distance;
+            index = i;
+          }
+        }
+      }
+
       if (index !== null) {
         handlePaintUpdate(index);
       }
@@ -212,9 +238,10 @@ export default function SegmentPainter({
   );
 
   // Pan gesture for painting - only active when feeling is selected
+  // minDistance reduced to 1 for immediate response
   const panGesture = Gesture.Pan()
     .enabled(enabled && selectedFeeling !== null)
-    .minDistance(5)
+    .minDistance(1)
     .onBegin((event) => {
       'worklet';
       paintIndicatorX.value = event.x;
@@ -238,16 +265,28 @@ export default function SegmentPainter({
     });
 
   // Long press gesture - only active when NOT painting (no feeling selected)
+  // maxDistance ensures gesture fails if user starts panning (allows map to take over)
   const longPressGesture = Gesture.LongPress()
     .enabled(enabled && selectedFeeling === null && !!onLongPress)
     .minDuration(500)
+    .maxDistance(15)
     .onStart((event) => {
       'worklet';
       runOnJS(handleLongPressEvent)(event.x, event.y);
     });
 
-  // Combine gestures - they are mutually exclusive based on enabled state
-  const composedGesture = Gesture.Exclusive(longPressGesture, panGesture);
+  // Create native gesture to allow map interactions when gestures are disabled
+  const nativeGesture = Gesture.Native();
+
+  // Combine gestures intelligently:
+  // - When painting: use pan gesture exclusively
+  // - When long press enabled: race between long press and native (first to activate wins)
+  // - Otherwise: just use native
+  const composedGesture = selectedFeeling !== null
+    ? panGesture
+    : (enabled && !!onLongPress)
+      ? Gesture.Race(longPressGesture, nativeGesture)
+      : nativeGesture;
 
   // Animated style for paint indicator
   const paintIndicatorStyle = useAnimatedStyle(() => ({
@@ -258,6 +297,8 @@ export default function SegmentPainter({
     ],
   }));
 
+  // Always wrap in GestureDetector so long press works
+  // Individual gestures control their own enabled state
   return (
     <GestureDetector gesture={composedGesture}>
       <View style={[styles.container, style]}>

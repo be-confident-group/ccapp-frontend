@@ -39,6 +39,40 @@ import {
 import { useTrip } from '@/lib/hooks/useTrips';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 
+/**
+ * Densify a route by adding interpolated points between GPS coordinates
+ * This makes painting smoother and more precise
+ */
+function densifyRoute(route: Coordinate[], targetPointsPerSegment: number = 5): Coordinate[] {
+  if (route.length < 2) return route;
+
+  const densified: Coordinate[] = [route[0]];
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const start = route[i];
+    const end = route[i + 1];
+
+    // Add interpolated points between start and end
+    for (let j = 1; j <= targetPointsPerSegment; j++) {
+      const ratio = j / (targetPointsPerSegment + 1);
+      densified.push({
+        latitude: start.latitude + (end.latitude - start.latitude) * ratio,
+        longitude: start.longitude + (end.longitude - start.longitude) * ratio,
+      });
+    }
+
+    // Add the end point (except for the last iteration)
+    if (i < route.length - 1) {
+      densified.push(end);
+    }
+  }
+
+  // Add final point
+  densified.push(route[route.length - 1]);
+
+  return densified;
+}
+
 export default function RateRouteScreen() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,18 +87,21 @@ export default function RateRouteScreen() {
   // Fetch trip from backend
   const { data: backendTrip, isLoading: isFetchingTrip } = useTrip(tripId);
 
-  const [route, setRoute] = useState<Coordinate[]>([]);
+  const [route, setRoute] = useState<Coordinate[]>([]); // Densified route for display/painting
+  const [originalRoute, setOriginalRoute] = useState<Coordinate[]>([]); // Original GPS points
   const [saving, setSaving] = useState(false);
   const [selectedFeeling, setSelectedFeeling] = useState<FeelingType | null>(null);
-  const [segments, setSegments] = useState<RouteSegment[]>([]);
+  const [segments, setSegments] = useState<RouteSegment[]>([]); // Segments reference originalRoute indices
   const [previewSegment, setPreviewSegment] = useState<RouteSegment | null>(null);
   const [routeScreenPoints, setRouteScreenPoints] = useState<
     { x: number; y: number }[]
   >([]);
   const [isPainting, setIsPainting] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [isCameraSettled, setIsCameraSettled] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [issueCoordinate, setIssueCoordinate] = useState<Coordinate | null>(null);
+  const [pendingReportCoordinate, setPendingReportCoordinate] = useState<Coordinate | null>(null);
 
   // Transform backend trip to local format
   const trip = useMemo(() => {
@@ -130,16 +167,33 @@ export default function RateRouteScreen() {
           return;
         }
 
-        setRoute(routeData);
+        // Store original route and densified version
+        setOriginalRoute(routeData);
+        // Increase densification for smoother painting (10 points between each GPS point)
+        const densifiedRoute = densifyRoute(routeData, 10);
+        console.log('[RateRoute] Route densified:', routeData.length, '→', densifiedRoute.length, 'points');
+        setRoute(densifiedRoute);
 
         // Load existing rating if any (use client_id for local database)
+        // Note: Existing segments will need to be scaled to match densified route
         await database.init();
         const existingRating = await database.getRating(backendTrip.client_id);
         if (existingRating) {
           const existingSegments = JSON.parse(
             existingRating.segments
           ) as RouteSegment[];
-          setSegments(existingSegments);
+
+          // Map segments from original route indices to densified route indices
+          // Each original segment gets multiplied by the densification factor
+          const densificationFactor = densifiedRoute.length / routeData.length;
+          const mappedSegments = existingSegments.map(seg => ({
+            startIndex: Math.round(seg.startIndex * densificationFactor),
+            endIndex: Math.round(seg.endIndex * densificationFactor),
+            feeling: seg.feeling,
+          }));
+
+          console.log('[RateRoute] Mapped existing segments from', existingSegments.length, 'to densified route');
+          setSegments(mappedSegments);
         }
       } catch (error) {
         console.error('[RateRoute] Error loading trip:', error);
@@ -151,22 +205,24 @@ export default function RateRouteScreen() {
     loadTrip();
   }, [id, backendTrip, isFetchingTrip]);
 
-  // Update route screen points when map is ready
-  const updateScreenPoints = useCallback(async () => {
-    if (mapRef.current && route.length > 0) {
-      const points = await mapRef.current.getRouteScreenPoints();
-      setRouteScreenPoints(points);
-    }
-  }, [route]);
-
   // Handle map ready
   const handleMapReady = useCallback(() => {
     setIsMapReady(true);
-    // Delay to ensure map is fully rendered
-    setTimeout(() => {
-      updateScreenPoints();
-    }, 500);
-  }, [updateScreenPoints]);
+    // Screen points will be updated when camera settles via handleCameraIdle
+  }, []);
+
+  // Handle camera idle - update screen points when camera stops moving
+  const handleCameraIdle = useCallback(async () => {
+    if (mapRef.current && route.length > 0) {
+      const points = await mapRef.current.getRouteScreenPoints();
+      // Only update if we got valid points
+      if (points.length > 0) {
+        console.log('[RateRoute] Camera idle - screen points updated:', points.length);
+        setRouteScreenPoints(points);
+        setIsCameraSettled(true);
+      }
+    }
+  }, [route]);
 
   // Handle segment painted
   const handleSegmentPainted = useCallback(
@@ -178,8 +234,9 @@ export default function RateRouteScreen() {
         routeLength: route.length,
       });
       setSegments((prev) => {
+        console.log('[RateRoute] Before merge - existing segments:', JSON.stringify(prev));
         const merged = mergeSegments(prev, segment);
-        console.log('[RateRoute] After merge - segments:', merged.length);
+        console.log('[RateRoute] After merge - segments:', JSON.stringify(merged));
         return merged;
       });
       setPreviewSegment(null);
@@ -188,25 +245,48 @@ export default function RateRouteScreen() {
   );
 
   // Handle feeling selection - refresh screen points when selecting a feeling
-  const handleFeelingSelect = useCallback(async (feeling: FeelingType | null) => {
-    setSelectedFeeling(feeling);
+  // Tap same feeling to deselect it
+  const handleFeelingSelect = useCallback(async (feeling: FeelingType) => {
+    // Toggle: if same feeling is selected, deselect it
+    const newFeeling = selectedFeeling === feeling ? null : feeling;
+    setSelectedFeeling(newFeeling);
+
     // Refresh screen points when entering painting mode for accuracy
-    if (feeling !== null && mapRef.current) {
+    if (newFeeling !== null && mapRef.current && isCameraSettled) {
       const points = await mapRef.current.getRouteScreenPoints();
-      console.log('[RateRoute] Refreshed screen points for feeling:', feeling, 'count:', points.length);
+      console.log('[RateRoute] Refreshed screen points for feeling:', newFeeling, 'count:', points.length);
       setRouteScreenPoints(points);
     }
-  }, []);
+  }, [selectedFeeling, isCameraSettled]);
 
   // Handle painting state change
   const handlePaintingStateChange = useCallback((painting: boolean) => {
     setIsPainting(painting);
   }, []);
 
-  // Handle long press to report issue
+  // Handle long press to report issue - show confirmation first
   const handleLongPress = useCallback((coordinate: Coordinate) => {
-    setIssueCoordinate(coordinate);
-    setShowIssueModal(true);
+    setPendingReportCoordinate(coordinate);
+
+    Alert.alert(
+      'Report Issue',
+      'Do you want to report an issue at this location?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setPendingReportCoordinate(null),
+        },
+        {
+          text: 'Report Here',
+          onPress: () => {
+            setIssueCoordinate(coordinate);
+            setShowIssueModal(true);
+            setPendingReportCoordinate(null);
+          },
+        },
+      ]
+    );
   }, []);
 
   // Handle close issue modal
@@ -253,20 +333,30 @@ export default function RateRouteScreen() {
       const now = Date.now();
       const clientId = trip.id; // Use client_id for local database operations
 
+      // Map segments back from densified indices to original route indices for storage
+      const densificationFactor = route.length / originalRoute.length;
+      const originalSegments = segments.map(seg => ({
+        startIndex: Math.round(seg.startIndex / densificationFactor),
+        endIndex: Math.round(seg.endIndex / densificationFactor),
+        feeling: seg.feeling,
+      }));
+
+      console.log('[RateRoute] Saving segments - densified:', segments.length, '→ original:', originalSegments.length);
+
       // Check if rating already exists
       const existingRating = await database.getRating(clientId);
 
       if (existingRating) {
         // Update existing rating
         await database.updateRating(clientId, {
-          segments: JSON.stringify(segments),
+          segments: JSON.stringify(originalSegments),
           synced: 0, // Mark as unsynced
         });
       } else {
         // Create new rating
         await database.createRating({
           trip_id: clientId,
-          segments: JSON.stringify(segments),
+          segments: JSON.stringify(originalSegments),
           rated_at: now,
           synced: 0,
           backend_id: null,
@@ -392,7 +482,7 @@ export default function RateRouteScreen() {
                 onSegmentPainted={handleSegmentPainted}
                 onPaintingStateChange={handlePaintingStateChange}
                 onLongPress={handleLongPress}
-                enabled={isMapReady}
+                enabled={isMapReady && isCameraSettled}
                 style={styles.painter}
               >
                 <RatingMap
@@ -400,8 +490,10 @@ export default function RateRouteScreen() {
                   route={route}
                   segments={segments}
                   previewSegment={previewSegment}
+                  pendingReportLocation={pendingReportCoordinate}
                   onMapReady={handleMapReady}
-                  disableInteraction={selectedFeeling !== null}
+                  onCameraIdle={handleCameraIdle}
+                  disableInteraction={isPainting}
                   style={styles.map}
                 />
               </SegmentPainter>
@@ -431,7 +523,7 @@ export default function RateRouteScreen() {
           <View style={[styles.bottomPanel, { backgroundColor: colors.card }]}>
             {/* Instruction hint */}
             <ThemedText style={[styles.hintText, { color: colors.textSecondary }]}>
-              {selectedFeeling ? 'Now swipe on the route to paint' : 'Select a feeling to start'}
+              {selectedFeeling ? 'Swipe on route to paint. Zoom & pan to navigate.' : 'Select a feeling to start'}
             </ThemedText>
 
             {/* Feeling selector - compact single row */}
