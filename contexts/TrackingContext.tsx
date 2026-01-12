@@ -7,6 +7,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { LocationTrackingService } from '@/lib/services';
+import {
+  initializeAppStateListener,
+  cleanupAppStateListener,
+  setOnPermissionDowngraded,
+} from '@/lib/services/LocationTrackingService';
 import { database } from '@/lib/database';
 import * as Location from 'expo-location';
 
@@ -25,9 +30,34 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [hasPermissions, setHasPermissions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check initial status
+  // Initialize AppState listener and check initial status
   useEffect(() => {
+    // Initialize AppState listener for foreground/background transitions
+    initializeAppStateListener();
+
+    // Set up permission downgrade callback
+    setOnPermissionDowngraded(() => {
+      console.warn('[TrackingContext] Background permission was downgraded');
+      setHasPermissions(false);
+      Alert.alert(
+        'Permission Changed',
+        'Background location permission has been changed. Tracking may not work when the app is in the background. Please enable "Always" location access in Settings for continuous tracking.',
+        [
+          { text: 'OK', style: 'default' },
+        ]
+      );
+      // Re-check status
+      checkStatus();
+    });
+
+    // Check initial status
     checkStatus();
+
+    // Cleanup on unmount
+    return () => {
+      cleanupAppStateListener();
+      setOnPermissionDowngraded(null);
+    };
   }, []);
 
   async function checkStatus() {

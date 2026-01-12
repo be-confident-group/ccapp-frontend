@@ -7,7 +7,7 @@
 
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
 import { ActivityClassifier } from './ActivityClassifier';
 import { TripDetectionService } from './TripDetectionService';
@@ -15,8 +15,235 @@ import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
+// ===== TRACKING STATE =====
 // Track stationary state across task executions
 let lastStationaryTime: number | null = null;
+
+// ===== APP STATE TRACKING =====
+let appStateSubscription: { remove: () => void } | null = null;
+let currentAppState: AppStateStatus = 'active';
+
+// ===== GPS STABILIZATION =====
+const MIN_ACCURACY_METERS = 50; // Reject points with accuracy worse than 50m
+const GPS_STABILIZATION_POINTS = 3; // Wait for 3 good readings before using
+let stabilizationBuffer: Location.LocationObject[] = [];
+let isGpsStabilized = false;
+
+// ===== ZOMBIE TRIP DETECTION =====
+const ZOMBIE_TRIP_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+
+// ===== PERMISSION CHANGE CALLBACK =====
+let onPermissionDowngraded: (() => void) | null = null;
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Check if a location reading has acceptable accuracy
+ */
+function isLocationAccurate(location: Location.LocationObject): boolean {
+  const accuracy = location.coords.accuracy;
+  if (accuracy === null || accuracy === undefined) {
+    return true; // Assume good if unknown
+  }
+  return accuracy <= MIN_ACCURACY_METERS;
+}
+
+/**
+ * Handle GPS stabilization - wait for accurate readings before using data
+ * Returns true if GPS is stabilized and location can be used
+ */
+function handleGpsStabilization(location: Location.LocationObject): boolean {
+  if (isGpsStabilized) {
+    return true;
+  }
+
+  if (isLocationAccurate(location)) {
+    stabilizationBuffer.push(location);
+    console.log(
+      `[LocationTracking] GPS stabilization: ${stabilizationBuffer.length}/${GPS_STABILIZATION_POINTS} accurate readings`
+    );
+
+    if (stabilizationBuffer.length >= GPS_STABILIZATION_POINTS) {
+      isGpsStabilized = true;
+      console.log('[LocationTracking] GPS stabilized - ready to track');
+      return true;
+    }
+  } else {
+    console.log(
+      `[LocationTracking] Skipping inaccurate point during stabilization: ${location.coords.accuracy}m`
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Get the best (most accurate) location from the stabilization buffer
+ */
+function getBestInitialLocation(): Location.LocationObject | null {
+  if (stabilizationBuffer.length === 0) {
+    return null;
+  }
+
+  return stabilizationBuffer.reduce((best, current) => {
+    const bestAccuracy = best.coords.accuracy || Infinity;
+    const currentAccuracy = current.coords.accuracy || Infinity;
+    return currentAccuracy < bestAccuracy ? current : best;
+  });
+}
+
+/**
+ * Reset GPS stabilization state (call when trip ends)
+ */
+function resetGpsStabilization(): void {
+  stabilizationBuffer = [];
+  isGpsStabilized = false;
+}
+
+/**
+ * Initialize AppState listener for foreground/background transitions
+ */
+export function initializeAppStateListener(): void {
+  if (appStateSubscription) {
+    console.log('[LocationTracking] AppState listener already initialized');
+    return;
+  }
+
+  appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+  currentAppState = AppState.currentState;
+  console.log('[LocationTracking] AppState listener initialized, current state:', currentAppState);
+}
+
+/**
+ * Clean up AppState listener
+ */
+export function cleanupAppStateListener(): void {
+  if (appStateSubscription) {
+    appStateSubscription.remove();
+    appStateSubscription = null;
+    console.log('[LocationTracking] AppState listener removed');
+  }
+}
+
+/**
+ * Handle app state changes (background <-> foreground)
+ */
+async function handleAppStateChange(nextAppState: AppStateStatus): Promise<void> {
+  console.log(`[LocationTracking] AppState: ${currentAppState} -> ${nextAppState}`);
+
+  const wasBackground = currentAppState === 'background' || currentAppState === 'inactive';
+  const isNowForeground = nextAppState === 'active';
+
+  // App coming to foreground from background
+  if (wasBackground && isNowForeground) {
+    await handleForegroundResume();
+  }
+
+  currentAppState = nextAppState;
+}
+
+/**
+ * Handle app resuming to foreground
+ * - Check for zombie trips
+ * - Verify permissions haven't been revoked
+ */
+async function handleForegroundResume(): Promise<void> {
+  console.log('[LocationTracking] App resumed to foreground');
+
+  try {
+    // Initialize database in case it's not ready
+    await database.init();
+
+    // Check for zombie trips
+    await detectAndHandleZombieTrips();
+
+    // Re-check permissions
+    await checkPermissionRevocation();
+  } catch (error) {
+    console.error('[LocationTracking] Error handling foreground resume:', error);
+  }
+}
+
+/**
+ * Detect and handle zombie trips (active trips with no recent updates)
+ */
+async function detectAndHandleZombieTrips(): Promise<void> {
+  const activeTrip = await database.getActiveTrip();
+  if (!activeTrip) {
+    return;
+  }
+
+  // Get locations for this trip to find the last update time
+  const locations = await database.getLocationsByTrip(activeTrip.id);
+  if (locations.length === 0) {
+    // Trip has no locations - check if it's been too long since creation
+    const timeSinceCreation = Date.now() - activeTrip.start_time;
+    if (timeSinceCreation > ZOMBIE_TRIP_THRESHOLD_MS) {
+      console.warn(`[LocationTracking] Zombie trip detected (no locations): ${activeTrip.id}`);
+      await endZombieTrip(activeTrip.id, activeTrip.start_time);
+    }
+    return;
+  }
+
+  // Find the most recent location timestamp
+  const lastLocation = locations[locations.length - 1];
+  const timeSinceLastLocation = Date.now() - lastLocation.timestamp;
+
+  if (timeSinceLastLocation > ZOMBIE_TRIP_THRESHOLD_MS) {
+    console.warn(
+      `[LocationTracking] Zombie trip detected: ${activeTrip.id}, ` +
+      `last location ${Math.round(timeSinceLastLocation / 60000)} minutes ago`
+    );
+    await endZombieTrip(activeTrip.id, lastLocation.timestamp);
+  }
+}
+
+/**
+ * End a zombie trip
+ */
+async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
+  await database.updateTrip(tripId, {
+    status: 'completed',
+    end_time: endTime,
+    updated_at: Date.now(),
+    notes: '[Auto-ended: background tracking timeout]',
+  });
+
+  // Reset tracking state
+  lastStationaryTime = null;
+  resetGpsStabilization();
+
+  console.log(`[LocationTracking] Zombie trip ${tripId} ended`);
+}
+
+/**
+ * Check if location permissions have been revoked or downgraded
+ */
+async function checkPermissionRevocation(): Promise<void> {
+  const isTracking = await LocationTrackingService.isTracking();
+  if (!isTracking) {
+    return;
+  }
+
+  const permissions = await LocationTrackingService.checkPermissions();
+
+  // Check if background permission was revoked
+  if (permissions.background !== Location.PermissionStatus.GRANTED) {
+    console.warn('[LocationTracking] Background permission revoked or downgraded!');
+
+    // Call the callback if registered
+    if (onPermissionDowngraded) {
+      onPermissionDowngraded();
+    }
+  }
+}
+
+/**
+ * Set callback for when permissions are downgraded
+ */
+export function setOnPermissionDowngraded(callback: (() => void) | null): void {
+  onPermissionDowngraded = callback;
+}
 
 // ===== CRITICAL: GLOBAL SCOPE TASK DEFINITION =====
 // This MUST be at top level, not inside class or function!
@@ -47,10 +274,25 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       return;
     }
 
-    console.log(`[LocationTracking] Received ${locations.length} location updates`);
+    // Filter by accuracy - reject points with accuracy worse than threshold
+    const accurateLocations = locations.filter(isLocationAccurate);
+    const filteredCount = locations.length - accurateLocations.length;
+
+    if (filteredCount > 0) {
+      console.log(
+        `[LocationTracking] Filtered ${filteredCount}/${locations.length} inaccurate locations (>${MIN_ACCURACY_METERS}m)`
+      );
+    }
+
+    if (accurateLocations.length === 0) {
+      console.log('[LocationTracking] All locations filtered due to low accuracy');
+      return;
+    }
+
+    console.log(`[LocationTracking] Processing ${accurateLocations.length} accurate location updates`);
 
     try {
-      await processLocationUpdates(locations);
+      await processLocationUpdates(accurateLocations);
     } catch (err) {
       console.error('[LocationTracking] Error processing locations:', err);
     }
@@ -72,7 +314,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
 
     console.log(
       `[LocationTracking] Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, ` +
-      `speed: ${mpsToKmh(currentSpeed).toFixed(1)} km/h`
+      `speed: ${mpsToKmh(currentSpeed).toFixed(1)} km/h, accuracy: ${accuracy?.toFixed(0) || 'unknown'}m`
     );
 
     // Get active trip
@@ -82,6 +324,16 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     if (!activeTrip) {
       // Check if we should start a new trip
       if (TripDetectionService.shouldStartTrip(currentSpeed)) {
+        // Wait for GPS to stabilize before starting trip
+        if (!handleGpsStabilization(location)) {
+          console.log('[LocationTracking] Waiting for GPS to stabilize before starting trip');
+          continue;
+        }
+
+        // Use the best location from stabilization buffer as start point
+        const startLocation = getBestInitialLocation() || location;
+        const startCoords = startLocation.coords;
+
         const tripId = `trip_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
         // TODO: Get actual user ID from auth context
@@ -92,16 +344,47 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           id: tripId,
           user_id: userId,
           status: 'active',
-          start_time: timestamp,
-          created_at: timestamp,
-          updated_at: timestamp,
+          start_time: startLocation.timestamp,
+          created_at: startLocation.timestamp,
+          updated_at: startLocation.timestamp,
         });
 
         activeTrip = await database.getActiveTrip();
         lastStationaryTime = null; // Reset stationary tracking
 
-        console.log(`[LocationTracking] ✓ Started new trip: ${tripId}`);
+        console.log(
+          `[LocationTracking] ✓ Started new trip: ${tripId} ` +
+          `(using ${stabilizationBuffer.length} stabilization points, best accuracy: ${startCoords.accuracy?.toFixed(0) || 'unknown'}m)`
+        );
+
+        // Store all stabilization buffer locations as the trip's initial points
+        for (const bufferedLoc of stabilizationBuffer) {
+          const bufferedCoords = bufferedLoc.coords;
+          const bufferedClassification = ActivityClassifier.classifyBySpeed(bufferedCoords.speed || 0);
+          await database.addLocation({
+            trip_id: tripId,
+            latitude: bufferedCoords.latitude,
+            longitude: bufferedCoords.longitude,
+            altitude: bufferedCoords.altitude,
+            accuracy: bufferedCoords.accuracy,
+            speed: bufferedCoords.speed || 0,
+            heading: bufferedCoords.heading,
+            timestamp: bufferedLoc.timestamp,
+            activity_type: bufferedClassification.type,
+            activity_confidence: bufferedClassification.confidence,
+            synced: 0,
+          });
+        }
+
+        // Clear the stabilization buffer (but keep isGpsStabilized = true)
+        stabilizationBuffer = [];
+        continue; // Move to next location
       } else {
+        // Not moving enough - reset stabilization if we have buffered points
+        if (stabilizationBuffer.length > 0) {
+          console.log('[LocationTracking] Speed dropped, resetting GPS stabilization');
+          resetGpsStabilization();
+        }
         console.log('[LocationTracking] Not moving enough to start trip');
         continue;
       }
@@ -187,7 +470,9 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         });
       }
 
-      lastStationaryTime = null; // Reset for next trip
+      // Reset tracking state for next trip
+      lastStationaryTime = null;
+      resetGpsStabilization();
     }
   }
 }

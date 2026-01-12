@@ -12,6 +12,8 @@ export interface ApiTripRoute {
   lat: number;
   lng: number;
   timestamp: string; // ISO 8601
+  speed?: number; // m/s - for backend analysis
+  accuracy?: number; // meters - for filtering
 }
 
 export interface ApiTripCreate {
@@ -20,6 +22,7 @@ export interface ApiTripCreate {
   end_timestamp: string; // ISO 8601
   route?: ApiTripRoute[];
   type: TripType;
+  frontend_type?: TripType; // What frontend classified this as (for backend comparison)
   is_manual: boolean;
   status?: TripStatus;
   elevation_gain?: number;
@@ -167,11 +170,24 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
               timestamp = new Date().toISOString();
             }
 
-            return {
+            // Include speed and accuracy if available (for backend analysis)
+            const routePoint: ApiTripRoute = {
               lat: coord.lat ?? coord.latitude,
               lng: coord.lng ?? coord.longitude,
               timestamp,
             };
+
+            // Add speed if available (convert from m/s if needed)
+            if (coord.speed != null && !isNaN(coord.speed)) {
+              routePoint.speed = coord.speed;
+            }
+
+            // Add accuracy if available
+            if (coord.accuracy != null && !isNaN(coord.accuracy)) {
+              routePoint.accuracy = coord.accuracy;
+            }
+
+            return routePoint;
           });
           console.log(`[TripAPI] Transformed ${route.length} valid coordinates (${routeData.length - validCoords.length} invalid filtered out)`);
         } else {
@@ -213,26 +229,34 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
     throw new Error(`Invalid timestamps for trip ${dbTrip.id}: start time >= end time`);
   }
 
-  const apiTrip = {
+  const apiTrip: ApiTripCreate = {
     client_id: dbTrip.id,
     start_timestamp: new Date(dbTrip.start_time).toISOString(),
     end_timestamp: new Date(endTime).toISOString(),
     route: route || [], // Backend requires route field, use empty array if no route
     type: dbTrip.type,
+    frontend_type: dbTrip.type, // Track what frontend classified this as
     is_manual: dbTrip.is_manual === 1,
     status: dbTrip.status,
     elevation_gain: dbTrip.elevation_gain > 0 ? dbTrip.elevation_gain : undefined,
     notes: dbTrip.notes || undefined,
   };
 
+  // Log route points with speed data availability
+  const routeWithSpeed = route?.filter(p => p.speed != null).length || 0;
+  const routeWithAccuracy = route?.filter(p => p.accuracy != null).length || 0;
+
   console.log('[TripAPI] Transformed trip payload:', {
     client_id: apiTrip.client_id,
     type: apiTrip.type,
+    frontend_type: apiTrip.frontend_type,
     status: apiTrip.status,
     is_manual: apiTrip.is_manual,
     start_timestamp: apiTrip.start_timestamp,
     end_timestamp: apiTrip.end_timestamp,
     route_points: route?.length || 0,
+    route_with_speed: routeWithSpeed,
+    route_with_accuracy: routeWithAccuracy,
     elevation_gain: apiTrip.elevation_gain,
     has_notes: !!apiTrip.notes,
   });
