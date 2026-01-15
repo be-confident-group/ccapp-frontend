@@ -5,7 +5,7 @@ import type { MapViewMode, HeatmapMode, FeedbackMode, MapModeState } from '@/typ
 const MAP_MODE_STORAGE_KEY = '@radzi:map_mode';
 
 const DEFAULT_MAP_MODE: MapModeState = {
-  viewMode: 'heatmap',
+  viewMode: 'feedback',
   heatmapMode: 'personal',
   feedbackMode: 'community',
 };

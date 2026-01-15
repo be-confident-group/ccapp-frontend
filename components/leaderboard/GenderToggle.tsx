@@ -19,6 +19,7 @@ export function GenderToggle({ selected, onToggle }: GenderToggleProps) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
+      style={styles.scrollView}
     >
       <View
         style={[
@@ -149,8 +150,11 @@ export function GenderToggle({ selected, onToggle }: GenderToggleProps) {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
+  scrollView: {
     flexGrow: 1,
+  },
+  scrollContent: {
+    paddingRight: Spacing.sm,
   },
   container: {
     flexDirection: 'row',

@@ -1,3 +1,7 @@
+// CRITICAL: Import LocationTrackingService FIRST to register background task
+// This ensures TaskManager.defineTask() executes before any location updates arrive
+import '@/lib/services/LocationTrackingService';
+
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

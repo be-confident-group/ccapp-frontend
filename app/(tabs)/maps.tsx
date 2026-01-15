@@ -16,7 +16,7 @@ import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import { mockUserLocation } from '@/lib/utils/mockMapData';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { TripManager } from '@/lib/services/TripManager';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
@@ -25,6 +25,7 @@ import type { Trip as DBTrip } from '@/lib/database/db';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
 import { useFocusEffect } from 'expo-router';
+import type { MapViewMode } from '@/types/mapMode';
 
 // Transform backend ApiTrip to local Trip format
 function transformApiTripToLocal(apiTrip: ApiTrip): DBTrip {
@@ -166,6 +167,18 @@ export default function MapsScreen() {
     }
   }, []);
 
+  const handleViewModeChange = useCallback((mode: MapViewMode) => {
+    if (mode === 'heatmap') {
+      Alert.alert(
+        'Coming Soon',
+        'Heatmap feature will be available soon!',
+        [{ text: 'OK', style: 'default' }]
+      );
+    } else {
+      setViewMode(mode);
+    }
+  }, [setViewMode]);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <MapContainer>
@@ -194,7 +207,7 @@ export default function MapsScreen() {
           heatmapMode={heatmapMode}
           feedbackMode={feedbackMode}
           selectedLayer={selectedLayer}
-          onViewModeChange={setViewMode}
+          onViewModeChange={handleViewModeChange}
           onHeatmapModeChange={setHeatmapMode}
           onFeedbackModeChange={setFeedbackMode}
           onLayerChange={handleLayerChange}
