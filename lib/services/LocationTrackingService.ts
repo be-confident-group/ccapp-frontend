@@ -15,6 +15,10 @@ import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
+// Log module initialization (CRITICAL for debugging task timing)
+console.log('[LocationTracking] ===== MODULE LOADED =====');
+console.log('[LocationTracking] TaskManager.defineTask will be called at global scope');
+
 // ===== TRACKING STATE =====
 // Track stationary state across task executions
 let lastStationaryTime: number | null = null;
@@ -24,8 +28,8 @@ let appStateSubscription: { remove: () => void } | null = null;
 let currentAppState: AppStateStatus = 'active';
 
 // ===== GPS STABILIZATION =====
-const MIN_ACCURACY_METERS = 50; // Reject points with accuracy worse than 50m
-const GPS_STABILIZATION_POINTS = 3; // Wait for 3 good readings before using
+const MIN_ACCURACY_METERS = 100; // Reject points with accuracy worse than 100m (relaxed for real-world GPS)
+const GPS_STABILIZATION_POINTS = 2; // Wait for 2 good readings before using (faster trip start)
 let stabilizationBuffer: Location.LocationObject[] = [];
 let isGpsStabilized = false;
 
@@ -251,6 +255,13 @@ export function setOnPermissionDowngraded(callback: (() => void) | null): void {
 // but this global code executes.
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+  console.log('[LocationTracking] ===== BACKGROUND TASK FIRED =====');
+  console.log('[LocationTracking] Task data received:', {
+    hasData: !!data,
+    hasError: !!error,
+    locationCount: data ? (data as any).locations?.length : 0,
+  });
+
   if (error) {
     // Check if it's a transient iOS location acquisition error (kCLErrorDomain Code=0)
     // This is normal during GPS initialization and shouldn't stop processing
@@ -273,6 +284,16 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       console.log('[LocationTracking] No location data available');
       return;
     }
+
+    // Log raw location data for debugging
+    console.log('[LocationTracking] Raw locations received:', locations.map((loc, i) => ({
+      index: i,
+      lat: loc.coords.latitude.toFixed(6),
+      lng: loc.coords.longitude.toFixed(6),
+      accuracy: loc.coords.accuracy?.toFixed(0) || 'unknown',
+      speed: loc.coords.speed?.toFixed(2) || 'unknown',
+      timestamp: new Date(loc.timestamp).toISOString(),
+    })));
 
     // Filter by accuracy - reject points with accuracy worse than threshold
     const accurateLocations = locations.filter(isLocationAccurate);
@@ -298,6 +319,10 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     }
   }
 });
+
+// Log task registration success
+console.log('[LocationTracking] ===== TASK REGISTERED =====');
+console.log('[LocationTracking] Background task name:', LOCATION_TASK_NAME);
 
 /**
  * Process location updates from background task

@@ -22,7 +22,7 @@ export class TripDetectionService {
     stationaryDistanceThreshold: 50,   // 50 meters
     minTripDuration: 60,               // 1 minute
     minTripDistance: 100,              // 100 meters
-    movementSpeedThreshold: 1.0,       // ~3.6 km/h
+    movementSpeedThreshold: 0.7,       // ~2.5 km/h (lowered for easier trip start detection)
   };
 
   /**
@@ -141,7 +141,7 @@ export class TripDetectionService {
       stationaryDistanceThreshold: 50,
       minTripDuration: 60,
       minTripDistance: 100,
-      movementSpeedThreshold: 1.0,
+      movementSpeedThreshold: 0.7,
     };
   }
 

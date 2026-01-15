@@ -15,6 +15,7 @@ import {
   StarIcon,
   ArrowRightOnRectangleIcon,
   SunIcon,
+  WrenchScrewdriverIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -28,7 +29,6 @@ import { ActivityChart } from '@/components/profile/ActivityChart';
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
-import { PrivacySettingsModal } from '@/components/profile/PrivacySettingsModal';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
@@ -47,8 +47,6 @@ export default function YouScreen() {
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
-  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
 
   const [userProfile, setUserProfile] = useState({
     firstName: 'John',
@@ -402,22 +400,26 @@ export default function YouScreen() {
                   icon={<ShieldCheckIcon size={22} color={colors.text} />}
                   title={t('profile:privacy.privacy')}
                   subtitle={t('profile:privacy.privacySubtitle')}
-                  onPress={() => setShowPrivacySettings(true)}
+                  onPress={() => {
+                    Alert.alert(
+                      'Coming Soon',
+                      'Privacy settings will come soon!',
+                      [{ text: 'OK', style: 'default' }]
+                    );
+                  }}
                   isFirst
-                />
-                <SettingsItem
-                  icon={<BellIcon size={22} color={colors.text} />}
-                  title={t('profile:privacy.dailyReminder')}
-                  subtitle={t('profile:privacy.dailyReminderSubtitle')}
-                  toggleValue={dailyReminderEnabled}
-                  onToggleChange={setDailyReminderEnabled}
-                  showChevron={false}
                 />
                 <SettingsItem
                   icon={<BellIcon size={22} color={colors.text} />}
                   title={t('profile:privacy.notificationSettings')}
                   subtitle={t('profile:privacy.notificationSettingsSubtitle')}
-                  onPress={() => showComingSoonAlert('notificationSettings')}
+                  onPress={() => {
+                    Alert.alert(
+                      'Coming Soon',
+                      'Notifications will come soon!',
+                      [{ text: 'OK', style: 'default' }]
+                    );
+                  }}
                   isLast
                 />
               </View>
@@ -456,6 +458,32 @@ export default function YouScreen() {
             </View>
           </View>
 
+          {/* Developer Section - visible in preview/dev builds for testing */}
+          <View style={styles.settingsSection}>
+            <ThemedText style={styles.sectionTitle}>Developer</ThemedText>
+            <View style={[styles.settingsCard, styles.cardShadow]}>
+              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                {!isDark && (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.3 }}
+                    style={styles.cardTopHighlight}
+                  />
+                )}
+                <SettingsItem
+                  icon={<WrenchScrewdriverIcon size={22} color={colors.text} />}
+                  title="Debug Tracking"
+                  subtitle="View real-time tracking status and diagnostics"
+                  onPress={() => router.push('/debug-tracking')}
+                  isFirst
+                  isLast
+                />
+              </View>
+            </View>
+          </View>
+
           {/* Log Out Button */}
           <View style={styles.logoutSection}>
             <Button
@@ -484,12 +512,6 @@ export default function YouScreen() {
         <LanguagePicker
           visible={showLanguagePicker}
           onClose={() => setShowLanguagePicker(false)}
-        />
-
-        {/* Privacy Settings Modal */}
-        <PrivacySettingsModal
-          visible={showPrivacySettings}
-          onClose={() => setShowPrivacySettings(false)}
         />
       </ThemedView>
     </SafeAreaView>
