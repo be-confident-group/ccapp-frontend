@@ -233,10 +233,10 @@ export default function SegmentPainter({
   );
 
   // Pan gesture for painting - only active when feeling is selected
-  // minDistance reduced to 1 for immediate response
+  // minDistance set higher than long press maxDistance to allow long press to complete
   const panGesture = Gesture.Pan()
     .enabled(enabled && selectedFeeling !== null)
-    .minDistance(1)
+    .minDistance(30)
     .onBegin((event) => {
       'worklet';
       paintIndicatorX.value = event.x;
@@ -259,12 +259,12 @@ export default function SegmentPainter({
       runOnJS(handlePaintEnd)();
     });
 
-  // Long press gesture - only active when NOT painting (no feeling selected)
-  // maxDistance ensures gesture fails if user starts panning (allows map to take over)
+  // Long press gesture - active anytime (both when painting and not painting)
+  // maxDistance (25) is less than pan minDistance (30) so long press wins if user holds still
   const longPressGesture = Gesture.LongPress()
-    .enabled(enabled && selectedFeeling === null && !!onLongPress)
+    .enabled(enabled && !!onLongPress)
     .minDuration(500)
-    .maxDistance(15)
+    .maxDistance(25)
     .onStart((event) => {
       'worklet';
       runOnJS(handleLongPressEvent)(event.x, event.y);
@@ -274,11 +274,13 @@ export default function SegmentPainter({
   const nativeGesture = Gesture.Native();
 
   // Combine gestures intelligently:
-  // - When painting: use pan gesture exclusively
+  // - When painting: race between pan and long press (user can paint or report issue)
   // - When long press enabled: race between long press and native (first to activate wins)
   // - Otherwise: just use native
   const composedGesture = selectedFeeling !== null
-    ? panGesture
+    ? (enabled && !!onLongPress)
+      ? Gesture.Race(longPressGesture, panGesture)
+      : panGesture
     : (enabled && !!onLongPress)
       ? Gesture.Race(longPressGesture, nativeGesture)
       : nativeGesture;

@@ -512,7 +512,7 @@ export default function RateRouteScreen() {
                   pendingReportLocation={pendingReportCoordinate}
                   onMapReady={handleMapReady}
                   onCameraIdle={handleCameraIdle}
-                  disableInteraction={isPainting}
+                  disableInteraction={selectedFeeling !== null}
                   style={styles.map}
                 />
               </SegmentPainter>
@@ -542,7 +542,7 @@ export default function RateRouteScreen() {
           <View style={[styles.bottomPanel, { backgroundColor: colors.card }]}>
             {/* Instruction hint */}
             <ThemedText style={[styles.hintText, { color: colors.textSecondary }]}>
-              {selectedFeeling ? 'Swipe on route to paint. Zoom & pan to navigate.' : 'Select a feeling to start'}
+              {selectedFeeling ? 'Swipe on route to paint. Long press to report an issue.' : 'Select a feeling to start. Long press to report an issue.'}
             </ThemedText>
 
             {/* Feeling selector - compact single row */}

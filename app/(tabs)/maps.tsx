@@ -9,11 +9,19 @@ import { MapControls } from '@/components/maps/MapControls';
 import { MapLayer } from '@/components/maps/MapLayerSelector';
 import { MapView } from '@/components/maps/MapView';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
+import { FeedbackMarkers } from '@/components/maps/FeedbackMarkers';
+import { FeedbackDetailSheet } from '@/components/maps/FeedbackDetailSheet';
+import { RoadSectionsLayer } from '@/components/maps/RoadSectionsLayer';
+import { RoadSectionDetailSheet } from '@/components/maps/RoadSectionDetailSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useMapMode } from '@/lib/hooks/useMapMode';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
+import { useMapFeedback } from '@/lib/hooks/useMapFeedback';
+import { useGlobalFeedback } from '@/lib/hooks/useGlobalFeedback';
+import { usePersonalRoadSections, useCommunityRoadSections } from '@/lib/hooks/useRoadSections';
 import { mockUserLocation } from '@/lib/utils/mockMapData';
+import { debounce } from '@/lib/utils/feedbackHelpers';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Alert } from 'react-native';
@@ -26,6 +34,9 @@ import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
 import { useFocusEffect } from 'expo-router';
 import type { MapViewMode } from '@/types/mapMode';
+import type { MapFeedback } from '@/lib/api/mapFeedback';
+import type { GlobalFeedback } from '@/lib/api/globalFeedback';
+import type { RoadSectionPersonal, RoadSectionCommunity } from '@/lib/api/roadSections';
 
 // Transform backend ApiTrip to local Trip format
 function transformApiTripToLocal(apiTrip: ApiTrip): DBTrip {
@@ -71,10 +82,27 @@ export default function MapsScreen() {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapBounds, setMapBounds] = useState<string | undefined>(undefined);
+  const [selectedFeedback, setSelectedFeedback] = useState<MapFeedback | GlobalFeedback | null>(null);
+  const [selectedRoadSection, setSelectedRoadSection] = useState<RoadSectionPersonal | RoadSectionCommunity | null>(null);
   const mapViewRef = useRef<any>(null);
 
   // Fetch trips from backend (including active trips that weren't properly stopped)
   const { data: backendTrips, refetch } = useTrips();
+
+  // Fetch feedback data based on mode
+  const { data: personalFeedback } = useMapFeedback();
+  const { data: globalFeedback } = useGlobalFeedback(
+    viewMode === 'feedback' && feedbackMode === 'community' ? mapBounds : undefined
+  );
+
+  // Fetch road sections data for heatmap mode
+  const { data: personalRoadSections } = usePersonalRoadSections(
+    viewMode === 'heatmap' && heatmapMode === 'personal' ? mapBounds : undefined
+  );
+  const { data: communityRoadSections } = useCommunityRoadSections(
+    viewMode === 'heatmap' && heatmapMode === 'global' ? mapBounds : undefined
+  );
 
   // Refetch trips when screen comes into focus
   useFocusEffect(
@@ -94,33 +122,58 @@ export default function MapsScreen() {
       .map(transformApiTripToLocal);
   }, [backendTrips]);
 
+  // All useCallback and useMemo hooks must be before any early returns
+  const handleMapLongPress = useCallback((event: any) => {
+    const { geometry } = event;
+    if (geometry && geometry.coordinates) {
+      const [longitude, latitude] = geometry.coordinates;
+      setReportCoordinates({ latitude, longitude });
+      setIsReportModalVisible(true);
+    }
+  }, []);
+
+  const handleViewModeChange = useCallback((mode: MapViewMode) => {
+    setViewMode(mode);
+  }, [setViewMode]);
+
+  // Handle map region changes to update bbox for feedback and heatmap modes
+  const handleRegionChange = useCallback(async () => {
+    const needsBbox =
+      (viewMode === 'feedback' && feedbackMode === 'community') ||
+      (viewMode === 'heatmap');
+
+    if (needsBbox && mapViewRef.current) {
+      try {
+        const bounds = await mapViewRef.current.getVisibleBounds();
+        if (bounds && bounds.length === 2) {
+          const [[minLon, minLat], [maxLon, maxLat]] = bounds;
+          const bboxString = `${minLon},${minLat},${maxLon},${maxLat}`;
+          setMapBounds(bboxString);
+        }
+      } catch (error) {
+        console.error('[MapsScreen] Error getting visible bounds:', error);
+      }
+    }
+  }, [viewMode, feedbackMode]);
+
+  // Debounced version to avoid excessive API calls
+  const debouncedHandleRegionChange = useMemo(
+    () => debounce(handleRegionChange, 500),
+    [handleRegionChange]
+  );
+
   // Handle layer change from user interaction
-  const handleLayerChange = (layer: MapLayer) => {
+  const handleLayerChange = useCallback((layer: MapLayer) => {
     setSelectedLayer(layer);
-  };
+  }, [setSelectedLayer]);
 
-  // Show permission prompt if not granted
-  if (permissionStatus !== 'granted') {
-    return (
-      <MapContainer>
-        <MapView
-          region={{
-            latitude: mockUserLocation.latitude,
-            longitude: mockUserLocation.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          showUserLocation={false}
-        />
-        <LocationPermissionPrompt
-          onRequestPermission={requestPermission}
-          isLoading={isLoading}
-        />
-      </MapContainer>
-    );
-  }
+  const handleFindLocation = useCallback(() => {
+    if (mapViewRef.current) {
+      mapViewRef.current.centerOnUserLocation();
+    }
+  }, []);
 
-  const handleTripPress = async (tripId: string) => {
+  const handleTripPress = useCallback(async (tripId: string) => {
     console.log('[MapsScreen] Trip pressed:', tripId);
     setSelectedTripId(tripId);
 
@@ -150,34 +203,28 @@ export default function MapsScreen() {
         console.error('[MapsScreen] Error parsing route data:', error);
       }
     }
-  };
+  }, [recentTrips]);
 
-  const handleFindLocation = () => {
-    if (mapViewRef.current) {
-      mapViewRef.current.centerOnUserLocation();
-    }
-  };
-
-  const handleMapLongPress = useCallback((event: any) => {
-    const { geometry } = event;
-    if (geometry && geometry.coordinates) {
-      const [longitude, latitude] = geometry.coordinates;
-      setReportCoordinates({ latitude, longitude });
-      setIsReportModalVisible(true);
-    }
-  }, []);
-
-  const handleViewModeChange = useCallback((mode: MapViewMode) => {
-    if (mode === 'heatmap') {
-      Alert.alert(
-        'Coming Soon',
-        'Heatmap feature will be available soon!',
-        [{ text: 'OK', style: 'default' }]
-      );
-    } else {
-      setViewMode(mode);
-    }
-  }, [setViewMode]);
+  // Show permission prompt if not granted (AFTER all hooks)
+  if (permissionStatus !== 'granted') {
+    return (
+      <MapContainer>
+        <MapView
+          region={{
+            latitude: mockUserLocation.latitude,
+            longitude: mockUserLocation.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          showUserLocation={false}
+        />
+        <LocationPermissionPrompt
+          onRequestPermission={requestPermission}
+          isLoading={isLoading}
+        />
+      </MapContainer>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -194,11 +241,30 @@ export default function MapsScreen() {
           followUserLocation={false}
           selectedLayer={selectedLayer}
           onLongPress={handleMapLongPress}
+          onRegionDidChange={debouncedHandleRegionChange}
         >
           {/* Render recent trips from database */}
           {recentTrips.map((trip) => (
             <DBTripRoute key={trip.id} trip={trip} colors={colors} isSelected={selectedTripId === trip.id} />
           ))}
+
+          {/* Render feedback markers based on mode */}
+          {viewMode === 'feedback' && (
+            <FeedbackMarkers
+              feedbacks={feedbackMode === 'personal' ? personalFeedback : globalFeedback}
+              type={feedbackMode}
+              onMarkerPress={setSelectedFeedback}
+            />
+          )}
+
+          {/* Render road sections as colored lines in heatmap mode */}
+          {viewMode === 'heatmap' && (
+            <RoadSectionsLayer
+              sections={heatmapMode === 'personal' ? personalRoadSections : communityRoadSections}
+              type={heatmapMode}
+              onSectionPress={setSelectedRoadSection}
+            />
+          )}
         </MapView>
 
         {/* Map controls overlay */}
@@ -229,6 +295,20 @@ export default function MapsScreen() {
           visible={isReportModalVisible}
           coordinates={reportCoordinates}
           onClose={() => setIsReportModalVisible(false)}
+        />
+
+        {/* Feedback Detail Sheet */}
+        <FeedbackDetailSheet
+          feedback={selectedFeedback}
+          visible={!!selectedFeedback}
+          onClose={() => setSelectedFeedback(null)}
+        />
+
+        {/* Road Section Detail Sheet */}
+        <RoadSectionDetailSheet
+          section={selectedRoadSection}
+          visible={!!selectedRoadSection}
+          onClose={() => setSelectedRoadSection(null)}
         />
       </MapContainer>
     </GestureHandlerRootView>

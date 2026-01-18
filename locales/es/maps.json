@@ -52,5 +52,36 @@
     "noHistoryMessage": "Comienza a rastrear tus viajes para verlos aquí",
     "noFeedback": "Aún no hay comentarios",
     "noFeedbackMessage": "Califica rutas para ver tus comentarios aquí"
+  },
+  "feedback": {
+    "categories": {
+      "road_damage": "Daño en la Carretera",
+      "traffic_light": "Semáforo",
+      "safety_issue": "Problema de Seguridad",
+      "other": "Otro"
+    },
+    "confidence": {
+      "label": "Confianza",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "signal_strength": "Intensidad de Señal",
+    "last_updated": "Última actualización",
+    "just_now": "Ahora mismo",
+    "hours_ago": "Hace {{count}}h",
+    "days_ago": "Hace {{count}}d"
+  },
+  "road_sections": {
+    "ratings": {
+      "stressed": "Estresado",
+      "uncomfortable": "Incómodo",
+      "comfortable": "Cómodo",
+      "enjoyable": "Agradable"
+    },
+    "community_score": "Puntuación Comunitaria",
+    "rating_count": "Valoraciones",
+    "your_rating": "Tu Valoración",
+    "legend": "Escala de Valoración"
   }
 }

@@ -52,5 +52,36 @@
     "noHistoryMessage": "Start tracking your rides to see them here",
     "noFeedback": "No feedback yet",
     "noFeedbackMessage": "Rate routes to see your feedback here"
+  },
+  "feedback": {
+    "categories": {
+      "road_damage": "Road Damage",
+      "traffic_light": "Traffic Light",
+      "safety_issue": "Safety Issue",
+      "other": "Other"
+    },
+    "confidence": {
+      "label": "Confidence",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "signal_strength": "Signal Strength",
+    "last_updated": "Last updated",
+    "just_now": "Just now",
+    "hours_ago": "{{count}}h ago",
+    "days_ago": "{{count}}d ago"
+  },
+  "road_sections": {
+    "ratings": {
+      "stressed": "Stressed",
+      "uncomfortable": "Uncomfortable",
+      "comfortable": "Comfortable",
+      "enjoyable": "Enjoyable"
+    },
+    "community_score": "Community Score",
+    "rating_count": "Ratings",
+    "your_rating": "Your Rating",
+    "legend": "Rating Scale"
   }
 }
