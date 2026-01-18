@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -17,7 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { useClubs, useJoinClub, useMyClubs } from '@/lib/hooks/useClubs';
+import { useClubs } from '@/lib/hooks/useClubs';
 import { UsersIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
@@ -251,29 +251,6 @@ const styles = StyleSheet.create({
   },
   memberCount: {
     fontSize: 12,
-  },
-  joinButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  joinButtonDisabled: {
-    opacity: 0.6,
-  },
-  joinButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  memberBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  memberBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   emptyState: {
     flex: 1,

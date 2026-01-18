@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   FlatList,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -26,6 +27,7 @@ import {
   PlusIcon,
   ArrowLeftStartOnRectangleIcon,
   PencilSquareIcon,
+  ShareIcon,
 } from 'react-native-heroicons/outline';
 import type { Post } from '@/types/feed';
 import type { ActivityPost } from '@/types/feed';
@@ -85,7 +87,14 @@ export default function ClubDetailScreen() {
     // Compare by name since SimpleProfile doesn't have email/id
     return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
   }, [club, currentUser]);
-  const isMember = true; // For now, assume user is member if they can view the club
+
+  // Check if current user is a member
+  const isMember = useMemo(() => {
+    if (!club || !currentUser) return false;
+    return club.members.some(
+      (member) => member.name === currentUser.name && member.last_name === currentUser.last_name
+    );
+  }, [club, currentUser]);
 
   const handleJoinLeave = useCallback(async () => {
     if (!club) return;
@@ -111,6 +120,10 @@ export default function ClubDetailScreen() {
     if (!club) return;
     router.push(`/clubs/edit?id=${club.id}`);
   }, [club]);
+
+  const handleShareClub = useCallback(() => {
+    Alert.alert('Coming Soon', 'Group sharing will be available soon!');
+  }, []);
 
   const handleLike = useCallback((postId: string) => {
     // Find the backend post to get club_id and is_liked
@@ -199,18 +212,41 @@ export default function ClubDetailScreen() {
             </TouchableOpacity>
           )}
 
-          {isMember && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={handleCreatePost}
-              activeOpacity={0.8}
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isMember
+                ? { backgroundColor: colors.primary }
+                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+            ]}
+            onPress={handleCreatePost}
+            disabled={!isMember}
+            activeOpacity={0.8}
+          >
+            <PlusIcon size={18} color={isMember ? '#fff' : colors.textMuted} />
+            <ThemedText
+              style={[
+                styles.actionButtonText,
+                { color: isMember ? '#fff' : colors.textMuted },
+              ]}
             >
-              <PlusIcon size={18} color="#fff" />
-              <ThemedText style={[styles.actionButtonText, { color: '#fff' }]}>
-                {t('clubs.createPost', 'Post')}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+              {t('clubs.createPost', 'Post')}
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+            ]}
+            onPress={handleShareClub}
+            activeOpacity={0.8}
+          >
+            <ShareIcon size={18} color={colors.text} />
+            <ThemedText style={[styles.actionButtonText, { color: colors.text }]}>
+              {t('clubs.share', 'Share')}
+            </ThemedText>
+          </TouchableOpacity>
         </View>
 
         {/* Members Preview */}
