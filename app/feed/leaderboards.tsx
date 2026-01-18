@@ -23,7 +23,7 @@ import type { Club } from '@/types/feed';
 
 type ActivityType = 'walks' | 'rides';
 type SortBy = 'distance' | 'trips';
-type GenderFilter = 'all' | 'male' | 'female' | 'other' | 'prefer_not_to_say';
+type GenderFilter = 'all' | 'male' | 'female';
 
 export default function LeaderboardsScreen() {
   const { t } = useTranslation('groups');
@@ -48,11 +48,9 @@ export default function LeaderboardsScreen() {
   // Map frontend gender filter to backend codes
   const backendGenderCode = useMemo(() => {
     if (genderFilter === 'all') return null;
-    const genderMap: Record<Exclude<GenderFilter, 'all'>, 'M' | 'F' | 'O' | 'P'> = {
+    const genderMap: Record<Exclude<GenderFilter, 'all'>, 'M' | 'F'> = {
       male: 'M',
       female: 'F',
-      other: 'O',
-      prefer_not_to_say: 'P',
     };
     return genderMap[genderFilter];
   }, [genderFilter]);
@@ -87,12 +85,8 @@ export default function LeaderboardsScreen() {
       customTitle = activityType === 'rides' ? 'Top Male Riders' : 'Top Male Walkers';
     } else if (genderFilter === 'female') {
       customTitle = activityType === 'rides' ? 'Top Female Riders' : 'Top Female Walkers';
-    } else if (genderFilter === 'other') {
-      customTitle = activityType === 'rides' ? 'Top Other Riders' : 'Top Other Walkers';
-    } else if (genderFilter === 'prefer_not_to_say') {
-      customTitle = activityType === 'rides' ? 'Top Riders (Prefer Not To Say)' : 'Top Walkers (Prefer Not To Say)';
     } else {
-      // All genders
+      // All genders (includes everyone: male, female, other, and prefer not to say)
       const activityLabel = activityType === 'rides' ? 'Riders' : 'Walkers';
       const sortLabel = sortBy === 'distance' ? 'Distance' : 'Trips';
       customTitle = `Top ${activityLabel} - ${sortLabel}`;
