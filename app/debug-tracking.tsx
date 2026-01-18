@@ -70,6 +70,16 @@ interface DebugInfo {
     locationsCount: number;
     startTime: string;
   }>;
+  lastCompletedTrip?: {
+    id: string;
+    status: string;
+    distance: number;
+    duration: number;
+    locationsCount: number;
+    hasRouteData: boolean;
+    routeDataLength: number;
+    routeDataSample: string | null;
+  };
 }
 
 export default function DebugTrackingScreen() {
@@ -222,6 +232,36 @@ export default function DebugTrackingScreen() {
         totalLocations,
       };
 
+      // Get last completed trip info with route_data status
+      let lastCompletedTripInfo: DebugInfo['lastCompletedTrip'] = undefined;
+      if (completedTrips.length > 0) {
+        // Sort by start_time descending to get the most recent
+        const sortedCompleted = [...completedTrips].sort((a, b) => b.start_time - a.start_time);
+        const lastTrip = sortedCompleted[0];
+        const tripLocations = await database.getLocationsByTrip(lastTrip.id);
+
+        let routeDataSample: string | null = null;
+        if (lastTrip.route_data) {
+          try {
+            const parsed = JSON.parse(lastTrip.route_data);
+            routeDataSample = JSON.stringify(parsed.slice(0, 2), null, 2);
+          } catch {
+            routeDataSample = 'Invalid JSON';
+          }
+        }
+
+        lastCompletedTripInfo = {
+          id: lastTrip.id.substring(0, 20) + '...',
+          status: lastTrip.status,
+          distance: lastTrip.distance || 0,
+          duration: lastTrip.duration || 0,
+          locationsCount: tripLocations.length,
+          hasRouteData: !!lastTrip.route_data,
+          routeDataLength: lastTrip.route_data?.length || 0,
+          routeDataSample,
+        };
+      }
+
       setDebugInfo({
         timestamp: new Date().toLocaleTimeString(),
         isTracking,
@@ -236,6 +276,7 @@ export default function DebugTrackingScreen() {
         detectionConfig,
         databaseStats,
         recentTrips,
+        lastCompletedTrip: lastCompletedTripInfo,
       });
     } catch (err) {
       console.error('[DebugTracking] Error loading info:', err);
@@ -593,6 +634,41 @@ export default function DebugTrackingScreen() {
                 Total Locations: {debugInfo.databaseStats.totalLocations}
               </Text>
             </View>
+
+            {/* Last Completed Trip Debug Section */}
+            {debugInfo.lastCompletedTrip && (
+              <View style={[styles.section, { backgroundColor: colors.card }]}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Last Completed Trip</Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  ID: {debugInfo.lastCompletedTrip.id}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Distance: {debugInfo.lastCompletedTrip.distance.toFixed(0)}m
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Duration: {Math.floor(debugInfo.lastCompletedTrip.duration / 60)}m {debugInfo.lastCompletedTrip.duration % 60}s
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  DB Locations: {debugInfo.lastCompletedTrip.locationsCount}
+                </Text>
+                <Text style={[styles.value, {
+                  color: debugInfo.lastCompletedTrip.hasRouteData ? '#4CAF50' : '#F44336',
+                  fontWeight: 'bold'
+                }]}>
+                  Has route_data: {debugInfo.lastCompletedTrip.hasRouteData ? '✓ YES' : '✗ NO'}
+                </Text>
+                {debugInfo.lastCompletedTrip.hasRouteData && (
+                  <>
+                    <Text style={[styles.value, { color: colors.text }]}>
+                      route_data length: {debugInfo.lastCompletedTrip.routeDataLength} chars
+                    </Text>
+                    <Text style={[styles.monoText, { color: colors.textSecondary, fontSize: 10 }]}>
+                      Sample: {debugInfo.lastCompletedTrip.routeDataSample}
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Recent Trips Section */}
             {debugInfo.recentTrips.length > 0 && (

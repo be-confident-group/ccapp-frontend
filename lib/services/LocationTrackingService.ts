@@ -224,9 +224,21 @@ async function detectAndHandleZombieTrips(): Promise<void> {
  * End a zombie trip
  */
 async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
+  // Build route_data from existing locations for backend sync
+  const locations = await database.getLocationsByTrip(tripId);
+  const routeForSync = locations.map((loc) => ({
+    lat: Number(loc.latitude.toFixed(6)),
+    lng: Number(loc.longitude.toFixed(6)),
+    timestamp: new Date(loc.timestamp).toISOString(),
+  }));
+  const routeDataJson = JSON.stringify(routeForSync);
+
+  console.log(`[LocationTracking] Zombie trip ${tripId}: built route with ${routeForSync.length} points`);
+
   await database.updateTrip(tripId, {
     status: 'completed',
     end_time: endTime,
+    route_data: routeDataJson,
     updated_at: Date.now(),
     notes: '[Auto-ended: background tracking timeout]',
   });
@@ -577,9 +589,21 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         });
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
+
+        // Build route_data for backend sync (ISO 8601 timestamps)
+        const routeForSync = allLocations.map((loc) => ({
+          lat: Number(loc.latitude.toFixed(6)),
+          lng: Number(loc.longitude.toFixed(6)),
+          timestamp: new Date(loc.timestamp).toISOString(),
+        }));
+        const routeDataJson = JSON.stringify(routeForSync);
+
+        console.log(`[LocationTracking] Built route with ${routeForSync.length} points for sync`);
+
         await database.updateTrip(activeTrip.id, {
           status: 'completed',
           end_time: timestamp,
+          route_data: routeDataJson,
           updated_at: timestamp,
         });
       }

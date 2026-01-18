@@ -38,38 +38,13 @@ export default function BrowseClubsScreen() {
   }, [searchQuery]);
 
   const { data: allClubs, isLoading, refetch, isRefetching } = useClubs(debouncedSearch);
-  const { data: myClubs } = useMyClubs();
-  const joinClubMutation = useJoinClub();
-
-  // Determine which clubs user is already a member of
-  const myClubIds = useMemo(() => {
-    return new Set(myClubs?.map((club) => club.id) || []);
-  }, [myClubs]);
 
   const handleClubPress = useCallback((clubId: number) => {
     router.push(`/clubs/${clubId}`);
   }, []);
 
-  const handleJoinClub = useCallback(
-    async (clubId: number, clubName: string) => {
-      try {
-        await joinClubMutation.mutateAsync(clubId);
-        // Show success feedback (you can add a toast/alert here)
-        console.log(`Joined group: ${clubName}`);
-      } catch (error) {
-        // Show error feedback
-        console.error('Failed to join group:', error);
-        alert(error instanceof Error ? error.message : 'Failed to join group');
-      }
-    },
-    [joinClubMutation]
-  );
-
   const renderClubItem = useCallback(
     ({ item }: { item: Club }) => {
-      const isMember = myClubIds.has(item.id);
-      const isJoining = joinClubMutation.isPending;
-
       return (
         <TouchableOpacity
           style={[styles.clubCard, { backgroundColor: colors.card }]}
@@ -104,38 +79,11 @@ export default function BrowseClubsScreen() {
                 </View>
               </View>
             </View>
-
-            {!isMember && (
-              <TouchableOpacity
-                style={[
-                  styles.joinButton,
-                  { backgroundColor: colors.primary },
-                  isJoining && styles.joinButtonDisabled,
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleJoinClub(item.id, item.name);
-                }}
-                disabled={isJoining}
-                activeOpacity={0.8}
-              >
-                <ThemedText style={[styles.joinButtonText, { color: '#fff' }]}>
-                  {isJoining ? 'Joining...' : t('clubs.join', 'Join')}
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-            {isMember && (
-              <View style={[styles.memberBadge, { backgroundColor: colors.success + '20' }]}>
-                <ThemedText style={[styles.memberBadgeText, { color: colors.success }]}>
-                  {t('clubs.member', 'Member')}
-                </ThemedText>
-              </View>
-            )}
           </View>
         </TouchableOpacity>
       );
     },
-    [colors, myClubIds, joinClubMutation.isPending, handleClubPress, handleJoinClub, t]
+    [colors, handleClubPress]
   );
 
   const renderEmptyState = () => {

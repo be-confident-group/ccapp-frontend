@@ -86,13 +86,29 @@ export class TripManager {
     const stats = this.calculateTripStats(locations);
     const dominantActivity = this.getDominantActivity(locations);
 
-    // Build route data for sync - include lat, lng, and timestamp for backend
+    // Build route data for sync - convert timestamps to ISO 8601 format for backend
     const routeForSync = locations.map((loc) => ({
       lat: Number(loc.latitude.toFixed(6)),
       lng: Number(loc.longitude.toFixed(6)),
-      timestamp: loc.timestamp,
+      timestamp: new Date(loc.timestamp).toISOString(),  // Convert Unix ms → ISO 8601
     }));
+
+    // Validate we have enough points for distance calculation
+    if (routeForSync.length < 2) {
+      console.warn(
+        `[TripManager] Trip ${tripId} has only ${routeForSync.length} route point(s). ` +
+        `Backend requires >= 2 for distance calculation.`
+      );
+    }
+
     const routeDataJson = JSON.stringify(routeForSync);
+
+    console.log(`[TripManager] Built route with ${routeForSync.length} points for sync`, {
+      tripId,
+      firstPoint: routeForSync[0],
+      lastPoint: routeForSync[routeForSync.length - 1],
+      sampleTimestampFormat: routeForSync[0]?.timestamp,
+    });
 
     // Update trip with stats AND route_data for backend sync
     await database.updateTrip(tripId, {
