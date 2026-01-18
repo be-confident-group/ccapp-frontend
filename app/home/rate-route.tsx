@@ -35,7 +35,9 @@ import {
   FeelingType,
   RouteSegment,
   mergeSegments,
+  toSubmitRatingsRequest,
 } from '@/types/rating';
+import { ratingsAPI } from '@/lib/api/ratings';
 import { useTrip } from '@/lib/hooks/useTrips';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 
@@ -303,7 +305,7 @@ export default function RateRouteScreen() {
 
   // Handle save
   const handleSave = useCallback(async () => {
-    if (!trip) return;
+    if (!trip || !backendTrip) return;
 
     if (segments.length === 0) {
       Alert.alert(
@@ -331,17 +333,16 @@ export default function RateRouteScreen() {
         feeling: seg.feeling,
       }));
 
-      // Check if rating already exists
+      // Check if rating already exists locally
       const existingRating = await database.getRating(clientId);
 
+      // Save locally first (offline-first approach)
       if (existingRating) {
-        // Update existing rating
         await database.updateRating(clientId, {
           segments: JSON.stringify(originalSegments),
-          synced: 0, // Mark as unsynced
+          synced: 0,
         });
       } else {
-        // Create new rating
         await database.createRating({
           trip_id: clientId,
           segments: JSON.stringify(originalSegments),
@@ -353,19 +354,49 @@ export default function RateRouteScreen() {
         });
       }
 
-      Alert.alert('Success', 'Your route rating has been saved!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      // Submit to backend API
+      try {
+        const apiRequest = toSubmitRatingsRequest(
+          clientId,
+          originalSegments,
+          originalRoute,
+          backendTrip.id,
+          now
+        );
+
+        console.log('[RateRoute] Submitting to backend:', JSON.stringify(apiRequest, null, 2));
+        await ratingsAPI.submitRatings(apiRequest);
+
+        // Mark as synced on success
+        await database.updateRating(clientId, { synced: 1 });
+
+        Alert.alert('Success', 'Your route rating has been saved!', [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]);
+      } catch (apiError) {
+        console.error('[RateRoute] API submission failed:', apiError);
+        // Rating is saved locally but not synced - will be retried later
+        Alert.alert(
+          'Saved Locally',
+          'Your rating was saved but could not be uploaded. It will sync automatically when you have a connection.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.error('[RateRoute] Error saving rating:', error);
       Alert.alert('Error', 'Failed to save rating. Please try again.');
     } finally {
       setSaving(false);
     }
-  }, [trip, segments, route.length, originalRoute.length]);
+  }, [trip, backendTrip, segments, originalRoute]);
 
   if (isFetchingTrip || !trip || route.length === 0) {
     return (

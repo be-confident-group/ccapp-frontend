@@ -86,7 +86,15 @@ export class TripManager {
     const stats = this.calculateTripStats(locations);
     const dominantActivity = this.getDominantActivity(locations);
 
-    // Update trip
+    // Build route data for sync - include lat, lng, and timestamp for backend
+    const routeForSync = locations.map((loc) => ({
+      lat: Number(loc.latitude.toFixed(6)),
+      lng: Number(loc.longitude.toFixed(6)),
+      timestamp: loc.timestamp,
+    }));
+    const routeDataJson = JSON.stringify(routeForSync);
+
+    // Update trip with stats AND route_data for backend sync
     await database.updateTrip(tripId, {
       status: 'completed',
       type: dominantActivity,
@@ -98,6 +106,7 @@ export class TripManager {
       elevation_gain: stats.elevationGain,
       calories: stats.calories,
       co2_saved: stats.co2Saved,
+      route_data: routeDataJson,
       updated_at: now,
     });
 

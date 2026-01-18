@@ -1,148 +1,73 @@
 /**
- * Route Ratings API service for backend integration
+ * Road Section Ratings API service for backend integration
  */
 
 import { apiClient } from './client';
-import type { ApiRouteRating, ApiRouteRatingResponse, FeelingType } from '@/types/rating';
+import type { FeelingType } from '@/types/rating';
 
 /**
- * API request format for a single route segment
+ * Backend feeling values - capitalized strings or numeric 1-4
  */
-export interface ApiSegmentRequest {
-  start_index: number;
-  end_index: number;
-  feeling: FeelingType;
-  start_coord: { lat: number; lng: number };
-  end_coord: { lat: number; lng: number };
+export type BackendFeelingType = 'Stressed' | 'Uncomfortable' | 'Comfortable' | 'Enjoyable';
+
+/**
+ * Map frontend feeling types to backend format (capitalized)
+ */
+const FEELING_TO_BACKEND: Record<FeelingType, BackendFeelingType> = {
+  stressed: 'Stressed',
+  uncomfortable: 'Uncomfortable',
+  comfortable: 'Comfortable',
+  enjoyable: 'Enjoyable',
+};
+
+/**
+ * API request format for a single rated segment (matches backend road-sections/submit)
+ */
+export interface ApiRatedSegment {
+  start_lat: number;
+  start_lng: number;
+  end_lat: number;
+  end_lng: number;
+  feeling: BackendFeelingType;
 }
 
 /**
- * API request format for creating/updating a rating
+ * API request format for submitting road section ratings
+ * Endpoint: POST /api/road-sections/submit/
  */
-export interface CreateRatingRequest {
-  trip_id: number;
+export interface SubmitRatingsRequest {
+  trip_id?: number;
   client_trip_id: string;
-  segments: ApiSegmentRequest[];
+  rated_at?: string; // ISO 8601 timestamp
+  rated_segments: ApiRatedSegment[];
 }
 
 /**
- * API response format for a rating
+ * API response format for rating submission
  */
-export interface RatingResponse {
-  id: number;
-  trip_id: number;
-  client_trip_id: string;
-  segments: ApiSegmentRequest[];
-  created_at: string;
-  updated_at: string;
+export interface SubmitRatingsResponse {
+  message: string;
 }
 
 /**
- * Bulk sync request format
- */
-export interface SyncRatingsRequest {
-  ratings: CreateRatingRequest[];
-}
-
-/**
- * Bulk sync response format
- */
-export interface SyncRatingsResponse {
-  synced: Array<{
-    id: number;
-    client_trip_id: string;
-  }>;
-  failed: Array<{
-    client_trip_id: string;
-    error: string;
-  }>;
-}
-
-/**
- * Route Ratings API class
+ * Road Section Ratings API class
  */
 class RatingsAPI {
   /**
-   * Create or update a rating for a trip
+   * Submit road section ratings for a trip
+   * Endpoint: POST /api/road-sections/submit/
    */
-  async createRating(rating: CreateRatingRequest): Promise<RatingResponse> {
-    console.log('[RatingsAPI] Creating rating for trip:', rating.client_trip_id);
-    return apiClient.post<RatingResponse>('/api/route-ratings/', rating);
+  async submitRatings(request: SubmitRatingsRequest): Promise<SubmitRatingsResponse> {
+    console.log('[RatingsAPI] Submitting ratings for trip:', request.client_trip_id);
+    console.log('[RatingsAPI] Segments count:', request.rated_segments.length);
+    return apiClient.post<SubmitRatingsResponse>('/api/road-sections/submit/', request);
   }
 
   /**
-   * Get rating for a specific trip by backend trip ID
+   * Convert frontend feeling to backend format
    */
-  async getRating(tripId: number): Promise<RatingResponse | null> {
-    try {
-      console.log('[RatingsAPI] Fetching rating for trip:', tripId);
-      return await apiClient.get<RatingResponse>(`/api/route-ratings/${tripId}/`);
-    } catch (error) {
-      // Return null if rating doesn't exist (404)
-      if (error instanceof Error && error.message.includes('404')) {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get rating by client trip ID
-   */
-  async getRatingByClientId(clientTripId: string): Promise<RatingResponse | null> {
-    try {
-      console.log('[RatingsAPI] Fetching rating by client ID:', clientTripId);
-      return await apiClient.get<RatingResponse>(
-        `/api/route-ratings/by-client/${clientTripId}/`
-      );
-    } catch (error) {
-      // Return null if rating doesn't exist (404)
-      if (error instanceof Error && error.message.includes('404')) {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Update an existing rating
-   */
-  async updateRating(
-    tripId: number,
-    updates: Partial<CreateRatingRequest>
-  ): Promise<RatingResponse> {
-    console.log('[RatingsAPI] Updating rating for trip:', tripId);
-    return apiClient.patch<RatingResponse>(`/api/route-ratings/${tripId}/`, updates);
-  }
-
-  /**
-   * Delete a rating
-   */
-  async deleteRating(tripId: number): Promise<void> {
-    console.log('[RatingsAPI] Deleting rating for trip:', tripId);
-    await apiClient.delete(`/api/route-ratings/${tripId}/`);
-  }
-
-  /**
-   * Bulk sync multiple ratings
-   */
-  async syncRatings(ratings: CreateRatingRequest[]): Promise<SyncRatingsResponse> {
-    if (ratings.length === 0) {
-      return { synced: [], failed: [] };
-    }
-
-    console.log('[RatingsAPI] Syncing', ratings.length, 'ratings');
-    return apiClient.post<SyncRatingsResponse>('/api/route-ratings/sync/', {
-      ratings,
-    });
-  }
-
-  /**
-   * Get all ratings for the current user
-   */
-  async getAllRatings(): Promise<RatingResponse[]> {
-    console.log('[RatingsAPI] Fetching all ratings');
-    return apiClient.get<RatingResponse[]>('/api/route-ratings/');
+  convertFeeling(feeling: FeelingType): BackendFeelingType {
+    return FEELING_TO_BACKEND[feeling];
   }
 }
 

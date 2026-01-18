@@ -39,6 +39,10 @@ const ZOMBIE_TRIP_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 // ===== PERMISSION CHANGE CALLBACK =====
 let onPermissionDowngraded: (() => void) | null = null;
 
+// ===== FOREGROUND LOCATION WATCHER =====
+// Provides real-time updates when app is in foreground (more reliable than background task)
+let foregroundWatcher: Location.LocationSubscription | null = null;
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -137,10 +141,24 @@ async function handleAppStateChange(nextAppState: AppStateStatus): Promise<void>
 
   const wasBackground = currentAppState === 'background' || currentAppState === 'inactive';
   const isNowForeground = nextAppState === 'active';
+  const isNowBackground = nextAppState === 'background' || nextAppState === 'inactive';
 
   // App coming to foreground from background
   if (wasBackground && isNowForeground) {
     await handleForegroundResume();
+
+    // Start foreground watcher if tracking is enabled
+    const isTracking = await LocationTrackingService.isTracking();
+    if (isTracking) {
+      await startForegroundWatching();
+    }
+  }
+
+  // App going to background
+  if (!wasBackground && isNowBackground) {
+    // Stop foreground watcher - rely on background task instead
+    stopForegroundWatching();
+    console.log('[LocationTracking] App going to background, stopped foreground watcher');
   }
 
   currentAppState = nextAppState;
@@ -249,6 +267,76 @@ export function setOnPermissionDowngraded(callback: (() => void) | null): void {
   onPermissionDowngraded = callback;
 }
 
+// ===== FOREGROUND LOCATION WATCHER =====
+
+/**
+ * Start foreground location watcher for real-time updates when app is active.
+ * This is more reliable than background task for immediate location updates.
+ */
+export async function startForegroundWatching(): Promise<void> {
+  if (foregroundWatcher) {
+    console.log('[LocationTracking] Foreground watcher already active');
+    return;
+  }
+
+  try {
+    console.log('[LocationTracking] Starting foreground location watcher...');
+
+    foregroundWatcher = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 3000, // Every 3 seconds
+        distanceInterval: 5, // Or every 5 meters
+      },
+      async (location) => {
+        console.log('[LocationTracking] Foreground watcher received location');
+        // Process location the same way as background task
+        if (isLocationAccurate(location)) {
+          try {
+            await processSingleLocationUpdate(location);
+          } catch (err) {
+            console.error('[LocationTracking] Error processing foreground location:', err);
+          }
+        } else {
+          console.log(
+            `[LocationTracking] Foreground: skipped inaccurate location (${location.coords.accuracy}m)`
+          );
+        }
+      }
+    );
+
+    console.log('[LocationTracking] ✓ Foreground watcher started');
+  } catch (error) {
+    console.error('[LocationTracking] Failed to start foreground watcher:', error);
+  }
+}
+
+/**
+ * Stop foreground location watcher
+ */
+export function stopForegroundWatching(): void {
+  if (foregroundWatcher) {
+    foregroundWatcher.remove();
+    foregroundWatcher = null;
+    console.log('[LocationTracking] Foreground watcher stopped');
+  }
+}
+
+/**
+ * Check if foreground watcher is active
+ */
+export function isForegroundWatchingActive(): boolean {
+  return foregroundWatcher !== null;
+}
+
+/**
+ * Process a single location update (used by foreground watcher)
+ */
+async function processSingleLocationUpdate(location: Location.LocationObject): Promise<void> {
+  await database.init();
+  await processLocationUpdates([location]);
+}
+
 // ===== CRITICAL: GLOBAL SCOPE TASK DEFINITION =====
 // This MUST be at top level, not inside class or function!
 // When app wakes up in background, React components don't mount,
@@ -335,7 +423,8 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
   for (const location of locations) {
     const { latitude, longitude, altitude, accuracy, speed, heading } = location.coords;
     const timestamp = location.timestamp;
-    const currentSpeed = speed || 0; // m/s
+    // iOS returns -1 for speed when unavailable, treat as 0
+    const currentSpeed = speed != null && speed >= 0 ? speed : 0; // m/s
 
     console.log(
       `[LocationTracking] Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, ` +
@@ -653,11 +742,11 @@ export class LocationTrackingService {
     await database.init();
 
     // Start background location updates
+    // CRITICAL: Do NOT use deferredUpdatesInterval - iOS may never wake the app!
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-      accuracy: config.accuracy || Location.Accuracy.Balanced,
-      distanceInterval: config.distanceInterval || 50, // Update every 50 meters
-      deferredUpdatesInterval: 60000, // Batch updates every 60s in background
-      deferredUpdatesDistance: 100, // Or every 100m
+      accuracy: Location.Accuracy.High, // High accuracy for fitness tracking
+      timeInterval: 5000, // Request updates every 5 seconds
+      distanceInterval: 10, // Or every 10 meters (reduced for better tracking)
       showsBackgroundLocationIndicator: true,
 
       // iOS-specific
@@ -675,7 +764,14 @@ export class LocationTrackingService {
           : undefined,
     });
 
+    console.log('[LocationTracking] Config: timeInterval=5000ms, distanceInterval=10m, accuracy=High');
+
     console.log('[LocationTracking] ✓ Background tracking started');
+
+    // Also start foreground watcher if app is in foreground for real-time updates
+    if (currentAppState === 'active') {
+      await startForegroundWatching();
+    }
   }
 
   /**
@@ -683,6 +779,9 @@ export class LocationTrackingService {
    */
   static async stopTracking(): Promise<void> {
     console.log('[LocationTracking] Stopping background tracking...');
+
+    // Stop foreground watcher if active
+    stopForegroundWatching();
 
     if (!(await this.isTracking())) {
       console.log('[LocationTracking] Not tracking');

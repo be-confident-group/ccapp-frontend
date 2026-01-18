@@ -17,12 +17,27 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon, CloudIcon } from 'react-native-heroicons/outline';
 import { syncService } from '@/lib/services/SyncService';
 import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 import { RatedBadge } from '@/components/rating';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
+
+// Unified trip display type for both local and backend trips
+interface DisplayTrip {
+  id: string;
+  backendId?: number;
+  type: 'walk' | 'run' | 'cycle' | 'drive';
+  isManual: boolean;
+  startTime: Date;
+  distance: number; // meters
+  duration: number; // seconds
+  co2Saved: number; // kg
+  isSynced: boolean;
+  hasRoute: boolean;
+  clientId: string;
+}
 
 export default function TripHistoryScreen() {
   const { colors } = useTheme();
@@ -34,7 +49,12 @@ export default function TripHistoryScreen() {
   const [syncing, setSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
+  const [localTrips, setLocalTrips] = useState<DBTrip[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
+
+  // Determine which data source to use
+  const useLocalData = !isOnline || (!backendTrips && localTrips.length > 0);
 
   useEffect(() => {
     loadLocalData();
@@ -42,6 +62,7 @@ export default function TripHistoryScreen() {
 
   async function loadLocalData() {
     try {
+      setLocalLoading(true);
       await database.init();
 
       // Get unsynced count from local database
@@ -52,10 +73,55 @@ export default function TripHistoryScreen() {
       const ratings = await database.getAllRatings();
       const ratedIds = new Set(ratings.map((r) => r.trip_id));
       setRatedTripIds(ratedIds);
+
+      // Load local trips for offline display
+      const trips = await database.getAllTrips({ status: 'completed' });
+      setLocalTrips(trips);
     } catch (error) {
       console.error('[TripHistory] Error loading local data:', error);
+    } finally {
+      setLocalLoading(false);
     }
   }
+
+  // Convert backend trips to display format
+  function backendToDisplay(trip: ApiTrip): DisplayTrip {
+    return {
+      id: trip.client_id,
+      backendId: trip.id,
+      type: trip.type,
+      isManual: trip.is_manual,
+      startTime: new Date(trip.start_timestamp),
+      distance: trip.distance * 1000, // km to meters
+      duration: trip.duration,
+      co2Saved: trip.co2_saved,
+      isSynced: true,
+      hasRoute: (trip.route && trip.route.length > 0) || false,
+      clientId: trip.client_id,
+    };
+  }
+
+  // Convert local trips to display format
+  function localToDisplay(trip: DBTrip): DisplayTrip {
+    return {
+      id: trip.id,
+      backendId: trip.backend_id || undefined,
+      type: trip.type,
+      isManual: trip.is_manual === 1,
+      startTime: new Date(trip.start_time),
+      distance: trip.distance, // already in meters
+      duration: trip.duration,
+      co2Saved: trip.co2_saved,
+      isSynced: trip.synced === 1,
+      hasRoute: !!trip.route_data,
+      clientId: trip.id,
+    };
+  }
+
+  // Get the display trips based on data source
+  const displayTrips: DisplayTrip[] = useLocalData
+    ? localTrips.map(localToDisplay)
+    : (backendTrips || []).map(backendToDisplay);
 
   async function onRefresh() {
     await Promise.all([
@@ -95,19 +161,26 @@ export default function TripHistoryScreen() {
     }
   }
 
-  function renderTrip({ item }: { item: ApiTrip }) {
+  function renderTrip({ item }: { item: DisplayTrip }) {
     const tripColor = getTripTypeColor(item.type);
     const tripIcon = getTripTypeIcon(item.type);
     const tripName = getTripTypeName(item.type);
-    const date = new Date(item.start_timestamp);
-    const isSynced = true; // Backend trips are always synced
-    const isRated = ratedTripIds.has(item.client_id);
-    const hasRoute = item.route && item.route.length > 0;
+    const isRated = ratedTripIds.has(item.clientId);
+
+    // Navigate to trip detail - use backend ID if available, otherwise local ID
+    const handlePress = () => {
+      if (item.backendId) {
+        router.push(`/home/trip-detail?id=${item.backendId}`);
+      } else {
+        // For unsynced trips, show local trip detail (or alert if not implemented)
+        Alert.alert('Trip Not Synced', 'This trip has not been synced to the server yet. Sync to view full details.');
+      }
+    };
 
     return (
       <TouchableOpacity
         style={[styles.tripCard, { backgroundColor: colors.card }]}
-        onPress={() => router.push(`/home/trip-detail?id=${item.id}`)}
+        onPress={handlePress}
         activeOpacity={0.7}
       >
         {/* Icon */}
@@ -119,33 +192,33 @@ export default function TripHistoryScreen() {
         <View style={styles.tripDetails}>
           <View style={styles.tripHeader}>
             <ThemedText style={styles.tripType}>{tripName}</ThemedText>
-            {item.is_manual && (
+            {item.isManual && (
               <View style={[styles.manualBadge, { backgroundColor: colors.border }]}>
                 <ThemedText style={styles.manualText}>Manual</ThemedText>
               </View>
             )}
             {/* Sync Status Badge */}
-            <View style={[styles.syncBadge, { backgroundColor: isSynced ? '#4CAF50' : '#FF9800' }]}>
+            <View style={[styles.syncBadge, { backgroundColor: item.isSynced ? '#4CAF50' : '#FF9800' }]}>
               <MaterialCommunityIcons
-                name={isSynced ? 'cloud-check' : 'cloud-upload'}
+                name={item.isSynced ? 'cloud-check' : 'cloud-upload'}
                 size={14}
                 color="#FFFFFF"
               />
             </View>
             {/* Rating Badge - only show for trips with route data */}
-            {hasRoute && (
+            {item.hasRoute && (
               <RatedBadge isRated={isRated} size="small" style={styles.ratedBadge} />
             )}
           </View>
 
           <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
-            {date.toLocaleDateString()} at {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {item.startTime.toLocaleDateString()} at {item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </ThemedText>
 
           <View style={styles.tripStats}>
             <View style={styles.stat}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDistanceUtil(item.distance * 1000, unitSystem)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatDistanceUtil(item.distance, unitSystem)}</ThemedText>
             </View>
 
             <View style={styles.stat}>
@@ -155,7 +228,7 @@ export default function TripHistoryScreen() {
 
             <View style={styles.stat}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂</ThemedText>
-              <ThemedText style={styles.statValue}>{formatWeight(item.co2_saved)}</ThemedText>
+              <ThemedText style={styles.statValue}>{formatWeight(item.co2Saved)}</ThemedText>
             </View>
           </View>
         </View>
@@ -163,7 +236,8 @@ export default function TripHistoryScreen() {
     );
   }
 
-  if (isLoading) {
+  // Show loading only if both sources are loading
+  if (isLoading && localLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
         <ThemedView style={styles.container}>
@@ -222,7 +296,17 @@ export default function TripHistoryScreen() {
           {unsyncedCount === 0 && <View style={styles.placeholder} />}
         </View>
 
-      {!backendTrips || backendTrips.length === 0 ? (
+      {/* Offline Banner */}
+      {useLocalData && (
+        <View style={[styles.offlineBanner, { backgroundColor: colors.border }]}>
+          <CloudIcon size={16} color={colors.textSecondary} />
+          <ThemedText style={[styles.offlineText, { color: colors.textSecondary }]}>
+            {isOnline ? 'Showing local data' : 'Offline - showing local trips'}
+          </ThemedText>
+        </View>
+      )}
+
+      {displayTrips.length === 0 ? (
         <View style={styles.empty}>
           <MaterialCommunityIcons name="map-marker-off" size={64} color={colors.textSecondary} />
           <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -234,9 +318,9 @@ export default function TripHistoryScreen() {
         </View>
       ) : (
         <FlatList
-          data={backendTrips}
+          data={displayTrips}
           renderItem={renderTrip}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -301,6 +385,17 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  offlineText: {
+    fontSize: 13,
   },
   centered: {
     flex: 1,

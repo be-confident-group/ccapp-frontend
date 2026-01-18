@@ -52,35 +52,40 @@ export interface DBRouteRating {
 }
 
 /**
- * API format for a route segment
+ * Backend feeling values - capitalized strings
  */
-export interface ApiRouteSegment {
-  start_index: number;
-  end_index: number;
-  feeling: FeelingType;
-  start_coord: { lat: number; lng: number };
-  end_coord: { lat: number; lng: number };
+export type BackendFeelingType = 'Stressed' | 'Uncomfortable' | 'Comfortable' | 'Enjoyable';
+
+/**
+ * Map frontend feeling types to backend format (capitalized)
+ */
+export const FEELING_TO_BACKEND: Record<FeelingType, BackendFeelingType> = {
+  stressed: 'Stressed',
+  uncomfortable: 'Uncomfortable',
+  comfortable: 'Comfortable',
+  enjoyable: 'Enjoyable',
+};
+
+/**
+ * API format for a rated segment (matches backend road-sections/submit)
+ */
+export interface ApiRatedSegment {
+  start_lat: number;
+  start_lng: number;
+  end_lat: number;
+  end_lng: number;
+  feeling: BackendFeelingType;
 }
 
 /**
  * API format for submitting ratings to backend
+ * Endpoint: POST /api/road-sections/submit/
  */
-export interface ApiRouteRating {
-  trip_id: number; // Backend trip ID
-  client_trip_id: string; // Frontend trip ID
-  segments: ApiRouteSegment[];
-}
-
-/**
- * API response for a created/fetched rating
- */
-export interface ApiRouteRatingResponse {
-  id: number;
-  trip_id: number;
+export interface SubmitRatingsRequest {
+  trip_id?: number;
   client_trip_id: string;
-  segments: ApiRouteSegment[];
-  created_at: string;
-  updated_at: string;
+  rated_at?: string; // ISO 8601 timestamp
+  rated_segments: ApiRatedSegment[];
 }
 
 /**
@@ -184,28 +189,26 @@ export function getFeelingInfo(feeling: FeelingType): FeelingInfo {
 export const UNPAINTED_COLOR = '#6B7280';
 
 /**
- * Convert local TripRating to API format
+ * Convert local segments to API format for submission
+ * Uses route coordinates to get lat/lng for each segment
  */
-export function toApiRating(
-  rating: TripRating,
-  backendTripId: number,
-  route: Coordinate[]
-): ApiRouteRating {
+export function toSubmitRatingsRequest(
+  clientTripId: string,
+  segments: RouteSegment[],
+  route: Coordinate[],
+  backendTripId?: number,
+  ratedAt?: number
+): SubmitRatingsRequest {
   return {
-    trip_id: backendTripId,
-    client_trip_id: rating.tripId,
-    segments: rating.segments.map((seg) => ({
-      start_index: seg.startIndex,
-      end_index: seg.endIndex,
-      feeling: seg.feeling,
-      start_coord: {
-        lat: route[seg.startIndex]?.latitude ?? 0,
-        lng: route[seg.startIndex]?.longitude ?? 0,
-      },
-      end_coord: {
-        lat: route[seg.endIndex]?.latitude ?? 0,
-        lng: route[seg.endIndex]?.longitude ?? 0,
-      },
+    ...(backendTripId !== undefined && { trip_id: backendTripId }),
+    client_trip_id: clientTripId,
+    rated_at: ratedAt ? new Date(ratedAt).toISOString() : new Date().toISOString(),
+    rated_segments: segments.map((seg) => ({
+      start_lat: route[seg.startIndex]?.latitude ?? 0,
+      start_lng: route[seg.startIndex]?.longitude ?? 0,
+      end_lat: route[seg.endIndex]?.latitude ?? 0,
+      end_lng: route[seg.endIndex]?.longitude ?? 0,
+      feeling: FEELING_TO_BACKEND[seg.feeling],
     })),
   };
 }
