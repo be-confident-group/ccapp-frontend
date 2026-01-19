@@ -93,7 +93,6 @@ export default function RateRouteScreen() {
   const [routeScreenPoints, setRouteScreenPoints] = useState<
     { x: number; y: number }[]
   >([]);
-  const [isPainting, setIsPainting] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isCameraSettled, setIsCameraSettled] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
@@ -247,10 +246,6 @@ export default function RateRouteScreen() {
     }
   }, [selectedFeeling, isCameraSettled]);
 
-  // Handle painting state change
-  const handlePaintingStateChange = useCallback((painting: boolean) => {
-    setIsPainting(painting);
-  }, []);
 
   // Handle long press to report issue - show confirmation first
   const handleLongPress = useCallback((coordinate: Coordinate) => {
@@ -364,7 +359,13 @@ export default function RateRouteScreen() {
           now
         );
 
-        console.log('[RateRoute] Submitting to backend:', JSON.stringify(apiRequest, null, 2));
+        // Log full payload for debugging - easy to copy for backend engineer
+        console.log('========================================');
+        console.log('[RateRoute] POST /api/road-sections/submit/');
+        console.log('========================================');
+        console.log(JSON.stringify(apiRequest, null, 2));
+        console.log('========================================');
+
         await ratingsAPI.submitRatings(apiRequest);
 
         // Mark as synced on success
@@ -499,7 +500,6 @@ export default function RateRouteScreen() {
                 routeScreenPoints={routeScreenPoints}
                 selectedFeeling={selectedFeeling}
                 onSegmentPainted={handleSegmentPainted}
-                onPaintingStateChange={handlePaintingStateChange}
                 onLongPress={handleLongPress}
                 enabled={isMapReady && isCameraSettled}
                 style={styles.painter}

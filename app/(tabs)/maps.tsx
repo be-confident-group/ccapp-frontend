@@ -96,12 +96,12 @@ export default function MapsScreen() {
     viewMode === 'feedback' && feedbackMode === 'community' ? mapBounds : undefined
   );
 
-  // Fetch road sections data for heatmap mode
+  // Fetch road sections data for feedback mode (shows ratings alongside reports)
   const { data: personalRoadSections } = usePersonalRoadSections(
-    viewMode === 'heatmap' && heatmapMode === 'personal' ? mapBounds : undefined
+    viewMode === 'feedback' && feedbackMode === 'personal' ? mapBounds : undefined
   );
   const { data: communityRoadSections } = useCommunityRoadSections(
-    viewMode === 'heatmap' && heatmapMode === 'global' ? mapBounds : undefined
+    viewMode === 'feedback' && feedbackMode === 'community' ? mapBounds : undefined
   );
 
   // Refetch trips when screen comes into focus
@@ -136,11 +136,22 @@ export default function MapsScreen() {
     setViewMode(mode);
   }, [setViewMode]);
 
-  // Handle map region changes to update bbox for feedback and heatmap modes
+  // Handle heatmap mode change - global heatmap is coming soon
+  const handleHeatmapModeChange = useCallback((mode: 'personal' | 'global') => {
+    if (mode === 'global') {
+      Alert.alert(
+        'Coming Soon',
+        'Global heatmap showing popular cycling and walking routes will be available soon!',
+        [{ text: 'OK' }]
+      );
+      return; // Don't change mode
+    }
+    setHeatmapMode(mode);
+  }, [setHeatmapMode]);
+
+  // Handle map region changes to update bbox for feedback mode (needs bounds for road sections and global feedback)
   const handleRegionChange = useCallback(async () => {
-    const needsBbox =
-      (viewMode === 'feedback' && feedbackMode === 'community') ||
-      (viewMode === 'heatmap');
+    const needsBbox = viewMode === 'feedback';
 
     if (needsBbox && mapViewRef.current) {
       try {
@@ -154,7 +165,7 @@ export default function MapsScreen() {
         console.error('[MapsScreen] Error getting visible bounds:', error);
       }
     }
-  }, [viewMode, feedbackMode]);
+  }, [viewMode]);
 
   // Debounced version to avoid excessive API calls
   const debouncedHandleRegionChange = useMemo(
@@ -243,27 +254,27 @@ export default function MapsScreen() {
           onLongPress={handleMapLongPress}
           onRegionDidChange={debouncedHandleRegionChange}
         >
-          {/* Render recent trips from database */}
-          {recentTrips.map((trip) => (
+          {/* Render recent trips (journeys) in heatmap mode */}
+          {viewMode === 'heatmap' && recentTrips.map((trip) => (
             <DBTripRoute key={trip.id} trip={trip} colors={colors} isSelected={selectedTripId === trip.id} />
           ))}
 
-          {/* Render feedback markers based on mode */}
+          {/* Render feedback mode: both reports and road section ratings */}
           {viewMode === 'feedback' && (
-            <FeedbackMarkers
-              feedbacks={feedbackMode === 'personal' ? personalFeedback : globalFeedback}
-              type={feedbackMode}
-              onMarkerPress={setSelectedFeedback}
-            />
-          )}
-
-          {/* Render road sections as colored lines in heatmap mode */}
-          {viewMode === 'heatmap' && (
-            <RoadSectionsLayer
-              sections={heatmapMode === 'personal' ? personalRoadSections : communityRoadSections}
-              type={heatmapMode}
-              onSectionPress={setSelectedRoadSection}
-            />
+            <>
+              {/* Road section ratings as colored lines */}
+              <RoadSectionsLayer
+                sections={feedbackMode === 'personal' ? personalRoadSections : communityRoadSections}
+                type={feedbackMode}
+                onSectionPress={setSelectedRoadSection}
+              />
+              {/* Feedback markers (reported issues) */}
+              <FeedbackMarkers
+                feedbacks={feedbackMode === 'personal' ? personalFeedback : globalFeedback}
+                type={feedbackMode}
+                onMarkerPress={setSelectedFeedback}
+              />
+            </>
           )}
         </MapView>
 
@@ -274,7 +285,7 @@ export default function MapsScreen() {
           feedbackMode={feedbackMode}
           selectedLayer={selectedLayer}
           onViewModeChange={handleViewModeChange}
-          onHeatmapModeChange={setHeatmapMode}
+          onHeatmapModeChange={handleHeatmapModeChange}
           onFeedbackModeChange={setFeedbackMode}
           onLayerChange={handleLayerChange}
           onFindLocation={handleFindLocation}
