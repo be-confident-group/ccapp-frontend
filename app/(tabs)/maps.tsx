@@ -10,7 +10,7 @@ import { MapLayer } from '@/components/maps/MapLayerSelector';
 import { MapView } from '@/components/maps/MapView';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 import { FeedbackMarkers } from '@/components/maps/FeedbackMarkers';
-import { FeedbackDetailSheet } from '@/components/maps/FeedbackDetailSheet';
+import { FeedbackDetailsModal } from '@/components/modals/FeedbackDetailsModal';
 import { RoadSectionsLayer } from '@/components/maps/RoadSectionsLayer';
 import { RoadSectionDetailSheet } from '@/components/maps/RoadSectionDetailSheet';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -26,7 +26,7 @@ import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { TripManager } from '@/lib/services/TripManager';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
 import type { Trip as DBTrip } from '@/lib/database/db';
@@ -60,11 +60,12 @@ function transformApiTripToLocal(apiTrip: ApiTrip): DBTrip {
     created_at: new Date(apiTrip.created_at).getTime(),
     updated_at: new Date(apiTrip.updated_at).getTime(),
     synced: 1,
+    backend_id: apiTrip.id,
   };
 }
 
 export default function MapsScreen() {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { permissionStatus, requestPermission, isLoading } = useLocation();
   const {
     viewMode,
@@ -77,6 +78,9 @@ export default function MapsScreen() {
 
   // Use persistent map layer hook
   const { selectedLayer, setSelectedLayer } = useMapLayer(isDark);
+
+  // Query client for invalidating queries
+  const queryClient = useQueryClient();
 
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -110,6 +114,49 @@ export default function MapsScreen() {
       refetch();
     }, [refetch])
   );
+
+  // Debug logging to track data flow
+  useEffect(() => {
+    console.log('[MapsScreen] Data state:', {
+      viewMode,
+      feedbackMode,
+      heatmapMode,
+      mapBounds: mapBounds ? 'set' : 'undefined',
+      backendTrips: backendTrips?.length || 0,
+      personalFeedback: personalFeedback?.length || 0,
+      globalFeedback: globalFeedback?.length || 0,
+      personalRoadSections: personalRoadSections?.length || 0,
+      communityRoadSections: communityRoadSections?.length || 0,
+    });
+  }, [viewMode, feedbackMode, heatmapMode, mapBounds, backendTrips, personalFeedback, globalFeedback, personalRoadSections, communityRoadSections]);
+
+  // Fetch map bounds when feedback mode is activated (for road sections and global feedback)
+  useEffect(() => {
+    const fetchBounds = async () => {
+      if (viewMode === 'feedback' && mapViewRef.current) {
+        try {
+          const bounds = await mapViewRef.current.getVisibleBounds();
+          if (bounds && bounds.length === 2) {
+            const [[minLon, minLat], [maxLon, maxLat]] = bounds;
+            const bboxString = `${minLon},${minLat},${maxLon},${maxLat}`;
+            console.log('[MapsScreen] Setting mapBounds:', bboxString);
+            setMapBounds(bboxString);
+
+            // CRITICAL: Invalidate queries to trigger refetch with new bbox
+            // This fixes the race condition where queries were disabled on mount
+            queryClient.invalidateQueries({ queryKey: ['globalFeedback'] });
+            queryClient.invalidateQueries({ queryKey: ['roadSections'] });
+          }
+        } catch (error) {
+          // Map might not be ready yet, will fetch on region change
+          console.log('[MapsScreen] Map not ready for bounds, will fetch on region change');
+        }
+      }
+    };
+    // Delay to ensure map is loaded
+    const timer = setTimeout(fetchBounds, 500);
+    return () => clearTimeout(timer);
+  }, [viewMode, feedbackMode, queryClient]);
 
   // Transform and get recent trips (last 10)
   const recentTrips = useMemo(() => {
@@ -252,11 +299,11 @@ export default function MapsScreen() {
           followUserLocation={false}
           selectedLayer={selectedLayer}
           onLongPress={handleMapLongPress}
-          onRegionDidChange={debouncedHandleRegionChange}
+          onRegionChange={debouncedHandleRegionChange}
         >
           {/* Render recent trips (journeys) in heatmap mode */}
           {viewMode === 'heatmap' && recentTrips.map((trip) => (
-            <DBTripRoute key={trip.id} trip={trip} colors={colors} isSelected={selectedTripId === trip.id} />
+            <DBTripRoute key={trip.id} trip={trip} isSelected={selectedTripId === trip.id} />
           ))}
 
           {/* Render feedback mode: both reports and road section ratings */}
@@ -265,7 +312,7 @@ export default function MapsScreen() {
               {/* Road section ratings as colored lines */}
               <RoadSectionsLayer
                 sections={feedbackMode === 'personal' ? personalRoadSections : communityRoadSections}
-                type={feedbackMode}
+                type={feedbackMode === 'personal' ? 'personal' : 'global'}
                 onSectionPress={setSelectedRoadSection}
               />
               {/* Feedback markers (reported issues) */}
@@ -308,8 +355,8 @@ export default function MapsScreen() {
           onClose={() => setIsReportModalVisible(false)}
         />
 
-        {/* Feedback Detail Sheet */}
-        <FeedbackDetailSheet
+        {/* Feedback Details Modal */}
+        <FeedbackDetailsModal
           feedback={selectedFeedback}
           visible={!!selectedFeedback}
           onClose={() => setSelectedFeedback(null)}
@@ -329,7 +376,7 @@ export default function MapsScreen() {
 /**
  * Component to render a database trip route on the map
  */
-function DBTripRoute({ trip, colors, isSelected }: { trip: DBTrip; colors: any; isSelected: boolean }) {
+function DBTripRoute({ trip, isSelected }: { trip: DBTrip; isSelected: boolean }) {
   // Parse route data
   let coordinates: Array<[number, number]> = [];
 

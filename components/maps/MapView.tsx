@@ -19,6 +19,7 @@ export interface MapViewRef {
   resetNorth: () => void;
   animateToRegion: (region: Region, duration?: number) => void;
   fitBounds: (bounds: { ne: [number, number]; sw: [number, number] }, padding?: number, duration?: number) => void;
+  getVisibleBounds: () => Promise<[[number, number], [number, number]] | null>;
 }
 
 interface MapViewProps {
@@ -110,7 +111,19 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
         cameraRef.current.fitBounds(bounds.ne, bounds.sw, padding, duration);
       }
     },
-  }));
+    getVisibleBounds: async () => {
+      if (mapRef.current && isMapLoaded) {
+        try {
+          const bounds = await mapRef.current.getVisibleBounds();
+          return bounds as [[number, number], [number, number]];
+        } catch (error) {
+          console.error('[MapView] Error getting visible bounds:', error);
+          return null;
+        }
+      }
+      return null;
+    },
+  }), [userLocation, isMapLoaded]);
 
   // Default center (London) if no region provided
   const defaultCenter = region

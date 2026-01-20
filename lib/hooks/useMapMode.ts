@@ -7,7 +7,7 @@ const MAP_MODE_STORAGE_KEY = '@radzi:map_mode';
 const DEFAULT_MAP_MODE: MapModeState = {
   viewMode: 'feedback',
   heatmapMode: 'personal',
-  feedbackMode: 'community',
+  feedbackMode: 'personal', // Changed from 'community' - personal doesn't require bbox
 };
 
 export interface UseMapModeReturn extends MapModeState {
