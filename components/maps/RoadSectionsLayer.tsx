@@ -3,8 +3,10 @@
  * Displays road sections as colored lines based on ratings
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { ShapeSource, LineLayer } from '@rnmapbox/maps';
+import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { RoadSectionPersonal, RoadSectionCommunity } from '@/lib/api/roadSections';
 
 interface RoadSectionsLayerProps {
@@ -47,6 +49,9 @@ function convertToGeoJSON(
 }
 
 export function RoadSectionsLayer({ sections, type, onSectionPress }: RoadSectionsLayerProps) {
+  const { colors } = useTheme();
+  const [showEmptyMessage, setShowEmptyMessage] = useState(false);
+  
   // Convert sections to GeoJSON FeatureCollection
   const geojson = useMemo(() => {
     if (!sections || sections.length === 0) {
@@ -55,7 +60,6 @@ export function RoadSectionsLayer({ sections, type, onSectionPress }: RoadSectio
         features: [],
       };
     }
-
     return convertToGeoJSON(sections);
   }, [sections]);
 
@@ -73,8 +77,39 @@ export function RoadSectionsLayer({ sections, type, onSectionPress }: RoadSectio
     }
   };
 
-  // Don't render if no sections
+  // Show empty message briefly when no sections are available
+  useEffect(() => {
+    if (sections !== undefined && sections.length === 0) {
+      setShowEmptyMessage(true);
+      const timer = setTimeout(() => setShowEmptyMessage(false), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowEmptyMessage(false);
+    }
+  }, [sections]);
+
+  // Don't render layer if no sections
   if (!sections || sections.length === 0) {
+    // Show informational message
+    if (showEmptyMessage) {
+      return (
+        <View style={styles.emptyMessageContainer} pointerEvents="none">
+          <View style={[styles.emptyMessage, { backgroundColor: colors.card }]}>
+            <Text style={[styles.emptyMessageText, { color: colors.text }]}>
+              {type === 'personal' 
+                ? 'No personal ratings in this area yet' 
+                : 'No community ratings available in this area'}
+            </Text>
+            <Text style={[styles.emptyMessageSubtext, { color: colors.textSecondary }]}>
+              {type === 'personal'
+                ? 'Complete a trip with ratings to see them here'
+                : 'This area needs more community ratings'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
     return null;
   }
 
@@ -117,3 +152,35 @@ export function RoadSectionsLayer({ sections, type, onSectionPress }: RoadSectio
     </ShapeSource>
   );
 }
+
+const styles = StyleSheet.create({
+  emptyMessageContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  emptyMessage: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyMessageText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  emptyMessageSubtext: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+});

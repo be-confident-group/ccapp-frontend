@@ -21,12 +21,10 @@ import { useMapFeedback } from '@/lib/hooks/useMapFeedback';
 import { useGlobalFeedback } from '@/lib/hooks/useGlobalFeedback';
 import { usePersonalRoadSections, useCommunityRoadSections } from '@/lib/hooks/useRoadSections';
 import { mockUserLocation } from '@/lib/utils/mockMapData';
-import { debounce } from '@/lib/utils/feedbackHelpers';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useQueryClient } from '@tanstack/react-query';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
 import type { Trip as DBTrip } from '@/lib/database/db';
@@ -66,7 +64,7 @@ function transformApiTripToLocal(apiTrip: ApiTrip): DBTrip {
 
 export default function MapsScreen() {
   const { isDark } = useTheme();
-  const { permissionStatus, requestPermission, isLoading } = useLocation();
+  const { location, permissionStatus, requestPermission, isLoading, getCurrentLocation } = useLocation();
   const {
     viewMode,
     heatmapMode,
@@ -75,18 +73,23 @@ export default function MapsScreen() {
     setHeatmapMode,
     setFeedbackMode,
   } = useMapMode();
+  
+  // Track if we've centered on user location initially
+  const [hasInitializedLocation, setHasInitializedLocation] = useState(false);
+  const [initialRegion, setInitialRegion] = useState<{
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  } | null>(null);
 
   // Use persistent map layer hook
   const { selectedLayer, setSelectedLayer } = useMapLayer(isDark);
-
-  // Query client for invalidating queries
-  const queryClient = useQueryClient();
 
   const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [mapBounds, setMapBounds] = useState<string | undefined>(undefined);
   const [selectedFeedback, setSelectedFeedback] = useState<MapFeedback | GlobalFeedback | null>(null);
   const [selectedRoadSection, setSelectedRoadSection] = useState<RoadSectionPersonal | RoadSectionCommunity | null>(null);
   const mapViewRef = useRef<any>(null);
@@ -94,19 +97,17 @@ export default function MapsScreen() {
   // Fetch trips from backend (including active trips that weren't properly stopped)
   const { data: backendTrips, refetch } = useTrips();
 
-  // Fetch feedback data based on mode
-  const { data: personalFeedback } = useMapFeedback();
-  const { data: globalFeedback } = useGlobalFeedback(
-    viewMode === 'feedback' && feedbackMode === 'community' ? mapBounds : undefined
-  );
+  // Determine which feedback mode is active
+  const isPersonalFeedbackMode = viewMode === 'feedback' && feedbackMode === 'personal';
+  const isCommunityFeedbackMode = viewMode === 'feedback' && feedbackMode === 'community';
 
-  // Fetch road sections data for feedback mode (shows ratings alongside reports)
-  const { data: personalRoadSections } = usePersonalRoadSections(
-    viewMode === 'feedback' && feedbackMode === 'personal' ? mapBounds : undefined
-  );
-  const { data: communityRoadSections } = useCommunityRoadSections(
-    viewMode === 'feedback' && feedbackMode === 'community' ? mapBounds : undefined
-  );
+  // Fetch ALL feedback data - no bbox filtering, loads everything immediately
+  const { data: personalFeedback } = useMapFeedback();
+  const { data: globalFeedback } = useGlobalFeedback(isCommunityFeedbackMode);
+  
+  // Fetch ALL road sections data for feedback mode (shows ratings alongside reports)
+  const { data: personalRoadSections } = usePersonalRoadSections(isPersonalFeedbackMode);
+  const { data: communityRoadSections } = useCommunityRoadSections(isCommunityFeedbackMode);
 
   // Refetch trips when screen comes into focus
   useFocusEffect(
@@ -115,48 +116,56 @@ export default function MapsScreen() {
     }, [refetch])
   );
 
-  // Debug logging to track data flow
+  // Get user's actual location on mount and center map on it
   useEffect(() => {
-    console.log('[MapsScreen] Data state:', {
-      viewMode,
-      feedbackMode,
-      heatmapMode,
-      mapBounds: mapBounds ? 'set' : 'undefined',
-      backendTrips: backendTrips?.length || 0,
-      personalFeedback: personalFeedback?.length || 0,
-      globalFeedback: globalFeedback?.length || 0,
-      personalRoadSections: personalRoadSections?.length || 0,
-      communityRoadSections: communityRoadSections?.length || 0,
-    });
-  }, [viewMode, feedbackMode, heatmapMode, mapBounds, backendTrips, personalFeedback, globalFeedback, personalRoadSections, communityRoadSections]);
-
-  // Fetch map bounds when feedback mode is activated (for road sections and global feedback)
-  useEffect(() => {
-    const fetchBounds = async () => {
-      if (viewMode === 'feedback' && mapViewRef.current) {
+    const initializeUserLocation = async () => {
+      if (hasInitializedLocation) return;
+      
+      // If we already have a location, use it
+      if (location) {
+        const region = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        };
+        setInitialRegion(region);
+        setHasInitializedLocation(true);
+        
+        // Animate map to user location if map is ready
+        if (mapViewRef.current) {
+          mapViewRef.current.animateToRegion(region, 800);
+        }
+        return;
+      }
+      
+      // Otherwise fetch the current location
+      if (permissionStatus === 'granted') {
         try {
-          const bounds = await mapViewRef.current.getVisibleBounds();
-          if (bounds && bounds.length === 2) {
-            const [[minLon, minLat], [maxLon, maxLat]] = bounds;
-            const bboxString = `${minLon},${minLat},${maxLon},${maxLat}`;
-            console.log('[MapsScreen] Setting mapBounds:', bboxString);
-            setMapBounds(bboxString);
-
-            // CRITICAL: Invalidate queries to trigger refetch with new bbox
-            // This fixes the race condition where queries were disabled on mount
-            queryClient.invalidateQueries({ queryKey: ['globalFeedback'] });
-            queryClient.invalidateQueries({ queryKey: ['roadSections'] });
+          const currentLocation = await getCurrentLocation();
+          if (currentLocation) {
+            const region = {
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            };
+            setInitialRegion(region);
+            setHasInitializedLocation(true);
+            
+            // Animate map to user location if map is ready
+            if (mapViewRef.current) {
+              mapViewRef.current.animateToRegion(region, 800);
+            }
           }
         } catch (error) {
-          // Map might not be ready yet, will fetch on region change
-          console.log('[MapsScreen] Map not ready for bounds, will fetch on region change');
+          // Silently handle - user location not critical
         }
       }
     };
-    // Delay to ensure map is loaded
-    const timer = setTimeout(fetchBounds, 500);
-    return () => clearTimeout(timer);
-  }, [viewMode, feedbackMode, queryClient]);
+
+    initializeUserLocation();
+  }, [location, permissionStatus, getCurrentLocation, hasInitializedLocation]);
 
   // Transform and get recent trips (last 10)
   const recentTrips = useMemo(() => {
@@ -195,30 +204,6 @@ export default function MapsScreen() {
     }
     setHeatmapMode(mode);
   }, [setHeatmapMode]);
-
-  // Handle map region changes to update bbox for feedback mode (needs bounds for road sections and global feedback)
-  const handleRegionChange = useCallback(async () => {
-    const needsBbox = viewMode === 'feedback';
-
-    if (needsBbox && mapViewRef.current) {
-      try {
-        const bounds = await mapViewRef.current.getVisibleBounds();
-        if (bounds && bounds.length === 2) {
-          const [[minLon, minLat], [maxLon, maxLat]] = bounds;
-          const bboxString = `${minLon},${minLat},${maxLon},${maxLat}`;
-          setMapBounds(bboxString);
-        }
-      } catch (error) {
-        console.error('[MapsScreen] Error getting visible bounds:', error);
-      }
-    }
-  }, [viewMode]);
-
-  // Debounced version to avoid excessive API calls
-  const debouncedHandleRegionChange = useMemo(
-    () => debounce(handleRegionChange, 500),
-    [handleRegionChange]
-  );
 
   // Handle layer change from user interaction
   const handleLayerChange = useCallback((layer: MapLayer) => {
@@ -289,17 +274,16 @@ export default function MapsScreen() {
       <MapContainer>
         <MapView
           ref={mapViewRef}
-          region={{
-            latitude: mockUserLocation.latitude,
-            longitude: mockUserLocation.longitude,
-            latitudeDelta: 0.05,
+          region={initialRegion || {
+            latitude: location?.latitude || 51.5074, // Fallback to London center
+            longitude: location?.longitude || -0.1278,
+            latitudeDelta: 0.05, // Comfortable zoom level
             longitudeDelta: 0.05,
           }}
           showUserLocation
           followUserLocation={false}
           selectedLayer={selectedLayer}
           onLongPress={handleMapLongPress}
-          onRegionChange={debouncedHandleRegionChange}
         >
           {/* Render recent trips (journeys) in heatmap mode */}
           {viewMode === 'heatmap' && recentTrips.map((trip) => (
@@ -311,12 +295,14 @@ export default function MapsScreen() {
             <>
               {/* Road section ratings as colored lines */}
               <RoadSectionsLayer
+                key={`road-sections-${feedbackMode}`}
                 sections={feedbackMode === 'personal' ? personalRoadSections : communityRoadSections}
                 type={feedbackMode === 'personal' ? 'personal' : 'global'}
                 onSectionPress={setSelectedRoadSection}
               />
               {/* Feedback markers (reported issues) */}
               <FeedbackMarkers
+                key={`feedback-markers-${feedbackMode}`}
                 feedbacks={feedbackMode === 'personal' ? personalFeedback : globalFeedback}
                 type={feedbackMode}
                 onMarkerPress={setSelectedFeedback}

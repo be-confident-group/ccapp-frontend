@@ -38,26 +38,18 @@ class GlobalFeedbackApi {
    * @param params - Query parameters including bbox and confidence_level
    */
   async getGlobalFeedback(params: GlobalFeedbackParams = {}): Promise<GlobalFeedback[]> {
-    try {
-      const queryParams = new URLSearchParams();
+    const queryParams = new URLSearchParams();
 
-      if (params.bbox) {
-        queryParams.append('bbox', params.bbox);
-      }
-
-      if (params.confidence_level) {
-        queryParams.append('confidence_level', params.confidence_level);
-      }
-
-      const endpoint = `/api/global-feedback/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-
-      console.log('[GlobalFeedbackAPI] Fetching global feedback:', endpoint);
-
-      return await apiClient.get<GlobalFeedback[]>(endpoint);
-    } catch (error) {
-      console.error('[GlobalFeedbackAPI] Error fetching global feedback:', error);
-      throw error;
+    if (params.bbox) {
+      queryParams.append('bbox', params.bbox);
     }
+
+    if (params.confidence_level) {
+      queryParams.append('confidence_level', params.confidence_level);
+    }
+
+    const endpoint = `/api/global-feedback/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await apiClient.get<GlobalFeedback[]>(endpoint);
   }
 }
 

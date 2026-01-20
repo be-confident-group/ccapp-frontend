@@ -59,14 +59,8 @@ class RoadSectionsApi {
    * @param bbox - Bounding box "min_lon,min_lat,max_lon,max_lat"
    */
   async getPersonalRoadSections(bbox: string): Promise<RoadSectionPersonal[]> {
-    try {
-      const endpoint = `/api/road-sections/personal/?bbox=${encodeURIComponent(bbox)}`;
-      console.log('[RoadSectionsAPI] Fetching personal road sections:', endpoint);
-      return await apiClient.get<RoadSectionPersonal[]>(endpoint);
-    } catch (error) {
-      console.error('[RoadSectionsAPI] Error fetching personal road sections:', error);
-      throw error;
-    }
+    const endpoint = `/api/road-sections/personal/?bbox=${encodeURIComponent(bbox)}`;
+    return await apiClient.get<RoadSectionPersonal[]>(endpoint);
   }
 
   /**
@@ -78,17 +72,11 @@ class RoadSectionsApi {
     bbox: string,
     minRatingCount?: number
   ): Promise<RoadSectionCommunity[]> {
-    try {
-      let endpoint = `/api/road-sections/community/?bbox=${encodeURIComponent(bbox)}`;
-      if (minRatingCount !== undefined) {
-        endpoint += `&min_rating_count=${minRatingCount}`;
-      }
-      console.log('[RoadSectionsAPI] Fetching community road sections:', endpoint);
-      return await apiClient.get<RoadSectionCommunity[]>(endpoint);
-    } catch (error) {
-      console.error('[RoadSectionsAPI] Error fetching community road sections:', error);
-      throw error;
+    let endpoint = `/api/road-sections/community/?bbox=${encodeURIComponent(bbox)}`;
+    if (minRatingCount !== undefined) {
+      endpoint += `&min_rating_count=${minRatingCount}`;
     }
+    return await apiClient.get<RoadSectionCommunity[]>(endpoint);
   }
 }
 
