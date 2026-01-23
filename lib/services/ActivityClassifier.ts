@@ -44,12 +44,13 @@ export interface LocationPoint {
 
 export class ActivityClassifier {
   // Speed thresholds in km/h
+  // Updated thresholds: walk (2-7), ride/cycle (7-30), drive (>30)
   private static thresholds: ActivityThresholds = {
     stationary: 2,   // < 2 km/h
-    walking: 8,      // 2-8 km/h
-    running: 15,     // 8-15 km/h
-    cycling: 40,     // 15-40 km/h
-    // > 40 km/h = driving
+    walking: 7,      // 2-7 km/h
+    running: 7,      // Not used (merged with cycling as "ride")
+    cycling: 30,     // 7-30 km/h (includes what was running)
+    // > 30 km/h = driving
   };
 
   /**
@@ -66,7 +67,7 @@ export class ActivityClassifier {
       };
     }
 
-    // Walking: 2-8 km/h
+    // Walking: 2-7 km/h
     if (speedKmh >= this.thresholds.stationary && speedKmh < this.thresholds.walking) {
       // Higher confidence in middle of range
       const midRange = (this.thresholds.stationary + this.thresholds.walking) / 2;
@@ -79,21 +80,9 @@ export class ActivityClassifier {
       };
     }
 
-    // Running: 8-15 km/h
-    if (speedKmh >= this.thresholds.walking && speedKmh < this.thresholds.running) {
-      const midRange = (this.thresholds.walking + this.thresholds.running) / 2;
-      const distance = Math.abs(speedKmh - midRange);
-      const confidence = Math.max(60, 75 - distance * 2);
-
-      return {
-        type: 'running',
-        confidence: Math.round(confidence),
-      };
-    }
-
-    // Cycling: 15-40 km/h
-    if (speedKmh >= this.thresholds.running && speedKmh < this.thresholds.cycling) {
-      const midRange = (this.thresholds.running + this.thresholds.cycling) / 2;
+    // Cycling/Riding: 7-30 km/h (includes what was previously "running")
+    if (speedKmh >= this.thresholds.walking && speedKmh < this.thresholds.cycling) {
+      const midRange = (this.thresholds.walking + this.thresholds.cycling) / 2;
       const distance = Math.abs(speedKmh - midRange);
       const confidence = Math.max(70, 85 - distance * 1.5);
 
@@ -103,11 +92,11 @@ export class ActivityClassifier {
       };
     }
 
-    // Driving: 40+ km/h
+    // Driving: 30+ km/h (was 40+)
     if (speedKmh >= this.thresholds.cycling) {
       return {
         type: 'driving',
-        confidence: speedKmh > 50 ? 90 : 80,
+        confidence: speedKmh > 40 ? 95 : 85,
       };
     }
 
@@ -307,8 +296,8 @@ export class ActivityClassifier {
     const variance = speeds.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / n;
     const stdDev = Math.sqrt(variance);
 
-    // Calculate sustained high speed ratio (8+ km/h)
-    const highSpeedThreshold = 8;
+    // Calculate sustained high speed ratio (7+ km/h - cycling threshold)
+    const highSpeedThreshold = 7;
     const highSpeedCount = speeds.filter((s) => s >= highSpeedThreshold).length;
     const sustainedHighSpeedRatio = highSpeedCount / n;
 

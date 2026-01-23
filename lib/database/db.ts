@@ -144,6 +144,15 @@ class Database {
     return result || null;
   }
 
+  async getTripByBackendId(backendId: number): Promise<Trip | null> {
+    const db = await this.getDb();
+    const result = await db.getFirstAsync<Trip>(
+      'SELECT * FROM trips WHERE backend_id = ?',
+      [backendId]
+    );
+    return result || null;
+  }
+
   async updateTrip(id: string, updates: Partial<Trip>): Promise<void> {
     const db = await this.getDb();
 

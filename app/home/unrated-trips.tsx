@@ -53,6 +53,7 @@ function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
     created_at: new Date(apiTrip.created_at).getTime(),
     updated_at: new Date(apiTrip.updated_at).getTime(),
     synced: 1,
+    backend_id: apiTrip.id,
   };
 }
 
@@ -88,12 +89,13 @@ export default function UnratedTripsScreen() {
     }, [loadRatedTrips, refetch])
   );
 
-  // Filter for unrated trips with route data
+  // Filter for unrated trips with route data (walk/cycle only)
   const unratedTrips = useMemo(() => {
     if (!backendTrips) return [];
 
     return backendTrips
       .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
+      .filter((trip) => trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
       .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
       .map(transformApiTripToLocal);
   }, [backendTrips, ratedTripIds]);

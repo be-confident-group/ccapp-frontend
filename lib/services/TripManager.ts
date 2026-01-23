@@ -86,6 +86,53 @@ export class TripManager {
     const stats = this.calculateTripStats(locations);
     const dominantActivity = this.getDominantActivity(locations);
 
+    // Validate trip against quality thresholds
+    const MIN_WALK_DISTANCE = 400; // meters
+    const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
+    const MAX_SPEED_THRESHOLD = 30; // km/h
+
+    let validationError: string | null = null;
+
+    // Check 1: Max speed exceeds threshold (indicates driving)
+    if (stats.maxSpeed > MAX_SPEED_THRESHOLD) {
+      validationError = `Max speed (${stats.maxSpeed.toFixed(1)} km/h) exceeds threshold (${MAX_SPEED_THRESHOLD} km/h)`;
+      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
+    }
+
+    // Check 2: Walk trip below minimum distance
+    if (!validationError && dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
+      validationError = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
+      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
+    }
+
+    // Check 3: Cycle trip below minimum distance
+    if (!validationError && dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
+      validationError = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
+      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
+    }
+
+    // Check 4: Running or driving types should be filtered
+    if (!validationError && (dominantActivity === 'run' || dominantActivity === 'drive')) {
+      validationError = `Trip type '${dominantActivity}' not supported (only walk/cycle allowed)`;
+      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
+    }
+
+    // If validation failed, cancel the trip
+    if (validationError) {
+      await database.updateTrip(tripId, {
+        status: 'cancelled',
+        end_time: now,
+        notes: validationError,
+        updated_at: now,
+      });
+      console.log(`[TripManager] Trip ${tripId} cancelled due to validation failure`);
+      return {
+        trip: await database.getTrip(tripId),
+        synced: false,
+        newTrophies: [],
+      };
+    }
+
     // Build route data for sync - convert timestamps to ISO 8601 format for backend
     const routeForSync = locations.map((loc) => ({
       lat: Number(loc.latitude.toFixed(6)),
@@ -315,6 +362,24 @@ export class TripManager {
   }> {
     const tripId = `manual_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const now = Date.now();
+
+    // Validate manual trip against quality thresholds
+    const MIN_WALK_DISTANCE = 400; // meters
+    const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
+
+    // Check minimum distances
+    if (data.type === 'walk' && data.distance < MIN_WALK_DISTANCE) {
+      throw new Error(`Walk distance (${data.distance.toFixed(0)}m) is below minimum (${MIN_WALK_DISTANCE}m)`);
+    }
+
+    if (data.type === 'cycle' && data.distance < MIN_RIDE_DISTANCE) {
+      throw new Error(`Ride distance (${data.distance.toFixed(0)}m) is below minimum (${MIN_RIDE_DISTANCE}m)`);
+    }
+
+    // Reject run and drive types
+    if (data.type === 'run' || data.type === 'drive') {
+      throw new Error(`Trip type '${data.type}' not supported (only walk/cycle allowed)`);
+    }
 
     // Calculate stats from manual data
     const avgSpeed = calculateSpeed(data.distance, data.duration);

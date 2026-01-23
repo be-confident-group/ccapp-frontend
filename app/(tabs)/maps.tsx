@@ -167,12 +167,16 @@ export default function MapsScreen() {
     initializeUserLocation();
   }, [location, permissionStatus, getCurrentLocation, hasInitializedLocation]);
 
-  // Transform and get all trips with routes for heatmap
+  // Transform and get all trips with routes for heatmap (walk/cycle only)
   const recentTrips = useMemo(() => {
     if (!backendTrips) return [];
 
     return backendTrips
-      .filter((trip) => trip.route && trip.route.length > 0) // Only trips with routes
+      .filter((trip) =>
+        trip.route &&
+        trip.route.length > 0 &&
+        (trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
+      )
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .map(transformApiTripToLocal);
   }, [backendTrips]);

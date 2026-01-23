@@ -118,10 +118,11 @@ export default function TripHistoryScreen() {
     };
   }
 
-  // Get the display trips based on data source
-  const displayTrips: DisplayTrip[] = useLocalData
+  // Get the display trips based on data source and filter out run/drive trips
+  const displayTrips: DisplayTrip[] = (useLocalData
     ? localTrips.map(localToDisplay)
-    : (backendTrips || []).map(backendToDisplay);
+    : (backendTrips || []).map(backendToDisplay)
+  ).filter(trip => trip.type === 'walk' || trip.type === 'cycle');
 
   async function onRefresh() {
     await Promise.all([

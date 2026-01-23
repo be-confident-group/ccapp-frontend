@@ -15,18 +15,23 @@ import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { useTrip, useDeleteTrip } from '@/lib/hooks/useTrips';
+import { database } from '@/lib/database';
+import type { Trip } from '@/lib/database/db';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, isDark } = useTheme();
   const { unitSystem, formatElevation, formatWeight } = useUnits();
   const { selectedLayer } = useMapLayer(isDark);
+  const [localTrip, setLocalTrip] = useState<Trip | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   // Try to parse as number (backend trip ID) or use as string (local client_id)
   const tripId = useMemo(() => {
@@ -35,41 +40,108 @@ export default function TripDetailScreen() {
   }, [id]);
 
   // Fetch trip from backend if we have a numeric ID
-  const { data: backendTrip, isLoading } = useTrip(tripId);
+  const { data: backendTrip, isLoading, isError } = useTrip(tripId);
   const deleteTrip = useDeleteTrip();
 
-  // Transform backend trip to local format for display
-  const tripDetails = useMemo(() => {
-    if (!backendTrip) return null;
+  // Check network status and load from local DB if offline or backend fails
+  useEffect(() => {
+    let mounted = true;
 
-    // Transform route from backend format {lat, lng} to {latitude, longitude}
-    const transformedRoute = backendTrip.route
-      ? backendTrip.route.map(coord => ({
-          latitude: coord.lat,
-          longitude: coord.lng,
-          timestamp: coord.timestamp
-        }))
-      : [];
+    const checkNetworkAndLoadLocal = async () => {
+      const netState = await NetInfo.fetch();
+      const online = netState.isConnected ?? false;
 
-    return {
-      trip: {
-        id: backendTrip.client_id,
-        type: backendTrip.type,
-        is_manual: backendTrip.is_manual ? 1 : 0,
-        start_time: new Date(backendTrip.start_timestamp).getTime(),
-        end_time: new Date(backendTrip.end_timestamp).getTime(),
-        distance: backendTrip.distance * 1000, // Convert km to meters
-        duration: backendTrip.duration,
-        avg_speed: backendTrip.average_speed,
-        max_speed: backendTrip.average_speed, // Backend doesn't track max speed, use average
-        elevation_gain: backendTrip.elevation_gain || 0,
-        co2_saved: backendTrip.co2_saved,
-        notes: backendTrip.notes || null,
-        status: backendTrip.status,
-      },
-      route: transformedRoute,
+      if (mounted) {
+        setIsOnline(online);
+      }
+
+      // Load from local DB if offline or backend fails
+      if (!online || isError) {
+        try {
+          const local = await database.getTripByBackendId(tripId);
+          if (mounted && local) {
+            setLocalTrip(local);
+          }
+        } catch (error) {
+          console.error('[TripDetail] Error loading local trip:', error);
+        }
+      }
     };
-  }, [backendTrip]);
+
+    checkNetworkAndLoadLocal();
+
+    return () => {
+      mounted = false;
+    };
+  }, [tripId, isError]);
+
+  // Transform backend trip OR local trip to display format
+  const tripDetails = useMemo(() => {
+    // Use backend trip if available
+    if (backendTrip) {
+      // Transform route from backend format {lat, lng} to {latitude, longitude}
+      const transformedRoute = backendTrip.route
+        ? backendTrip.route.map(coord => ({
+            latitude: coord.lat,
+            longitude: coord.lng,
+            timestamp: coord.timestamp
+          }))
+        : [];
+
+      return {
+        trip: {
+          id: backendTrip.client_id,
+          type: backendTrip.type,
+          is_manual: backendTrip.is_manual ? 1 : 0,
+          start_time: new Date(backendTrip.start_timestamp).getTime(),
+          end_time: new Date(backendTrip.end_timestamp).getTime(),
+          distance: backendTrip.distance * 1000, // Convert km to meters
+          duration: backendTrip.duration,
+          avg_speed: backendTrip.average_speed,
+          max_speed: backendTrip.average_speed, // Backend doesn't track max speed, use average
+          elevation_gain: backendTrip.elevation_gain || 0,
+          co2_saved: backendTrip.co2_saved,
+          notes: backendTrip.notes || null,
+          status: backendTrip.status,
+        },
+        route: transformedRoute,
+      };
+    }
+
+    // Fallback to local trip if offline or backend fails
+    if (localTrip) {
+      // Parse route_data JSON string
+      let parsedRoute: any[] = [];
+      if (localTrip.route_data) {
+        try {
+          parsedRoute = JSON.parse(localTrip.route_data);
+        } catch (error) {
+          console.error('[TripDetail] Error parsing route_data:', error);
+        }
+      }
+
+      return {
+        trip: {
+          id: localTrip.id,
+          type: localTrip.type,
+          is_manual: localTrip.is_manual,
+          start_time: localTrip.start_time,
+          end_time: localTrip.end_time,
+          distance: localTrip.distance,
+          duration: localTrip.duration,
+          avg_speed: localTrip.avg_speed,
+          max_speed: localTrip.max_speed,
+          elevation_gain: localTrip.elevation_gain,
+          co2_saved: localTrip.co2_saved,
+          notes: localTrip.notes,
+          status: localTrip.status,
+        },
+        route: parsedRoute,
+      };
+    }
+
+    return null;
+  }, [backendTrip, localTrip]);
 
   function handleDelete() {
     Alert.alert(
