@@ -298,13 +298,26 @@ export default function ClubDetailScreen() {
     );
   };
 
-  const renderEmptyPosts = () => (
-    <View style={styles.emptyPosts}>
-      <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-        {t('clubs.noPosts', 'No posts yet. Be the first to post!')}
-      </ThemedText>
-    </View>
-  );
+  const renderEmptyPosts = () => {
+    // Show different message for non-members
+    if (!isMember) {
+      return (
+        <View style={styles.emptyPosts}>
+          <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
+            {t('clubs.joinToSeePosts', 'Join this group to see posts')}
+          </ThemedText>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyPosts}>
+        <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
+          {t('clubs.noPosts', 'No posts yet. Be the first to post!')}
+        </ThemedText>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -356,7 +369,7 @@ export default function ClubDetailScreen() {
       />
       <ThemedView style={styles.container}>
         <FlatList
-          data={activityPosts}
+          data={isMember ? activityPosts : []}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderHeader}

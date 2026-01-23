@@ -9,20 +9,18 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
-import { database } from '@/lib/database';
-import { TripManager } from '@/lib/services';
 import { formatDistance, formatDuration, formatSpeed } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
 import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { useTrip } from '@/lib/hooks/useTrips';
+import { useTrip, useDeleteTrip } from '@/lib/hooks/useTrips';
 
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +36,7 @@ export default function TripDetailScreen() {
 
   // Fetch trip from backend if we have a numeric ID
   const { data: backendTrip, isLoading } = useTrip(tripId);
+  const deleteTrip = useDeleteTrip();
 
   // Transform backend trip to local format for display
   const tripDetails = useMemo(() => {
@@ -72,7 +71,7 @@ export default function TripDetailScreen() {
     };
   }, [backendTrip]);
 
-  async function handleDelete() {
+  function handleDelete() {
     Alert.alert(
       'Delete Trip',
       'Are you sure you want to delete this trip? This cannot be undone.',
@@ -81,21 +80,19 @@ export default function TripDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              // Delete from backend if we have a numeric ID
-              if (tripId > 0) {
-                const { useDeleteTrip } = await import('@/lib/hooks/useTrips');
-                // Note: This won't work as hooks can't be called conditionally
-                // For now, we'll keep the local delete
-                await TripManager.deleteTrip(id as string);
-              } else {
-                await TripManager.deleteTrip(id as string);
-              }
-              router.back();
-            } catch (error) {
-              console.error('[TripDetail] Error deleting trip:', error);
-              Alert.alert('Error', 'Failed to delete trip');
+          onPress: () => {
+            if (tripId > 0) {
+              deleteTrip.mutate(tripId, {
+                onSuccess: () => {
+                  router.back();
+                },
+                onError: (error) => {
+                  console.error('[TripDetail] Error deleting trip:', error);
+                  Alert.alert('Error', 'Failed to delete trip');
+                },
+              });
+            } else {
+              Alert.alert('Error', 'Invalid trip ID');
             }
           },
         },
@@ -127,7 +124,8 @@ export default function TripDetailScreen() {
     );
   }
 
-  const { trip, route, locationCount } = tripDetails;
+  const { trip, route } = tripDetails;
+  const locationCount = route.length;
   const tripColor = getTripTypeColor(trip.type);
   const tripName = getTripTypeName(trip.type);
   const date = new Date(trip.start_time);
