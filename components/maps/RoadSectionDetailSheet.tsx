@@ -62,7 +62,7 @@ export function RoadSectionDetailSheet({ section, visible, onClose }: RoadSectio
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <Pressable
@@ -72,15 +72,10 @@ export function RoadSectionDetailSheet({ section, visible, onClose }: RoadSectio
         <View
           style={[
             styles.container,
-            { backgroundColor: colors.card, borderTopColor: colors.border },
+            { backgroundColor: colors.card },
           ]}
           onStartShouldSetResponder={() => true}
         >
-          {/* Handle bar */}
-          <View style={styles.handleContainer}>
-            <View style={[styles.handle, { backgroundColor: colors.textSecondary }]} />
-          </View>
-
           <View style={styles.content}>
             {/* Rating indicator */}
             <View style={styles.ratingHeader}>
@@ -147,7 +142,7 @@ export function RoadSectionDetailSheet({ section, visible, onClose }: RoadSectio
                     <View
                       style={[styles.legendDot, { backgroundColor: RATING_COLORS[rating] }]}
                     />
-                    <Text style={[styles.legendText, { color: colors.textTertiary }]}>
+                    <Text style={[styles.legendText, { color: colors.textSecondary }]}>
                       {rating}
                     </Text>
                   </View>
@@ -173,24 +168,19 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   container: {
-    maxHeight: SCREEN_HEIGHT * 0.5,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    paddingBottom: 30,
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.3,
+    width: SCREEN_HEIGHT * 0.45,
+    maxWidth: 400,
+    borderRadius: 20,
+    paddingVertical: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
   },
   content: {
     paddingHorizontal: 20,
