@@ -7,6 +7,7 @@
 
 import { database, type Trip as DBTrip, type LocationPoint } from '../database';
 import { LocationTrackingService } from './LocationTrackingService';
+import { SegmentDetector } from './SegmentDetector';
 import {
   calculateDistance,
   calculateSpeed,
@@ -85,6 +86,113 @@ export class TripManager {
     // Calculate final statistics
     const stats = this.calculateTripStats(locations);
     const dominantActivity = this.getDominantActivity(locations);
+
+    // SEGMENT ANALYSIS: Detect multi-modal trips
+    console.log(`[TripManager] Analyzing trip ${tripId} for segments...`);
+    const segmentAnalysis = SegmentDetector.analyzeTrip(locations);
+
+    console.log(`[TripManager] Segment analysis complete:`, {
+      isMultiModal: segmentAnalysis.isMultiModal,
+      segmentCount: segmentAnalysis.segments.length,
+      types: segmentAnalysis.segments.map(s => s.type),
+    });
+
+    // If multi-modal, create separate trips for each segment
+    if (segmentAnalysis.isMultiModal && segmentAnalysis.segments.length > 1) {
+      console.log(`[TripManager] Multi-modal trip detected! Creating ${segmentAnalysis.segments.length} separate trips...`);
+
+      const subTrips: DBTrip[] = [];
+      const syncedSubTrips: string[] = [];
+
+      for (let i = 0; i < segmentAnalysis.segments.length; i++) {
+        const segment = segmentAnalysis.segments[i];
+        const subTripId = `${tripId}_segment${i}`;
+
+        console.log(`[TripManager] Creating sub-trip ${subTripId} (${segment.type}, ${segment.distance.toFixed(0)}m)`);
+
+        // Build route data for this segment
+        const segmentRouteForSync = segment.locations.map((loc) => ({
+          lat: Number(loc.latitude.toFixed(6)),
+          lng: Number(loc.longitude.toFixed(6)),
+          timestamp: new Date(loc.timestamp).toISOString(),
+        }));
+
+        const segmentRouteDataJson = JSON.stringify(segmentRouteForSync);
+        const segmentStartTime = segment.locations[0].timestamp;
+        const segmentEndTime = segment.locations[segment.locations.length - 1].timestamp;
+
+        // Calculate segment stats
+        const segmentStats = this.calculateTripStats(segment.locations);
+
+        // Create sub-trip
+        await database.createTrip({
+          id: subTripId,
+          user_id: trip.user_id,
+          type: segment.type,
+          status: 'completed',
+          is_manual: 0,
+          start_time: segmentStartTime,
+          end_time: segmentEndTime,
+          distance: segment.distance,
+          duration: segment.duration,
+          avg_speed: segment.avgSpeed,
+          max_speed: segment.maxSpeed,
+          elevation_gain: segmentStats.elevationGain,
+          calories: segmentStats.calories,
+          co2_saved: calculateCO2Saved(segment.distance / 1000),
+          notes: `Segment ${i + 1} of ${segmentAnalysis.segments.length} (multi-modal trip)`,
+          route_data: segmentRouteDataJson,
+          created_at: now,
+          updated_at: now,
+          synced: 0,
+          backend_id: null,
+        });
+
+        const subTrip = await database.getTrip(subTripId);
+        if (subTrip) {
+          subTrips.push(subTrip);
+
+          // Try to sync each sub-trip
+          try {
+            const synced = await syncService.syncSingleTrip(subTripId);
+            if (synced) {
+              syncedSubTrips.push(subTripId);
+            }
+          } catch (error) {
+            console.error(`[TripManager] Error syncing sub-trip ${subTripId}:`, error);
+          }
+        }
+      }
+
+      // Mark original trip as cancelled (replaced by sub-trips)
+      await database.updateTrip(tripId, {
+        status: 'cancelled',
+        end_time: now,
+        notes: `Multi-modal trip split into ${subTrips.length} segments`,
+        updated_at: now,
+      });
+
+      console.log(`[TripManager] Multi-modal trip processing complete. Created ${subTrips.length} trips, synced ${syncedSubTrips.length}`);
+
+      // Fetch trophies if any sub-trip was synced
+      let newTrophies: Trophy[] = [];
+      if (syncedSubTrips.length > 0) {
+        try {
+          newTrophies = await trophyAPI.getNewTrophies();
+        } catch (error) {
+          console.error('[TripManager] Error fetching trophies:', error);
+        }
+      }
+
+      return {
+        trip: await database.getTrip(tripId),
+        synced: syncedSubTrips.length > 0,
+        newTrophies,
+      };
+    }
+
+    // Single-modal trip - continue with normal validation
+    console.log(`[TripManager] Single-modal trip (${dominantActivity}), continuing with normal processing...`);
 
     // Validate trip against quality thresholds
     const MIN_WALK_DISTANCE = 400; // meters
