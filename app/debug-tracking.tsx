@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { LocationTrackingService } from '@/lib/services/LocationTrackingService';
 import { TripDetectionService } from '@/lib/services/TripDetectionService';
 import { ActivityClassifier } from '@/lib/services/ActivityClassifier';
+import { SegmentDetector } from '@/lib/services/SegmentDetector';
 import { database } from '@/lib/database';
 import { useTheme } from '@/contexts/ThemeContext';
 import * as TaskManager from 'expo-task-manager';
@@ -53,6 +54,31 @@ interface DebugInfo {
     minDuration: string;
     minDistance: string;
     accuracyThreshold: string;
+  };
+  classificationThresholds: {
+    stationary: string;
+    walk: string;
+    ride: string;
+    drive: string;
+  };
+  validationRules: {
+    minWalkDistance: string;
+    minRideDistance: string;
+    maxSpeedThreshold: string;
+  };
+  segmentAnalysis?: {
+    isMultiModal: boolean;
+    segmentCount: number;
+    dominantType: string;
+    confidence: number;
+    segments: Array<{
+      type: string;
+      distance: number;
+      duration: number;
+      avgSpeed: number;
+      maxSpeed: number;
+      pointCount: number;
+    }>;
   };
   databaseStats: {
     totalTrips: number;
@@ -201,6 +227,48 @@ export default function DebugTrackingScreen() {
         accuracyThreshold: '100m',
       };
 
+      // Classification thresholds (from ActivityClassifier)
+      const classificationThresholds = {
+        stationary: '< 2 km/h',
+        walk: '2-7 km/h',
+        ride: '7-30 km/h',
+        drive: '> 30 km/h (filtered)',
+      };
+
+      // Validation rules (from TripManager)
+      const validationRules = {
+        minWalkDistance: '400m',
+        minRideDistance: '1000m (1km)',
+        maxSpeedThreshold: '30 km/h',
+      };
+
+      // Segment analysis for active trip
+      let segmentAnalysisInfo = undefined;
+      if (activeTrip) {
+        const locations = await database.getLocationsByTrip(activeTrip.id);
+        if (locations.length >= 2) {
+          try {
+            const analysis = SegmentDetector.analyzeTrip(locations);
+            segmentAnalysisInfo = {
+              isMultiModal: analysis.isMultiModal,
+              segmentCount: analysis.segments.length,
+              dominantType: analysis.dominantType,
+              confidence: analysis.confidence,
+              segments: analysis.segments.map(seg => ({
+                type: seg.type,
+                distance: seg.distance,
+                duration: seg.duration,
+                avgSpeed: seg.avgSpeed,
+                maxSpeed: seg.maxSpeed,
+                pointCount: seg.locations.length,
+              })),
+            };
+          } catch (err) {
+            console.log('[DebugTracking] Segment analysis error:', err);
+          }
+        }
+      }
+
       // Get database stats
       const allTrips = await database.getAllTrips();
       const activeTrips = allTrips.filter(t => t.status === 'active');
@@ -274,6 +342,9 @@ export default function DebugTrackingScreen() {
         lastDbLocation: lastDbLocationInfo,
         currentGpsLocation: currentGpsInfo,
         detectionConfig,
+        classificationThresholds,
+        validationRules,
+        segmentAnalysis: segmentAnalysisInfo,
         databaseStats,
         recentTrips,
         lastCompletedTrip: lastCompletedTripInfo,
@@ -614,6 +685,119 @@ export default function DebugTrackingScreen() {
                 GPS Accuracy Threshold: {debugInfo.detectionConfig.accuracyThreshold}
               </Text>
             </View>
+
+            {/* Classification Thresholds Section */}
+            <View style={[styles.section, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={[styles.sectionTitle, { color: '#2E7D32' }]}>📊 Classification Thresholds</Text>
+              <Text style={[styles.value, { color: '#1B5E20' }]}>
+                Stationary: {debugInfo.classificationThresholds.stationary}
+              </Text>
+              <Text style={[styles.value, { color: '#1B5E20', fontWeight: 'bold' }]}>
+                Walk: {debugInfo.classificationThresholds.walk} ✓
+              </Text>
+              <Text style={[styles.value, { color: '#1B5E20', fontWeight: 'bold' }]}>
+                Ride (Cycle): {debugInfo.classificationThresholds.ride} ✓
+              </Text>
+              <Text style={[styles.value, { color: '#EF6C00' }]}>
+                Drive: {debugInfo.classificationThresholds.drive}
+              </Text>
+              {debugInfo.currentGpsLocation?.speed != null && (
+                <Text style={[styles.value, {
+                  color: '#1976D2',
+                  fontWeight: 'bold',
+                  marginTop: 8,
+                  paddingTop: 8,
+                  borderTopWidth: 1,
+                  borderTopColor: '#C8E6C9'
+                }]}>
+                  Current Speed: {(debugInfo.currentGpsLocation.speed * 3.6).toFixed(1)} km/h
+                  {debugInfo.currentGpsLocation.speed * 3.6 < 2 && ' → Stationary'}
+                  {debugInfo.currentGpsLocation.speed * 3.6 >= 2 && debugInfo.currentGpsLocation.speed * 3.6 < 7 && ' → Walk ✓'}
+                  {debugInfo.currentGpsLocation.speed * 3.6 >= 7 && debugInfo.currentGpsLocation.speed * 3.6 < 30 && ' → Ride ✓'}
+                  {debugInfo.currentGpsLocation.speed * 3.6 >= 30 && ' → Drive (filtered)'}
+                </Text>
+              )}
+            </View>
+
+            {/* Validation Rules Section */}
+            <View style={[styles.section, { backgroundColor: '#FFF3E0' }]}>
+              <Text style={[styles.sectionTitle, { color: '#E65100' }]}>✓ Validation Rules</Text>
+              <Text style={[styles.value, { color: '#BF360C' }]}>
+                Min Walk Distance: {debugInfo.validationRules.minWalkDistance}
+              </Text>
+              <Text style={[styles.value, { color: '#BF360C' }]}>
+                Min Ride Distance: {debugInfo.validationRules.minRideDistance}
+              </Text>
+              <Text style={[styles.value, { color: '#BF360C' }]}>
+                Max Speed (Filter): {debugInfo.validationRules.maxSpeedThreshold}
+              </Text>
+              {debugInfo.activeTrip && (
+                <>
+                  <Text style={[styles.value, {
+                    color: '#1976D2',
+                    fontWeight: 'bold',
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTopWidth: 1,
+                    borderTopColor: '#FFE0B2'
+                  }]}>
+                    Active Trip Status:
+                  </Text>
+                  <Text style={[styles.value, {
+                    color: debugInfo.activeTrip.type === 'walk' && debugInfo.activeTrip.distance >= 400 ? '#4CAF50' :
+                           debugInfo.activeTrip.type === 'cycle' && debugInfo.activeTrip.distance >= 1000 ? '#4CAF50' : '#FF9800'
+                  }]}>
+                    {debugInfo.activeTrip.type === 'walk' && debugInfo.activeTrip.distance >= 400 && '✓ Walk distance valid'}
+                    {debugInfo.activeTrip.type === 'walk' && debugInfo.activeTrip.distance < 400 && `⚠ Walk needs ${(400 - debugInfo.activeTrip.distance).toFixed(0)}m more`}
+                    {debugInfo.activeTrip.type === 'cycle' && debugInfo.activeTrip.distance >= 1000 && '✓ Ride distance valid'}
+                    {debugInfo.activeTrip.type === 'cycle' && debugInfo.activeTrip.distance < 1000 && `⚠ Ride needs ${(1000 - debugInfo.activeTrip.distance).toFixed(0)}m more`}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            {/* Segment Analysis Section */}
+            {debugInfo.segmentAnalysis && (
+              <View style={[styles.section, { backgroundColor: debugInfo.segmentAnalysis.isMultiModal ? '#FCE4EC' : '#E1F5FE' }]}>
+                <Text style={[styles.sectionTitle, { color: debugInfo.segmentAnalysis.isMultiModal ? '#C2185B' : '#0277BD' }]}>
+                  🔍 Segment Analysis {debugInfo.segmentAnalysis.isMultiModal ? '(Multi-Modal!)' : ''}
+                </Text>
+                <Text style={[styles.value, { color: colors.text, fontWeight: 'bold' }]}>
+                  Segments Detected: {debugInfo.segmentAnalysis.segmentCount}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Dominant Type: {debugInfo.segmentAnalysis.dominantType}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Confidence: {debugInfo.segmentAnalysis.confidence}%
+                </Text>
+                {debugInfo.segmentAnalysis.isMultiModal && (
+                  <Text style={[styles.value, { color: '#C2185B', fontWeight: 'bold', marginTop: 4 }]}>
+                    ⚠ Will split into {debugInfo.segmentAnalysis.segmentCount} separate trips!
+                  </Text>
+                )}
+                {debugInfo.segmentAnalysis.segments.length > 0 && (
+                  <>
+                    <Text style={[styles.value, { color: colors.text, marginTop: 12, fontWeight: 'bold' }]}>
+                      Segment Breakdown:
+                    </Text>
+                    {debugInfo.segmentAnalysis.segments.map((seg, idx) => (
+                      <View key={idx} style={{ marginTop: 8, paddingLeft: 8, borderLeftWidth: 3, borderLeftColor: seg.type === 'walk' ? '#4CAF50' : '#2196F3' }}>
+                        <Text style={[styles.value, { color: colors.text, fontWeight: 'bold' }]}>
+                          Segment {idx + 1}: {seg.type.toUpperCase()}
+                        </Text>
+                        <Text style={[styles.monoText, { color: colors.textSecondary, fontSize: 12 }]}>
+                          Distance: {seg.distance.toFixed(0)}m • Duration: {Math.floor(seg.duration / 60)}m {Math.floor(seg.duration % 60)}s
+                        </Text>
+                        <Text style={[styles.monoText, { color: colors.textSecondary, fontSize: 12 }]}>
+                          Avg Speed: {seg.avgSpeed.toFixed(1)} km/h • Max: {seg.maxSpeed.toFixed(1)} km/h • Points: {seg.pointCount}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Database Stats Section */}
             <View style={[styles.section, { backgroundColor: colors.card }]}>
