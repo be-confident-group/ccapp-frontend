@@ -9,7 +9,7 @@ try {
 export default {
   expo: {
     name: "Radzi",
-    slug: "radzi",
+    slug: "ccapp-frontend",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
