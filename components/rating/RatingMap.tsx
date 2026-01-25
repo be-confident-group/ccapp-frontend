@@ -74,6 +74,7 @@ interface RatingMapProps {
   onMapReady?: () => void;
   onCameraIdle?: () => void; // Fires when camera stops moving (for screen point sync)
   disableInteraction?: boolean; // Disable map scrolling when painting
+  onLongPress?: (coordinate: Coordinate) => void; // Native long press on map
 }
 
 /**
@@ -237,7 +238,7 @@ function calculateBounds(
 }
 
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
-  ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false }, ref) => {
+  ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false, onLongPress }, ref) => {
     const { colors, isDark } = useTheme();
     const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
@@ -308,6 +309,36 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       onMapReady?.();
     }, [onMapReady]);
 
+    // Handle native long press on map - find nearest point on route
+    const handleMapLongPress = useCallback((feature: GeoJSON.Feature) => {
+      if (!onLongPress || route.length === 0) return;
+
+      // Extract coordinates from the feature
+      const geometry = feature.geometry as GeoJSON.Point;
+      if (!geometry || geometry.type !== 'Point') return;
+
+      const [lng, lat] = geometry.coordinates;
+
+      // Find nearest point on route
+      let minDist = Infinity;
+      let nearestIdx = 0;
+
+      for (let i = 0; i < route.length; i++) {
+        const coord = route[i];
+        // Simple euclidean distance (good enough for nearby points)
+        const dist = Math.sqrt(
+          Math.pow(coord.longitude - lng, 2) + Math.pow(coord.latitude - lat, 2)
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          nearestIdx = i;
+        }
+      }
+
+      // Use nearest route point for the report
+      onLongPress(route[nearestIdx]);
+    }, [onLongPress, route]);
+
     // Handle camera changes - debounce to detect when camera settles
     // Only trigger after map is ready to avoid premature calls
     const handleCameraChanged = useCallback(() => {
@@ -349,6 +380,7 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           styleURL={mapStyle}
           onDidFinishLoadingMap={handleMapLoaded}
           onCameraChanged={handleCameraChanged}
+          onLongPress={handleMapLongPress}
           scrollEnabled={!disableInteraction}
           zoomEnabled={!disableInteraction}
           rotateEnabled={!disableInteraction}

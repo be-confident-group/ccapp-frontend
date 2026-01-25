@@ -512,6 +512,7 @@ export default function RateRouteScreen() {
                   pendingReportLocation={pendingReportCoordinate}
                   onMapReady={handleMapReady}
                   onCameraIdle={handleCameraIdle}
+                  onLongPress={handleLongPress}
                   disableInteraction={selectedFeeling !== null}
                   style={styles.map}
                 />

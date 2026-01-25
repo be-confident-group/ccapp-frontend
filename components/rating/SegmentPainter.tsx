@@ -270,20 +270,19 @@ export default function SegmentPainter({
       runOnJS(handleLongPressEvent)(event.x, event.y);
     });
 
-  // Create native gesture to allow map interactions when gestures are disabled
+  // Create native gesture to allow map interactions when not painting
   const nativeGesture = Gesture.Native();
 
   // Combine gestures intelligently:
-  // - When painting: race between pan and long press (user can paint or report issue)
-  // - When long press enabled: race between long press and native (first to activate wins)
-  // - Otherwise: just use native
+  // - When painting (feeling selected): race between pan and long press
+  //   (map interactions disabled, so gesture handler controls everything)
+  // - When not painting (no feeling): use native gesture pass-through
+  //   (Mapbox's native onLongPress handles long press, gesture handler stays out of the way)
   const composedGesture = selectedFeeling !== null
     ? (enabled && !!onLongPress)
       ? Gesture.Race(longPressGesture, panGesture)
       : panGesture
-    : (enabled && !!onLongPress)
-      ? Gesture.Race(longPressGesture, nativeGesture)
-      : nativeGesture;
+    : nativeGesture;
 
   // Animated style for paint indicator
   const paintIndicatorStyle = useAnimatedStyle(() => ({
