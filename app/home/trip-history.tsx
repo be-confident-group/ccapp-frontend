@@ -58,6 +58,13 @@ export default function TripHistoryScreen() {
 
   useEffect(() => {
     loadLocalData();
+
+    // Auto-refresh local data every 30 seconds to keep unsynced count updated
+    const interval = setInterval(() => {
+      loadLocalData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   async function loadLocalData() {

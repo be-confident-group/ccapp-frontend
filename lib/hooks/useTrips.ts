@@ -29,6 +29,8 @@ export function useTrips(filters?: TripFilters) {
     queryKey: tripKeys.list(filters),
     queryFn: () => tripAPI.getTrips(filters),
     staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchInterval: 1000 * 30, // Auto-refetch every 30 seconds
+    refetchIntervalInBackground: false, // Only refetch when app is active
   });
 }
 
