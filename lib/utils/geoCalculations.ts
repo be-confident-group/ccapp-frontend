@@ -366,3 +366,69 @@ export function stringifyRouteData(coordinates: Coordinate[]): string {
   }));
   return JSON.stringify(simplified);
 }
+
+/**
+ * Calculate the maximum distance from the starting point reached during a trip
+ * This is the primary metric for detecting GPS drift vs real movement
+ *
+ * @param coordinates - Array of coordinates (first point is start)
+ * @returns Maximum distance in meters from start point
+ */
+export function calculateMaxDistanceFromStart(coordinates: Coordinate[]): number {
+  if (coordinates.length < 2) return 0;
+
+  const startPoint = coordinates[0];
+  let maxDistance = 0;
+
+  for (const coord of coordinates) {
+    const dist = calculateDistance(startPoint, coord);
+    if (dist > maxDistance) {
+      maxDistance = dist;
+    }
+  }
+
+  return maxDistance;
+}
+
+/**
+ * Calculate the radius of gyration for a set of coordinates
+ * Measures how spread out the points are from their center of mass
+ * Low values indicate clustered points (possible GPS drift)
+ *
+ * @param coordinates - Array of coordinates
+ * @returns Radius of gyration in meters
+ */
+export function calculateRadiusOfGyration(coordinates: Coordinate[]): number {
+  const center = calculateCenter(coordinates);
+  if (!center || coordinates.length === 0) return 0;
+
+  let sumSquaredDistances = 0;
+  for (const coord of coordinates) {
+    const dist = calculateDistance(coord, center);
+    sumSquaredDistances += dist * dist;
+  }
+
+  return Math.sqrt(sumSquaredDistances / coordinates.length);
+}
+
+/**
+ * Calculate the dimensions of a bounding box in meters
+ *
+ * @param coordinates - Array of coordinates
+ * @returns Object with width and height in meters, or null if insufficient points
+ */
+export function calculateBoundingBoxDimensions(coordinates: Coordinate[]): { width: number; height: number } | null {
+  const box = calculateBoundingBox(coordinates);
+  if (!box) return null;
+
+  const width = calculateDistance(
+    { latitude: box.minLat, longitude: box.minLng },
+    { latitude: box.minLat, longitude: box.maxLng }
+  );
+  const height = calculateDistance(
+    { latitude: box.minLat, longitude: box.minLng },
+    { latitude: box.maxLat, longitude: box.minLng }
+  );
+
+  return { width, height };
+}

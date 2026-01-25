@@ -23,6 +23,7 @@ import type { Coordinate } from '../../types/location';
 import { syncService } from './SyncService';
 import { trophyAPI, type Trophy } from '../api/trophies';
 import { tripAPI } from '../api/trips';
+import { TripValidationService } from './TripValidationService';
 
 export class TripManager {
   /**
@@ -195,7 +196,7 @@ export class TripManager {
     console.log(`[TripManager] Single-modal trip (${dominantActivity}), continuing with normal processing...`);
 
     // Validate trip against quality thresholds
-    const MIN_WALK_DISTANCE = 400; // meters
+    const MIN_WALK_DISTANCE = 500; // meters (updated from 400m)
     const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
     const MAX_SPEED_THRESHOLD = 30; // km/h
 
@@ -223,6 +224,17 @@ export class TripManager {
     if (!validationError && (dominantActivity === 'run' || dominantActivity === 'drive')) {
       validationError = `Trip type '${dominantActivity}' not supported (only walk/cycle allowed)`;
       console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
+    }
+
+    // Check 5: Trip quality validation (GPS drift detection)
+    if (!validationError) {
+      const coords = locations.map(loc => ({ latitude: loc.latitude, longitude: loc.longitude }));
+      const validation = TripValidationService.validateTrip(coords, stats.totalDistance);
+
+      if (!validation.isValid) {
+        validationError = validation.reasons.join('; ');
+        console.log(`[TripManager] Trip ${tripId} cancelled (GPS drift detected): ${validationError}`);
+      }
     }
 
     // If validation failed, cancel the trip
@@ -472,7 +484,7 @@ export class TripManager {
     const now = Date.now();
 
     // Validate manual trip against quality thresholds
-    const MIN_WALK_DISTANCE = 400; // meters
+    const MIN_WALK_DISTANCE = 500; // meters (updated from 400m)
     const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
 
     // Check minimum distances
