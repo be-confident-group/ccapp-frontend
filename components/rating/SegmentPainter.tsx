@@ -29,9 +29,15 @@ interface SegmentPainterProps {
   children?: React.ReactNode;
 }
 
-// Touch threshold in pixels - how close the finger needs to be to a route segment
-// Increased to make it easier to paint routes, especially with sparse GPS points
+// Touch thresholds in pixels - how close the finger needs to be to a route segment
+// START_TOUCH_THRESHOLD is more forgiving for initial touch to reduce "missed" starts
+// TOUCH_THRESHOLD is used during painting and for long press detection
 const TOUCH_THRESHOLD = 80;
+const START_TOUCH_THRESHOLD = 120;
+
+// Path interpolation settings for smooth painting
+const INTERPOLATION_STEP = 20; // pixels between interpolated samples
+const MAX_INTERPOLATION_STEPS = 10; // cap to maintain performance
 
 /**
  * Calculate perpendicular distance from point to line segment
@@ -76,9 +82,40 @@ function pointToLineDistance(
 }
 
 /**
- * Find the nearest segment index to a screen point
+ * Find the nearest segment index to a screen point within a given threshold
+ * @param threshold - maximum distance in pixels (defaults to TOUCH_THRESHOLD)
  */
 function findNearestSegmentIndex(
+  screenPoint: { x: number; y: number },
+  routeScreenPoints: { x: number; y: number }[],
+  threshold: number = TOUCH_THRESHOLD
+): number | null {
+  if (routeScreenPoints.length < 2) return null;
+
+  let minDistance = Infinity;
+  let nearestIndex: number | null = null;
+
+  for (let i = 0; i < routeScreenPoints.length - 1; i++) {
+    const distance = pointToLineDistance(
+      screenPoint,
+      routeScreenPoints[i],
+      routeScreenPoints[i + 1]
+    );
+
+    if (distance < minDistance && distance < threshold) {
+      minDistance = distance;
+      nearestIndex = i;
+    }
+  }
+
+  return nearestIndex;
+}
+
+/**
+ * Find the absolute nearest segment index (ignoring threshold)
+ * Used as fallback when finger moves off route during painting
+ */
+function findAbsoluteNearestSegmentIndex(
   screenPoint: { x: number; y: number },
   routeScreenPoints: { x: number; y: number }[]
 ): number | null {
@@ -94,7 +131,7 @@ function findNearestSegmentIndex(
       routeScreenPoints[i + 1]
     );
 
-    if (distance < minDistance && distance < TOUCH_THRESHOLD) {
+    if (distance < minDistance) {
       minDistance = distance;
       nearestIndex = i;
     }
@@ -117,6 +154,9 @@ export default function SegmentPainter({
   const [isPainting, setIsPainting] = useState(false);
   const startIndexRef = useRef<number | null>(null);
   const currentIndexRef = useRef<number | null>(null);
+
+  // Track previous finger position for path interpolation
+  const prevPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   // Store a fresh copy of screen points for use in gesture handlers
   const screenPointsRef = useRef(routeScreenPoints);
@@ -166,12 +206,19 @@ export default function SegmentPainter({
     onPaintingStateChange?.(false);
   }, [selectedFeeling, onSegmentPainted, onPaintingStateChange]);
 
+  // Reset gesture state for fresh start
+  const resetGestureState = useCallback(() => {
+    prevPositionRef.current = null;
+  }, []);
+
   // JS thread handlers for gesture events - use ref for fresh screen points
   const handleGestureStart = useCallback(
     (x: number, y: number) => {
-      const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+      // Use larger threshold for start to make it easier to begin painting
+      const index = findNearestSegmentIndex({ x, y }, screenPointsRef.current, START_TOUCH_THRESHOLD);
       if (index !== null) {
         handlePaintStart(index);
+        prevPositionRef.current = { x, y };
       }
     },
     [handlePaintStart]
@@ -179,29 +226,68 @@ export default function SegmentPainter({
 
   const handleGestureUpdate = useCallback(
     (x: number, y: number) => {
-      // Always find and update nearest index, even if beyond threshold
-      // This prevents gaps when finger moves slightly off route during painting
-      let index = findNearestSegmentIndex({ x, y }, screenPointsRef.current);
+      const prev = prevPositionRef.current;
+      const screenPoints = screenPointsRef.current;
 
-      // If no index within threshold, find the absolute nearest point (ignoring threshold)
-      if (index === null && screenPointsRef.current.length > 0) {
-        let minDist = Infinity;
-        for (let i = 0; i < screenPointsRef.current.length - 1; i++) {
-          const distance = pointToLineDistance(
-            { x, y },
-            screenPointsRef.current[i],
-            screenPointsRef.current[i + 1]
-          );
-          if (distance < minDist) {
-            minDist = distance;
-            index = i;
+      if (screenPoints.length < 2) return;
+
+      // Track min/max indices found during this update (for path interpolation)
+      let minFoundIndex = currentIndexRef.current ?? Infinity;
+      let maxFoundIndex = currentIndexRef.current ?? -Infinity;
+
+      // If we have a previous position, interpolate along the path to catch all segments
+      if (prev) {
+        const dx = x - prev.x;
+        const dy = y - prev.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Only interpolate if finger moved significantly
+        if (distance > INTERPOLATION_STEP) {
+          const steps = Math.min(MAX_INTERPOLATION_STEPS, Math.ceil(distance / INTERPOLATION_STEP));
+
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const interpX = prev.x + dx * t;
+            const interpY = prev.y + dy * t;
+
+            // Try with threshold first, then fallback to absolute nearest
+            let index = findNearestSegmentIndex({ x: interpX, y: interpY }, screenPoints);
+            if (index === null) {
+              index = findAbsoluteNearestSegmentIndex({ x: interpX, y: interpY }, screenPoints);
+            }
+
+            if (index !== null) {
+              minFoundIndex = Math.min(minFoundIndex, index);
+              maxFoundIndex = Math.max(maxFoundIndex, index);
+            }
           }
         }
       }
 
-      if (index !== null) {
-        handlePaintUpdate(index);
+      // Also check current position
+      let currentIndex = findNearestSegmentIndex({ x, y }, screenPoints);
+      if (currentIndex === null) {
+        currentIndex = findAbsoluteNearestSegmentIndex({ x, y }, screenPoints);
       }
+
+      if (currentIndex !== null) {
+        minFoundIndex = Math.min(minFoundIndex, currentIndex);
+        maxFoundIndex = Math.max(maxFoundIndex, currentIndex);
+      }
+
+      // Update current index to the furthest point in the direction of travel
+      // This ensures we capture the full range when painting ends
+      if (maxFoundIndex >= 0 && maxFoundIndex !== Infinity) {
+        handlePaintUpdate(maxFoundIndex);
+
+        // Also extend start index backward if we found segments before it
+        if (startIndexRef.current !== null && minFoundIndex < startIndexRef.current && minFoundIndex !== Infinity) {
+          startIndexRef.current = minFoundIndex;
+        }
+      }
+
+      // Update previous position for next interpolation
+      prevPositionRef.current = { x, y };
     },
     [handlePaintUpdate]
   );
@@ -232,13 +318,25 @@ export default function SegmentPainter({
     [onLongPress, route]
   );
 
+  // Handle gesture cancellation (cleanup without saving)
+  const handleGestureCancel = useCallback(() => {
+    startIndexRef.current = null;
+    currentIndexRef.current = null;
+    prevPositionRef.current = null;
+    setIsPainting(false);
+    onPaintingStateChange?.(false);
+  }, [onPaintingStateChange]);
+
   // Pan gesture for painting - only active when feeling is selected
-  // minDistance set higher than long press maxDistance to allow long press to complete
+  // minDistance reduced from 30 to 20 for more responsive start
+  // Long press maxDistance (25) > pan minDistance (20), but Race gesture handles conflicts
   const panGesture = Gesture.Pan()
     .enabled(enabled && selectedFeeling !== null)
-    .minDistance(30)
+    .minDistance(20)
     .onBegin((event) => {
       'worklet';
+      // Reset state for fresh gesture
+      runOnJS(resetGestureState)();
       paintIndicatorX.value = event.x;
       paintIndicatorY.value = event.y;
     })
@@ -257,10 +355,16 @@ export default function SegmentPainter({
       'worklet';
       paintIndicatorOpacity.value = withTiming(0, { duration: 200 });
       runOnJS(handlePaintEnd)();
+    })
+    .onFinalize(() => {
+      'worklet';
+      // Ensure cleanup even on gesture cancellation
+      paintIndicatorOpacity.value = withTiming(0, { duration: 100 });
+      runOnJS(handleGestureCancel)();
     });
 
   // Long press gesture - active anytime (both when painting and not painting)
-  // maxDistance (25) is less than pan minDistance (30) so long press wins if user holds still
+  // Long press requires staying within 25px for 500ms; pan requires moving 20px
   const longPressGesture = Gesture.LongPress()
     .enabled(enabled && !!onLongPress)
     .minDuration(500)
