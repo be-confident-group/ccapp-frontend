@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 if (!API_URL) {
-  throw new Error('EXPO_PUBLIC_API_URL is not defined in environment variables');
+  console.error('EXPO_PUBLIC_API_URL is not defined in environment variables');
+  console.warn('API features will not be available. Please configure environment variables in EAS or .env file.');
 }
 
 interface RequestConfig extends RequestInit {
@@ -13,8 +14,16 @@ interface RequestConfig extends RequestInit {
 class ApiClient {
   private baseURL: string;
 
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
+  constructor(baseURL: string | undefined) {
+    this.baseURL = baseURL || '';
+  }
+
+  private checkConfiguration(): boolean {
+    if (!this.baseURL) {
+      console.error('[API] API_URL not configured. Please set EXPO_PUBLIC_API_URL.');
+      return false;
+    }
+    return true;
   }
 
   private async getAuthToken(): Promise<string | null> {
@@ -30,6 +39,11 @@ class ApiClient {
     endpoint: string,
     config: RequestConfig = {}
   ): Promise<T> {
+    // Check if API is configured
+    if (!this.checkConfiguration()) {
+      throw new Error('API not configured. Please set EXPO_PUBLIC_API_URL in environment variables.');
+    }
+
     const { requiresAuth = true, headers = {}, ...restConfig } = config;
 
     const url = `${this.baseURL}${endpoint}`;
@@ -166,6 +180,11 @@ class ApiClient {
     formData: FormData,
     config?: RequestConfig
   ): Promise<T> {
+    // Check if API is configured
+    if (!this.checkConfiguration()) {
+      throw new Error('API not configured. Please set EXPO_PUBLIC_API_URL in environment variables.');
+    }
+
     const { requiresAuth = true, headers = {}, ...restConfig } = config || {};
     const url = `${this.baseURL}${endpoint}`;
 

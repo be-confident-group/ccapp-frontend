@@ -18,8 +18,16 @@ export function initializeMapbox(): void {
 
     if (!token) {
       console.error(
-        '[Mapbox] Access token not found. Please set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in .env file.'
+        '[Mapbox] Access token not found. Please set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in .env file or EAS secrets.'
       );
+      console.warn('[Mapbox] Mapbox features will not be available.');
+      // Don't attempt to set token if it's missing - this can crash the native module
+      return;
+    }
+
+    // Validate token format (basic check)
+    if (typeof token !== 'string' || token.trim().length === 0) {
+      console.error('[Mapbox] Invalid token format. Token must be a non-empty string.');
       return;
     }
 
@@ -29,6 +37,7 @@ export function initializeMapbox(): void {
     console.log('[Mapbox] Initialized successfully');
   } catch (error) {
     console.error('[Mapbox] Failed to initialize:', error);
+    // Don't rethrow - let the app continue without Mapbox
   }
 }
 
