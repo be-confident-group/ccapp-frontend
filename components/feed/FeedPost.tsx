@@ -34,7 +34,7 @@ const formatTimeAgo = (timestamp: string): string => {
   return postDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export function FeedPost({
+export const FeedPost = React.memo(function FeedPost({
   post,
   onLike,
   onComment,
@@ -121,7 +121,7 @@ export function FeedPost({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   cardContainer: {

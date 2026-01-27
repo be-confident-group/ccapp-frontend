@@ -380,7 +380,7 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Stats Grid */}
-          <View style={[styles.statsGrid, { backgroundColor: colors.card }]}>
+          <View style={[styles.statsGrid, { backgroundColor: colors.backgroundSecondary }]}>
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
               <ThemedText style={styles.statValue}>{formatDistance(trip.distance, unitSystem)}</ThemedText>
@@ -413,7 +413,7 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Additional Info */}
-          <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary }]}>
             <View style={styles.infoRow}>
               <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Points Recorded</ThemedText>
               <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
@@ -433,7 +433,7 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Trip Type Correction */}
-          <View style={[styles.correctionCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.correctionCard, { backgroundColor: colors.backgroundSecondary }]}>
             <View style={styles.correctionHeader}>
               <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.textSecondary} />
               <ThemedText style={[styles.correctionQuestion, { color: colors.textSecondary }]}>
@@ -549,6 +549,7 @@ const styles = StyleSheet.create({
   statItem: {
     width: '33.33%',
     marginBottom: 16,
+    alignItems: 'center',
   },
   statLabel: {
     fontSize: 12,

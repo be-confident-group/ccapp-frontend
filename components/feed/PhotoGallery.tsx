@@ -23,7 +23,7 @@ interface PhotoGalleryProps {
   height?: number;
 }
 
-export function PhotoGallery({ photos, onPhotoPress, height = 200 }: PhotoGalleryProps) {
+export const PhotoGallery = React.memo(function PhotoGallery({ photos, onPhotoPress, height = 200 }: PhotoGalleryProps) {
   const { colors, isDark } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -106,7 +106,7 @@ export function PhotoGallery({ photos, onPhotoPress, height = 200 }: PhotoGaller
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

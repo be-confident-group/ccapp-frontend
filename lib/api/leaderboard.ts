@@ -45,6 +45,8 @@ export interface LeaderboardParams {
   leaderboard_type: LeaderboardType;
   club_id?: number | null;
   gender?: 'M' | 'F' | 'O' | 'P' | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 class LeaderboardApi {
@@ -62,6 +64,14 @@ class LeaderboardApi {
 
       if (params.gender) {
         queryParams.append('gender', params.gender);
+      }
+
+      if (params.start_date) {
+        queryParams.append('start_date', params.start_date);
+      }
+
+      if (params.end_date) {
+        queryParams.append('end_date', params.end_date);
       }
 
       return await apiClient.get<BackendLeaderboardResponse>(

@@ -14,7 +14,7 @@ interface PostActionsProps {
   onComment: () => void;
 }
 
-export function PostActions({
+export const PostActions = React.memo(function PostActions({
   likeCount,
   commentCount,
   isLiked,
@@ -58,7 +58,7 @@ export function PostActions({
       </TouchableOpacity>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

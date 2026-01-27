@@ -9,7 +9,7 @@ interface UserAvatarProps {
   size?: number;
 }
 
-export function UserAvatar({ imageUri, name, size = 44 }: UserAvatarProps) {
+export const UserAvatar = React.memo(function UserAvatar({ imageUri, name, size = 44 }: UserAvatarProps) {
   const { colors } = useTheme();
 
   const getInitials = (fullName: string): string => {
@@ -53,7 +53,7 @@ export function UserAvatar({ imageUri, name, size = 44 }: UserAvatarProps) {
       </ThemedText>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   image: {

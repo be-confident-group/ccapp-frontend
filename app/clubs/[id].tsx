@@ -83,14 +83,14 @@ export default function ClubDetailScreen() {
 
   // Check if current user is the club owner
   const isOwner = useMemo(() => {
-    if (!club || !currentUser) return false;
+    if (!club || !currentUser || !club.owner) return false;
     // Compare by name since SimpleProfile doesn't have email/id
     return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
   }, [club, currentUser]);
 
   // Check if current user is a member
   const isMember = useMemo(() => {
-    if (!club || !currentUser) return false;
+    if (!club || !currentUser || !club.members) return false;
     return club.members.some(
       (member) => member.name === currentUser.name && member.last_name === currentUser.last_name
     );
@@ -162,7 +162,7 @@ export default function ClubDetailScreen() {
     [handleLike, handleComment, handleUserPress, handlePhotoPress]
   );
 
-  const renderHeader = () => {
+  const headerElement = useMemo(() => {
     if (!club) return null;
 
     return (
@@ -296,9 +296,10 @@ export default function ClubDetailScreen() {
         </View>
       </View>
     );
-  };
+  }, [club, colors, isOwner, isMember, handleJoinLeave, handleCreatePost, handleShareClub, joinClubMutation.isPending, leaveClubMutation.isPending, t]);
 
-  const renderEmptyPosts = () => {
+
+  const emptyElement = useMemo(() => {
     // Show different message for non-members
     if (!isMember) {
       return (
@@ -317,7 +318,7 @@ export default function ClubDetailScreen() {
         </ThemedText>
       </View>
     );
-  };
+  }, [isMember, colors.textMuted, t]);
 
   if (isLoading) {
     return (
@@ -372,8 +373,8 @@ export default function ClubDetailScreen() {
           data={isMember ? activityPosts : []}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderEmptyPosts}
+          ListHeaderComponent={headerElement}
+          ListEmptyComponent={emptyElement}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={

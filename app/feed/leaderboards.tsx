@@ -55,11 +55,23 @@ export default function LeaderboardsScreen() {
     return genderMap[genderFilter];
   }, [genderFilter]);
 
+  // Compute date range from selected month (format: "YYYY-MM" or null)
+  const { startDate, endDate } = useMemo(() => {
+    if (!selectedMonth) return { startDate: null, endDate: null };
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const start = `${selectedMonth}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const end = `${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
+    return { startDate: start, endDate: end };
+  }, [selectedMonth]);
+
   // Fetch leaderboard data
   const { data: backendData, isLoading } = useLeaderboard(
     leaderboardType,
     selectedClub?.id || null,
-    backendGenderCode
+    backendGenderCode,
+    startDate,
+    endDate
   );
 
   // Transform backend data to frontend format

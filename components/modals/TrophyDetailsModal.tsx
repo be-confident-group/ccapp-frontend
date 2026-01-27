@@ -1,7 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useUnits } from '@/contexts/UnitsContext';
 import type { Trophy } from '@/lib/api/trophies';
 import { XMarkIcon } from 'react-native-heroicons/outline';
 import React from 'react';
@@ -25,45 +24,10 @@ interface TrophyDetailsModalProps {
 }
 
 export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsModalProps) {
-  const { colors, isDark } = useTheme();
-  const { distanceUnit } = useUnits();
+  const { colors } = useTheme();
 
   if (!trophy) return null;
 
-  const getTrophyTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      trip_count: 'Trip Count',
-      distance: 'Distance',
-      streak: 'Streak',
-      speed: 'Speed',
-      co2_saved: 'CO₂ Saved',
-    };
-    return labels[type] || type;
-  };
-
-  const getTripTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      all: 'All Trips',
-      walk: 'Walking',
-      run: 'Running',
-      cycle: 'Cycling',
-      drive: 'Driving',
-    };
-    return labels[type] || type;
-  };
-
-  const getThresholdDisplay = () => {
-    if (trophy.trophy_type === 'distance') {
-      return `${trophy.threshold} ${distanceUnit}`;
-    } else if (trophy.trophy_type === 'trip_count') {
-      return `${trophy.threshold} ${trophy.threshold === 1 ? 'trip' : 'trips'}`;
-    } else if (trophy.trophy_type === 'streak') {
-      return `${trophy.threshold} ${trophy.threshold === 1 ? 'day' : 'days'}`;
-    } else if (trophy.trophy_type === 'co2_saved') {
-      return `${trophy.threshold} kg CO₂`;
-    }
-    return trophy.threshold.toString();
-  };
 
   return (
     <Modal
@@ -160,28 +124,6 @@ export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsMo
                   </View>
                 )}
 
-                {/* Trophy Details */}
-                <View style={[styles.detailsContainer, { backgroundColor: colors.background }]}>
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                      Activity
-                    </ThemedText>
-                    <ThemedText style={styles.detailValue}>
-                      {getTripTypeLabel(trophy.trip_type)}
-                    </ThemedText>
-                  </View>
-
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                      Target
-                    </ThemedText>
-                    <ThemedText style={styles.detailValue}>
-                      {getThresholdDisplay()}
-                    </ThemedText>
-                  </View>
-                </View>
               </ScrollView>
             </View>
           </TouchableOpacity>
@@ -286,25 +228,5 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 4,
-  },
-  detailsContainer: {
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-  },
-  detailLabel: {
-    fontSize: 14,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
   },
 });
