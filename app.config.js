@@ -16,12 +16,12 @@ export default {
     scheme: "radzi",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
-    // TODO: Add privacy policy URL when available (required for App Store if collecting user data)
-    // privacyPolicy: "https://yourwebsite.com/privacy",
+    privacyPolicy: "https://www.radzi.com/privacy",
     ios: {
       bundleIdentifier: "com.radzi.app",
       buildNumber: "1",
       supportsTablet: true,
+      usesAppleSignIn: true,
       infoPlist: {
         NSPhotoLibraryUsageDescription: "Radzi needs access to your photo library to let you select and upload images for your profile picture and posts.",
         NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your cycling and walking activities while you use the app, and to show your position on the map.",
@@ -61,6 +61,12 @@ export default {
       "expo-localization",
       "expo-sqlite",
       [
+        "expo-image-picker",
+        {
+          photosPermission: "Radzi needs access to your photo library to let you select images for your profile picture and posts."
+        }
+      ],
+      [
         "expo-location",
         {
           locationAlwaysAndWhenInUsePermission: "Allow Radzi to use your location to automatically track your activities in the background.",
@@ -90,6 +96,13 @@ export default {
         },
       ],
       "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          iosUrlScheme: "com.googleusercontent.apps.229488268800-st69okr9atquav65k8du0iov5fpgqsas",
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

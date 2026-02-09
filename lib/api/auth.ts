@@ -20,7 +20,8 @@ export interface RegisterRequest {
 
 export interface SocialLoginRequest {
   provider: 'google' | 'apple';
-  token: string;
+  id_token: string;
+  access_token?: string; // Required for Google, not needed for Apple
 }
 
 // Normalized auth response used by the app
@@ -115,8 +116,10 @@ export const authApi = {
 
   /**
    * Register a new user
+   * Backend sets user as inactive and sends a verification code via email.
+   * Login should only happen AFTER email verification.
    */
-  async register(data: RegisterRequest): Promise<AuthResponse> {
+  async register(data: RegisterRequest): Promise<{ message: string }> {
     // Map frontend fields to backend expected payload
     const payload: Record<string, any> = {
       email: data.email,
@@ -138,28 +141,47 @@ export const authApi = {
       payload['gender'] = genderMap[data.gender] || data.gender;
     }
 
-    // Create user (backend returns user data without token)
-    await apiClient.post<any>('/api/register/', payload, { requiresAuth: false });
+    // Create user (backend returns { message } -- user is inactive until verified)
+    const response = await apiClient.post<{ message: string }>('/api/register/', payload, { requiresAuth: false });
+    return response;
+  },
 
-    // Immediately log in to obtain token
-    const loginResult = await authApi.login({ email: data.email, password: data.password });
-    return loginResult;
+  /**
+   * Verify email with 6-digit code
+   * Backend expects: { email, code }
+   * On success, user is activated.
+   */
+  async verifyEmail(email: string, code: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/verify-email/', { email, code }, {
+      requiresAuth: false,
+    });
+  },
+
+  /**
+   * Resend email verification code
+   * Backend expects: { email }
+   * Rate-limited -- must wait before requesting again.
+   */
+  async resendVerificationCode(email: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/resend-verification-code/', { email }, {
+      requiresAuth: false,
+    });
   },
 
   /**
    * Social login (Google/Apple)
+   * Backend expects: { provider, id_token, access_token? }
+   * Backend returns: { token }
    */
   async socialLogin(data: SocialLoginRequest): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/api/social-login/', data, {
       requiresAuth: false,
     });
 
-    // Store tokens
-    if (response.access) {
-      await AsyncStorage.setItem('authToken', response.access);
-    }
-    if (response.refresh) {
-      await AsyncStorage.setItem('refreshToken', response.refresh);
+    // Backend returns { token } (DRF token)
+    const token = response.token || '';
+    if (token) {
+      await AsyncStorage.setItem('authToken', token);
     }
 
     return response;

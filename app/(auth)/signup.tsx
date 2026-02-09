@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  BackHandler,
+  TextInput as RNTextInput,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +27,10 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { authApi } from '@/lib/api';
 
-type SignupStep = 'email' | 'password' | 'name' | 'dob' | 'gender';
+type SignupStep = 'email' | 'password' | 'name' | 'dob' | 'gender' | 'verify';
+
+const FORM_STEPS: SignupStep[] = ['email', 'password', 'name', 'dob', 'gender'];
+const CODE_LENGTH = 6;
 
 interface SignupData {
   email: string;
@@ -39,13 +45,19 @@ interface SignupData {
 export default function SignupScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
   const { signIn } = useAuth();
   const [currentStep, setCurrentStep] = useState<SignupStep>('email');
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Verification code state
+  const [verificationCode, setVerificationCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeInputRefs = useRef<(RNTextInput | null)[]>([]);
+
   const [formData, setFormData] = useState<SignupData>({
-    email: '',
+    email: params.email ?? '',
     password: '',
     confirmPassword: '',
     firstName: '',
@@ -62,17 +74,47 @@ export default function SignupScreen() {
     lastName: '',
   });
 
+  // --- Resend cooldown timer ---
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // --- Android hardware back button ---
+  useEffect(() => {
+    const onBackPress = () => {
+      if (currentStep === 'verify') {
+        // Can't go back from verification -- account already created
+        return true;
+      }
+      if (currentStep === 'email') {
+        router.back();
+        return true;
+      }
+      handleBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [currentStep]);
+
+  // --- Validation helpers ---
+
   const validateEmail = () => {
     if (!formData.email.trim()) {
-      setErrors({ ...errors, email: 'Email is required' });
+      setErrors((prev) => ({ ...prev, email: 'Email is required' }));
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email.trim())) {
-      setErrors({ ...errors, email: 'Please enter a valid email address' });
+      setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
       return false;
     }
-    setErrors({ ...errors, email: '' });
+    setErrors((prev) => ({ ...prev, email: '' }));
     return true;
   };
 
@@ -138,7 +180,7 @@ export default function SignupScreen() {
     const birthDate = new Date(formData.dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
@@ -158,6 +200,8 @@ export default function SignupScreen() {
     }
     return true;
   };
+
+  // --- Navigation ---
 
   const handleNext = () => {
     switch (currentStep) {
@@ -179,7 +223,7 @@ export default function SignupScreen() {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     switch (currentStep) {
       case 'password':
         setCurrentStep('email');
@@ -194,57 +238,165 @@ export default function SignupScreen() {
         setCurrentStep('dob');
         break;
     }
-  };
+  }, [currentStep]);
+
+  // --- Signup (register) ---
 
   const handleSignup = async () => {
     setLoading(true);
 
     try {
-      // Call the backend API to register the user
       await authApi.register({
         email: formData.email.trim(),
         password: formData.password,
         first_name: formData.firstName.trim(),
         last_name: formData.lastName.trim(),
-        date_of_birth: formData.dateOfBirth.toISOString().slice(0, 10), // YYYY-MM-DD
+        date_of_birth: formData.dateOfBirth.toISOString().slice(0, 10),
         gender: formData.gender === '' ? undefined : (formData.gender as any),
       });
 
-      // Success! Set loading to false
+      // Registration succeeded -- move to verification step
       setLoading(false);
-
-      // Update auth state - this will trigger navigation via AuthContext
-      signIn();
+      setCurrentStep('verify');
+      setResendCooldown(60);
     } catch (error) {
       console.error('Signup error:', error);
       setLoading(false);
 
-      // Handle specific error cases
-      let errorMessage = 'Failed to create account. Please try again.';
-
       if (error instanceof Error) {
-        // Use the full error message from the backend
-        errorMessage = error.message || errorMessage;
+        const msg = error.message.toLowerCase();
 
-        // Check for common error patterns and provide helpful messages
-        if (error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('already')) {
-          errorMessage = 'This email is already registered. Please try logging in instead.';
-        } else if (error.message.toLowerCase().includes('password') && error.message.toLowerCase().includes('least')) {
-          errorMessage = 'Password must be at least 8 characters long.';
-        } else if (error.message.toLowerCase().includes('age') || error.message.toLowerCase().includes('18')) {
-          errorMessage = 'You must be at least 18 years old to create an account.';
+        // Edge case: user already registered but not verified -- go straight to verify step
+        if (msg.includes('not verified') || (msg.includes('already registered') && msg.includes('verify'))) {
+          setCurrentStep('verify');
+          setResendCooldown(0);
+          return;
         }
-      }
 
-      Alert.alert('Signup Failed', errorMessage);
+        // Other known patterns
+        if (msg.includes('email') && msg.includes('already')) {
+          Alert.alert('Signup Failed', 'This email is already registered. Please try logging in instead.');
+        } else if (msg.includes('password') && msg.includes('least')) {
+          Alert.alert('Signup Failed', 'Password must be at least 8 characters long.');
+        } else if (msg.includes('age') || msg.includes('18')) {
+          Alert.alert('Signup Failed', 'You must be at least 18 years old to create an account.');
+        } else {
+          Alert.alert('Signup Failed', error.message || 'Failed to create account. Please try again.');
+        }
+      } else {
+        Alert.alert('Signup Failed', 'Failed to create account. Please try again.');
+      }
     }
   };
 
-  const getStepProgress = () => {
-    const steps = ['email', 'password', 'name', 'dob', 'gender'];
-    const currentIndex = steps.indexOf(currentStep);
-    return ((currentIndex + 1) / steps.length) * 100;
+  // --- Email verification ---
+
+  const handleVerifyCode = async (code: string) => {
+    setLoading(true);
+    try {
+      await authApi.verifyEmail(formData.email.trim(), code);
+
+      // Verification succeeded -- now log in
+      await authApi.login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
+
+      setLoading(false);
+      signIn();
+    } catch (error) {
+      console.error('Verification error:', error);
+      setLoading(false);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Verification failed. Please check the code and try again.';
+      Alert.alert('Verification Failed', message);
+
+      // Clear code inputs so user can retry
+      setVerificationCode(Array(CODE_LENGTH).fill(''));
+      codeInputRefs.current[0]?.focus();
+    }
   };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+
+    try {
+      await authApi.resendVerificationCode(formData.email.trim());
+      setResendCooldown(60);
+      Alert.alert('Code Sent', 'A new verification code has been sent to your email.');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to resend code. Please try again.';
+      Alert.alert('Error', message);
+    }
+  };
+
+  // --- OTP input handlers ---
+
+  const handleCodeChange = (text: string, index: number) => {
+    // Only allow digits
+    const digit = text.replace(/[^0-9]/g, '');
+    if (digit.length > 1) {
+      // Handle paste -- distribute digits across boxes
+      const digits = digit.split('').slice(0, CODE_LENGTH);
+      const newCode = [...verificationCode];
+      digits.forEach((d, i) => {
+        if (index + i < CODE_LENGTH) {
+          newCode[index + i] = d;
+        }
+      });
+      setVerificationCode(newCode);
+
+      // Focus the next empty box or the last filled one
+      const nextIndex = Math.min(index + digits.length, CODE_LENGTH - 1);
+      codeInputRefs.current[nextIndex]?.focus();
+
+      // Auto-submit if all digits filled
+      const fullCode = newCode.join('');
+      if (fullCode.length === CODE_LENGTH && newCode.every((d) => d !== '')) {
+        handleVerifyCode(fullCode);
+      }
+      return;
+    }
+
+    const newCode = [...verificationCode];
+    newCode[index] = digit;
+    setVerificationCode(newCode);
+
+    // Move focus forward
+    if (digit && index < CODE_LENGTH - 1) {
+      codeInputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all digits entered
+    const fullCode = newCode.join('');
+    if (fullCode.length === CODE_LENGTH && newCode.every((d) => d !== '')) {
+      handleVerifyCode(fullCode);
+    }
+  };
+
+  const handleCodeKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !verificationCode[index] && index > 0) {
+      // Move focus backward on empty backspace
+      const newCode = [...verificationCode];
+      newCode[index - 1] = '';
+      setVerificationCode(newCode);
+      codeInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // --- Progress bar ---
+
+  const getStepProgress = () => {
+    if (currentStep === 'verify') return 100;
+    const currentIndex = FORM_STEPS.indexOf(currentStep);
+    return ((currentIndex + 1) / FORM_STEPS.length) * 100;
+  };
+
+  // --- Render helpers ---
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -391,8 +543,7 @@ export default function SignupScreen() {
                 }}
                 maximumDate={new Date()}
               />
-            )
-            }
+            )}
           </>
         );
 
@@ -420,7 +571,7 @@ export default function SignupScreen() {
                       backgroundColor: colors.inputBackground,
                       borderColor:
                         formData.gender === option.value ? colors.primary : colors.border,
-                      borderWidth: formData.gender === option.value ? 2 : 2,
+                      borderWidth: 2,
                     },
                   ]}
                   onPress={() =>
@@ -446,6 +597,74 @@ export default function SignupScreen() {
             </View>
           </>
         );
+
+      case 'verify':
+        return (
+          <>
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: colors.text }]}>Verify your email</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                We sent a 6-digit code to{' '}
+                <Text style={{ color: colors.text, fontWeight: '600' }}>
+                  {formData.email.trim()}
+                </Text>
+              </Text>
+            </View>
+
+            {/* OTP code input boxes */}
+            <View style={styles.codeContainer}>
+              {verificationCode.map((digit, index) => (
+                <RNTextInput
+                  key={index}
+                  ref={(ref) => { codeInputRefs.current[index] = ref; }}
+                  style={[
+                    styles.codeInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: digit ? colors.primary : colors.border,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={digit}
+                  onChangeText={(text) => handleCodeChange(text, index)}
+                  onKeyPress={({ nativeEvent }) => handleCodeKeyPress(nativeEvent.key, index)}
+                  keyboardType="number-pad"
+                  maxLength={index === 0 ? CODE_LENGTH : 1}
+                  autoFocus={index === 0}
+                  selectTextOnFocus
+                  editable={!loading}
+                />
+              ))}
+            </View>
+
+            {loading && (
+              <View style={styles.verifyingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.verifyingText, { color: colors.textSecondary }]}>
+                  Verifying...
+                </Text>
+              </View>
+            )}
+
+            {/* Resend code */}
+            <View style={styles.resendContainer}>
+              <Text style={[styles.resendLabel, { color: colors.textSecondary }]}>
+                Didn't receive the code?
+              </Text>
+              {resendCooldown > 0 ? (
+                <Text style={[styles.resendCooldown, { color: colors.textSecondary }]}>
+                  Resend in {resendCooldown}s
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={handleResendCode}>
+                  <Text style={[styles.resendButton, { color: colors.primary }]}>
+                    Resend code
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        );
     }
   };
 
@@ -457,7 +676,7 @@ export default function SignupScreen() {
       >
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
-          {currentStep !== 'email' && (
+          {currentStep !== 'email' && currentStep !== 'verify' && (
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
               <ChevronLeftIcon color={colors.text} size={24} />
             </TouchableOpacity>
@@ -479,16 +698,19 @@ export default function SignupScreen() {
         >
           {renderStepContent()}
 
-          <Button
-            title={currentStep === 'gender' ? 'Create Account' : 'Continue'}
-            onPress={handleNext}
-            variant="primary"
-            size="large"
-            fullWidth
-            loading={loading}
-            style={styles.submitButton}
-            disabled={currentStep === 'gender' && !formData.gender}
-          />
+          {/* Show Continue / Create Account button only for form steps (not verify) */}
+          {currentStep !== 'verify' && (
+            <Button
+              title={currentStep === 'gender' ? 'Create Account' : 'Continue'}
+              onPress={handleNext}
+              variant="primary"
+              size="large"
+              fullWidth
+              loading={loading}
+              style={styles.submitButton}
+              disabled={currentStep === 'gender' && !formData.gender}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -565,6 +787,47 @@ const styles = StyleSheet.create({
   },
   genderOptionText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Verification code styles
+  codeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 32,
+  },
+  codeInput: {
+    width: 48,
+    height: 56,
+    borderWidth: 2,
+    borderRadius: 12,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  verifyingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  verifyingText: {
+    fontSize: 14,
+  },
+  resendContainer: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  resendLabel: {
+    fontSize: 14,
+  },
+  resendCooldown: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resendButton: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

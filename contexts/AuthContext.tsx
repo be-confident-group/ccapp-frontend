@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '@/lib/api';
+import { apiClient } from '@/lib/api/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -13,6 +14,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const signOut = useCallback(async () => {
+    await authApi.logout();
+    setIsAuthenticated(false);
+  }, []);
+
+  // Register the 401 handler so the API client can trigger sign-out
+  // when the backend rejects an invalid/expired token.
+  useEffect(() => {
+    apiClient.setOnUnauthorized(() => {
+      console.warn('[Auth] Session expired — signing out');
+      setIsAuthenticated(false);
+    });
+    return () => {
+      apiClient.setOnUnauthorized(null);
+    };
+  }, []);
 
   useEffect(() => {
     async function checkAuthStatus() {
@@ -30,11 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = () => {
     setIsAuthenticated(true);
-  };
-
-  const signOut = async () => {
-    await authApi.logout();
-    setIsAuthenticated(false);
   };
 
   return (

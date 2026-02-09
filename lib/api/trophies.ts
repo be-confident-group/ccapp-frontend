@@ -99,7 +99,11 @@ class TrophyAPI {
 
       return trophies;
     } catch (error) {
-      console.error('[TrophyAPI] Error fetching trophies:', error);
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        console.warn('[TrophyAPI] Error fetching trophies:', error);
+      } else {
+        console.error('[TrophyAPI] Error fetching trophies:', error);
+      }
       throw error;
     }
   }
@@ -119,7 +123,11 @@ class TrophyAPI {
 
       return profile;
     } catch (error) {
-      console.error('[TrophyAPI] Error fetching user profile:', error);
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        console.warn('[TrophyAPI] Error fetching user profile:', error);
+      } else {
+        console.error('[TrophyAPI] Error fetching user profile:', error);
+      }
       throw error;
     }
   }

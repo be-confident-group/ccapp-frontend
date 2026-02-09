@@ -104,7 +104,12 @@ export default function HomeScreen() {
       const fetchedTrophies = await trophyAPI.getTrophies();
       setTrophies(fetchedTrophies);
     } catch (err) {
-      console.error('[HomeScreen] Error loading user profile:', err);
+      // Session-expired errors are handled by the auth flow — don't trigger red LogBox
+      if (err instanceof Error && err.message.includes('Session expired')) {
+        console.warn('[HomeScreen] Session expired, skipping profile load');
+      } else {
+        console.error('[HomeScreen] Error loading user profile:', err);
+      }
       // Fallback to cached trophies if available
       const cached = await trophyAPI.getCachedTrophies();
       if (cached) {

@@ -24,6 +24,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDownIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { authApi } from '@/lib/api';
+import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { signIn } = useAuth();
+  const { handleGoogleSignIn, handleAppleSignIn, loading: socialLoading, appleAuthAvailable } = useSocialAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
@@ -406,7 +408,8 @@ export default function WelcomeScreen() {
                     {/* Google Button */}
                     <TouchableOpacity
                       style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                      onPress={() => console.log('Google')}
+                      onPress={handleGoogleSignIn}
+                      disabled={socialLoading}
                     >
                       <View style={styles.authButtonContent}>
                         <FontAwesome name="google" size={20} color={colors.text} />
@@ -414,16 +417,19 @@ export default function WelcomeScreen() {
                       </View>
                     </TouchableOpacity>
 
-                    {/* Apple Button */}
-                    <TouchableOpacity
-                      style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                      onPress={() => console.log('Apple')}
-                    >
-                      <View style={styles.authButtonContent}>
-                        <FontAwesome name="apple" size={20} color={colors.text} />
-                        <Text style={[styles.authButtonText, { color: colors.text }]}>Continue with Apple</Text>
-                      </View>
-                    </TouchableOpacity>
+                    {/* Apple Button (iOS only) */}
+                    {Platform.OS === 'ios' && appleAuthAvailable && (
+                      <TouchableOpacity
+                        style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={handleAppleSignIn}
+                        disabled={socialLoading}
+                      >
+                        <View style={styles.authButtonContent}>
+                          <FontAwesome name="apple" size={20} color={colors.text} />
+                          <Text style={[styles.authButtonText, { color: colors.text }]}>Continue with Apple</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
 
                     {/* Email Button */}
                     <TouchableOpacity

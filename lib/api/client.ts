@@ -11,11 +11,26 @@ interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;
 }
 
+/**
+ * Listener called when the API receives a 401 Unauthorized response,
+ * indicating the stored auth token is invalid or expired.
+ */
+type UnauthorizedListener = () => void;
+
 class ApiClient {
   private baseURL: string;
+  private onUnauthorized: UnauthorizedListener | null = null;
 
   constructor(baseURL: string | undefined) {
     this.baseURL = baseURL || '';
+  }
+
+  /**
+   * Register a callback that fires when a 401 response is received.
+   * Used by AuthContext to trigger sign-out and redirect to login.
+   */
+  setOnUnauthorized(listener: UnauthorizedListener | null) {
+    this.onUnauthorized = listener;
   }
 
   private checkConfiguration(): boolean {
@@ -71,6 +86,17 @@ class ApiClient {
 
       // Handle non-2xx responses
       if (!response.ok) {
+        // Handle 401 Unauthorized — token is invalid/expired
+        if (response.status === 401 && requiresAuth) {
+          console.warn('[API] 401 Unauthorized — clearing invalid token');
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('refreshToken');
+          if (this.onUnauthorized) {
+            this.onUnauthorized();
+          }
+          throw new Error('Session expired. Please sign in again.');
+        }
+
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
         try {

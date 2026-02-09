@@ -350,7 +350,12 @@ class TripAPI {
 
       return await apiClient.get<ApiTrip[]>(endpoint);
     } catch (error) {
-      console.error('[TripAPI] Error fetching trips:', error);
+      // Session-expired errors are handled by the auth flow; don't show red LogBox
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        console.warn('[TripAPI] Error fetching trips:', error);
+      } else {
+        console.error('[TripAPI] Error fetching trips:', error);
+      }
       throw error;
     }
   }

@@ -1,24 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
 import { EnvelopeIcon } from 'react-native-heroicons/outline';
+import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 
 export default function AuthMethodsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google Sign In
-    console.log('Google Sign In');
-  };
-
-  const handleAppleSignIn = () => {
-    // TODO: Implement Apple Sign In
-    console.log('Apple Sign In');
-  };
+  const { handleGoogleSignIn, handleAppleSignIn, loading: socialLoading, appleAuthAvailable } = useSocialAuth();
 
   const handleEmailSignIn = () => {
     router.push('/(auth)/login');
@@ -43,6 +35,7 @@ export default function AuthMethodsScreen() {
           <TouchableOpacity
             style={[styles.socialButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={handleGoogleSignIn}
+            disabled={socialLoading}
           >
             <View style={styles.socialButtonContent}>
               <Text style={[styles.socialButtonIcon, { color: colors.text }]}>G</Text>
@@ -52,18 +45,21 @@ export default function AuthMethodsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Apple Button */}
-          <TouchableOpacity
-            style={[styles.socialButton, { backgroundColor: '#000000' }]}
-            onPress={handleAppleSignIn}
-          >
-            <View style={styles.socialButtonContent}>
-              <Text style={[styles.socialButtonIcon, { color: '#FFFFFF' }]}></Text>
-              <Text style={[styles.socialButtonText, { color: '#FFFFFF' }]}>
-                Continue with Apple
-              </Text>
-            </View>
-          </TouchableOpacity>
+          {/* Apple Button (iOS only) */}
+          {Platform.OS === 'ios' && appleAuthAvailable && (
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: '#000000' }]}
+              onPress={handleAppleSignIn}
+              disabled={socialLoading}
+            >
+              <View style={styles.socialButtonContent}>
+                <Text style={[styles.socialButtonIcon, { color: '#FFFFFF' }]}></Text>
+                <Text style={[styles.socialButtonText, { color: '#FFFFFF' }]}>
+                  Continue with Apple
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* Email Button */}
           <TouchableOpacity
