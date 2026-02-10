@@ -33,6 +33,10 @@ const GPS_STABILIZATION_POINTS = 2; // Wait for 2 good readings before using (fa
 let stabilizationBuffer: Location.LocationObject[] = [];
 let isGpsStabilized = false;
 
+// ===== GPS OUTLIER DETECTION =====
+const MAX_POSSIBLE_SPEED_MPS = 50; // 180 km/h - absolute physical limit for any valid trip point
+let lastStoredLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
+
 // ===== ZOMBIE TRIP DETECTION =====
 const ZOMBIE_TRIP_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -106,6 +110,51 @@ function getBestInitialLocation(): Location.LocationObject | null {
 function resetGpsStabilization(): void {
   stabilizationBuffer = [];
   isGpsStabilized = false;
+  resetLastStoredLocation();
+}
+
+/**
+ * Check if a new GPS point is physically plausible given the previous stored point.
+ * Rejects points where the implied speed exceeds MAX_POSSIBLE_SPEED_MPS (GPS signal loss/re-acquisition).
+ */
+function isPointPhysicallyPlausible(
+  newLat: number,
+  newLng: number,
+  newTimestamp: number
+): boolean {
+  if (!lastStoredLocation) {
+    return true; // First point, always accept
+  }
+
+  const timeDiffSeconds = (newTimestamp - lastStoredLocation.timestamp) / 1000;
+  if (timeDiffSeconds <= 0) {
+    return true; // Same or backwards timestamp, let other logic handle
+  }
+
+  const distance = calculateDistance(
+    { latitude: lastStoredLocation.latitude, longitude: lastStoredLocation.longitude },
+    { latitude: newLat, longitude: newLng }
+  );
+
+  const impliedSpeedMps = distance / timeDiffSeconds;
+
+  if (impliedSpeedMps > MAX_POSSIBLE_SPEED_MPS) {
+    console.warn(
+      `[LocationTracking] GPS OUTLIER REJECTED: ${(impliedSpeedMps * 3.6).toFixed(1)} km/h ` +
+      `between points ${timeDiffSeconds.toFixed(0)}s apart, ${distance.toFixed(0)}m distance`
+    );
+    return false;
+  }
+
+  return true;
+}
+
+function updateLastStoredLocation(lat: number, lng: number, timestamp: number): void {
+  lastStoredLocation = { latitude: lat, longitude: lng, timestamp };
+}
+
+function resetLastStoredLocation(): void {
+  lastStoredLocation = null;
 }
 
 /**
@@ -221,33 +270,76 @@ async function detectAndHandleZombieTrips(): Promise<void> {
 }
 
 /**
- * End a zombie trip
+ * End a zombie trip with proper validation
  */
 async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
-  // Build route_data from existing locations for backend sync
   const locations = await database.getLocationsByTrip(tripId);
-  const routeForSync = locations.map((loc) => ({
-    lat: Number(loc.latitude.toFixed(6)),
-    lng: Number(loc.longitude.toFixed(6)),
-    timestamp: new Date(loc.timestamp).toISOString(),
-  }));
-  const routeDataJson = JSON.stringify(routeForSync);
+  const now = Date.now();
 
-  console.log(`[LocationTracking] Zombie trip ${tripId}: built route with ${routeForSync.length} points`);
+  if (locations.length < 2) {
+    await database.updateTrip(tripId, {
+      status: 'cancelled',
+      end_time: endTime,
+      notes: '[Auto-ended zombie] No locations recorded',
+      updated_at: now,
+    });
+    console.log(`[LocationTracking] Zombie trip ${tripId} cancelled: no locations`);
+    lastStationaryTime = null;
+    resetGpsStabilization();
+    return;
+  }
 
-  await database.updateTrip(tripId, {
-    status: 'completed',
-    end_time: endTime,
-    route_data: routeDataJson,
-    updated_at: Date.now(),
-    notes: '[Auto-ended: background tracking timeout]',
-  });
+  // Calculate stats and determine type
+  const stats = calculateTripStatistics(locations);
+  const dominantActivity = getDominantActivityType(locations);
+
+  // Validate minimum distances and types
+  const MIN_WALK_DISTANCE = 400;
+  const MIN_RIDE_DISTANCE = 1000;
+  let cancelReason: string | null = null;
+
+  if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
+    cancelReason = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
+  } else if (dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
+    cancelReason = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
+  } else if (dominantActivity === 'drive' || dominantActivity === 'run') {
+    cancelReason = `Trip type '${dominantActivity}' not supported`;
+  }
+
+  if (cancelReason) {
+    await database.updateTrip(tripId, {
+      status: 'cancelled',
+      end_time: endTime,
+      notes: `[Auto-ended zombie] ${cancelReason}`,
+      updated_at: now,
+    });
+    console.log(`[LocationTracking] Zombie trip ${tripId} cancelled: ${cancelReason}`);
+  } else {
+    // Build route_data from existing locations for backend sync
+    const routeForSync = locations.map((loc) => ({
+      lat: Number(loc.latitude.toFixed(6)),
+      lng: Number(loc.longitude.toFixed(6)),
+      timestamp: new Date(loc.timestamp).toISOString(),
+    }));
+
+    await database.updateTrip(tripId, {
+      status: 'completed',
+      end_time: endTime,
+      type: dominantActivity,
+      distance: stats.totalDistance,
+      duration: stats.duration,
+      avg_speed: stats.avgSpeed,
+      max_speed: stats.maxSpeed,
+      route_data: JSON.stringify(routeForSync),
+      notes: '[Auto-ended: background tracking timeout]',
+      updated_at: now,
+    });
+    console.log(`[LocationTracking] Zombie trip ${tripId} completed (${dominantActivity}, ${stats.totalDistance.toFixed(0)}m)`);
+  }
 
   // Reset tracking state
   lastStationaryTime = null;
   resetGpsStabilization();
-
-  console.log(`[LocationTracking] Zombie trip ${tripId} ended`);
 }
 
 /**
@@ -535,6 +627,12 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     // ===== CLASSIFY ACTIVITY =====
     const classification = ActivityClassifier.classifyBySpeed(currentSpeed);
 
+    // ===== GPS OUTLIER CHECK =====
+    if (!isPointPhysicallyPlausible(latitude, longitude, timestamp)) {
+      console.log('[LocationTracking] Skipping GPS outlier point');
+      continue;
+    }
+
     // ===== STORE LOCATION =====
     await database.addLocation({
       trip_id: activeTrip.id,
@@ -550,6 +648,8 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       synced: 0,
     });
 
+    updateLastStoredLocation(latitude, longitude, timestamp);
+
     console.log(
       `[LocationTracking] ✓ Stored location (${classification.type}, ${classification.confidence}% confidence)`
     );
@@ -557,7 +657,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     // ===== UPDATE TRIP STATS =====
     const allLocations = await database.getLocationsByTrip(activeTrip.id);
     const stats = calculateTripStatistics(allLocations);
-    const dominantActivity = getDominantActivityType(allLocations);
+    let dominantActivity = getDominantActivityType(allLocations);
 
     await database.updateTrip(activeTrip.id, {
       type: dominantActivity,
@@ -590,22 +690,61 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
 
-        // Build route_data for backend sync (ISO 8601 timestamps)
-        const routeForSync = allLocations.map((loc) => ({
-          lat: Number(loc.latitude.toFixed(6)),
-          lng: Number(loc.longitude.toFixed(6)),
-          timestamp: new Date(loc.timestamp).toISOString(),
+        // Post-hoc transit detection using pattern analysis
+        const speeds = allLocations.map(loc => loc.speed || 0);
+        const locationPoints = allLocations.map(loc => ({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          timestamp: loc.timestamp,
+          speed: loc.speed ?? undefined,
         }));
-        const routeDataJson = JSON.stringify(routeForSync);
+        const patternClassification = ActivityClassifier.classifyWithPatterns(speeds, locationPoints);
 
-        console.log(`[LocationTracking] Built route with ${routeForSync.length} points for sync`);
+        if (patternClassification.possibleTransit) {
+          console.log('[LocationTracking] Transit pattern detected at trip end - marking as drive');
+          dominantActivity = 'drive';
+          await database.updateTrip(activeTrip.id, { type: 'drive', updated_at: timestamp });
+        }
 
-        await database.updateTrip(activeTrip.id, {
-          status: 'completed',
-          end_time: timestamp,
-          route_data: routeDataJson,
-          updated_at: timestamp,
-        });
+        // Validate minimum distances and types before completing
+        const MIN_WALK_DISTANCE = 400;
+        const MIN_RIDE_DISTANCE = 1000;
+        let cancelReason: string | null = null;
+
+        if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
+          cancelReason = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
+        } else if (dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
+          cancelReason = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
+        } else if (dominantActivity === 'drive' || dominantActivity === 'run') {
+          cancelReason = `Trip type '${dominantActivity}' not supported (only walk/cycle allowed)`;
+        }
+
+        if (cancelReason) {
+          console.log(`[LocationTracking] Trip ${activeTrip.id} cancelled: ${cancelReason}`);
+          await database.updateTrip(activeTrip.id, {
+            status: 'cancelled',
+            end_time: timestamp,
+            notes: cancelReason,
+            updated_at: timestamp,
+          });
+        } else {
+          // Build route_data for backend sync (ISO 8601 timestamps)
+          const routeForSync = allLocations.map((loc) => ({
+            lat: Number(loc.latitude.toFixed(6)),
+            lng: Number(loc.longitude.toFixed(6)),
+            timestamp: new Date(loc.timestamp).toISOString(),
+          }));
+          const routeDataJson = JSON.stringify(routeForSync);
+
+          console.log(`[LocationTracking] Built route with ${routeForSync.length} points for sync`);
+
+          await database.updateTrip(activeTrip.id, {
+            status: 'completed',
+            end_time: timestamp,
+            route_data: routeDataJson,
+            updated_at: timestamp,
+          });
+        }
       }
 
       // Reset tracking state for next trip
@@ -638,25 +777,29 @@ function calculateTripStatistics(locations: LocationPoint[]) {
   for (let i = 0; i < locations.length; i++) {
     const loc = locations[i];
 
-    // Distance
     if (i > 0) {
       const prev = locations[i - 1];
+
+      // Distance
       const dist = calculateDistance(
         { latitude: prev.latitude, longitude: prev.longitude },
         { latitude: loc.latitude, longitude: loc.longitude }
       );
       totalDistance += dist;
-    }
 
-    // Max speed (convert to km/h)
-    const speedKmh = (loc.speed || 0) * 3.6;
-    if (speedKmh > maxSpeed) {
-      maxSpeed = speedKmh;
-    }
+      // Max speed: use device speed but cross-check against calculated speed between points
+      const deviceSpeedKmh = (loc.speed || 0) * 3.6;
+      let pointMaxSpeed = deviceSpeedKmh;
+      const segTimeDiff = (loc.timestamp - prev.timestamp) / 1000;
+      if (segTimeDiff > 0) {
+        const calculatedSpeedKmh = (dist / segTimeDiff) * 3.6;
+        pointMaxSpeed = Math.min(deviceSpeedKmh, calculatedSpeedKmh * 1.5);
+      }
+      if (pointMaxSpeed > maxSpeed) {
+        maxSpeed = pointMaxSpeed;
+      }
 
-    // Elevation gain
-    if (i > 0) {
-      const prev = locations[i - 1];
+      // Elevation gain
       if (loc.altitude != null && prev.altitude != null && loc.altitude > prev.altitude) {
         elevationGain += loc.altitude - prev.altitude;
       }
@@ -713,7 +856,31 @@ function getDominantActivityType(locations: LocationPoint[]): 'walk' | 'run' | '
     driving: 'drive',
   };
 
-  return mapping[dominant] || 'walk';
+  const mappedType = mapping[dominant] || 'walk';
+
+  // Transit override: if calculated avg speed suggests transit but per-point classification says walking,
+  // the user is likely on a train/bus where GPS device speed reads ~0
+  if (mappedType === 'walk' && locations.length >= 2) {
+    const duration = (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000;
+    if (duration > 0) {
+      let totalDist = 0;
+      for (let i = 1; i < locations.length; i++) {
+        totalDist += calculateDistance(
+          { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude },
+          { latitude: locations[i].latitude, longitude: locations[i].longitude }
+        );
+      }
+      const calcAvgSpeedKmh = (totalDist / duration) * 3.6;
+      if (calcAvgSpeedKmh > 10) {
+        console.log(
+          `[LocationTracking] Transit override: avg speed ${calcAvgSpeedKmh.toFixed(1)} km/h but classified as walking`
+        );
+        return 'drive';
+      }
+    }
+  }
+
+  return mappedType;
 }
 
 // ===== PUBLIC SERVICE CLASS =====

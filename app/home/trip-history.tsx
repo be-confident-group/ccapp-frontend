@@ -125,10 +125,12 @@ export default function TripHistoryScreen() {
     };
   }
 
-  // Get the display trips based on data source and filter out run/drive trips
+  // Get the display trips based on data source, filter out invalid and unsupported types
   const displayTrips: DisplayTrip[] = (useLocalData
     ? localTrips.map(localToDisplay)
-    : (backendTrips || []).map(backendToDisplay)
+    : (backendTrips || [])
+        .filter(trip => trip.is_valid !== false)
+        .map(backendToDisplay)
   ).filter(trip => trip.type === 'walk' || trip.type === 'cycle');
 
   async function onRefresh() {

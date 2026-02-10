@@ -217,6 +217,15 @@ export class SegmentDetector {
     // Calculate average speed
     const avgSpeed = duration > 0 ? (distance / 1000) / (duration / 3600) : 0;
 
+    // Transit override: if calculated avg speed > 10 km/h but classified as walk, it's transit
+    let effectiveType = type;
+    if (effectiveType === 'walk' && avgSpeed > 10) {
+      console.log(
+        `[SegmentDetector] Transit override: segment avg speed ${avgSpeed.toFixed(1)} km/h but classified as walk`
+      );
+      effectiveType = 'drive';
+    }
+
     // Calculate average confidence
     const avgConfidence =
       speeds.reduce((sum, s) => sum + s.confidence, 0) / speeds.length;
@@ -225,7 +234,7 @@ export class SegmentDetector {
       startIndex,
       endIndex,
       locations: segmentLocations,
-      type,
+      type: effectiveType,
       distance,
       duration,
       avgSpeed,

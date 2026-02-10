@@ -109,6 +109,23 @@ export class TripManager {
         const segment = segmentAnalysis.segments[i];
         const subTripId = `${tripId}_segment${i}`;
 
+        // Validate segment before creating sub-trip
+        const MIN_WALK_DIST = 400;
+        const MIN_RIDE_DIST = 1000;
+
+        if (segment.type === 'walk' && segment.distance < MIN_WALK_DIST) {
+          console.log(`[TripManager] Skipping walk segment ${i}: ${segment.distance.toFixed(0)}m < ${MIN_WALK_DIST}m`);
+          continue;
+        }
+        if (segment.type === 'cycle' && segment.distance < MIN_RIDE_DIST) {
+          console.log(`[TripManager] Skipping cycle segment ${i}: ${segment.distance.toFixed(0)}m < ${MIN_RIDE_DIST}m`);
+          continue;
+        }
+        if (segment.type === 'drive' || segment.type === 'run') {
+          console.log(`[TripManager] Skipping ${segment.type} segment ${i}: unsupported type`);
+          continue;
+        }
+
         console.log(`[TripManager] Creating sub-trip ${subTripId} (${segment.type}, ${segment.distance.toFixed(0)}m)`);
 
         // Build route data for this segment
@@ -196,7 +213,7 @@ export class TripManager {
     console.log(`[TripManager] Single-modal trip (${dominantActivity}), continuing with normal processing...`);
 
     // Validate trip against quality thresholds
-    const MIN_WALK_DISTANCE = 500; // meters (updated from 400m)
+    const MIN_WALK_DISTANCE = 400; // meters
     const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
     const MAX_SPEED_THRESHOLD = 30; // km/h
 
@@ -484,7 +501,7 @@ export class TripManager {
     const now = Date.now();
 
     // Validate manual trip against quality thresholds
-    const MIN_WALK_DISTANCE = 500; // meters (updated from 400m)
+    const MIN_WALK_DISTANCE = 400; // meters
     const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
 
     // Check minimum distances
@@ -621,10 +638,23 @@ export class TripManager {
         totalDistance += dist;
       }
 
-      // Max speed (convert to km/h)
-      const speedKmh = (loc.speed || 0) * 3.6;
-      if (speedKmh > maxSpeed) {
-        maxSpeed = speedKmh;
+      // Max speed: use device speed but cross-check against calculated speed between points
+      const deviceSpeedKmh = (loc.speed || 0) * 3.6;
+      let pointMaxSpeed = deviceSpeedKmh;
+      if (i > 0) {
+        const prev = locations[i - 1];
+        const segTimeDiff = (loc.timestamp - prev.timestamp) / 1000;
+        if (segTimeDiff > 0) {
+          const dist = calculateDistance(
+            { latitude: prev.latitude, longitude: prev.longitude },
+            { latitude: loc.latitude, longitude: loc.longitude }
+          );
+          const calculatedSpeedKmh = (dist / segTimeDiff) * 3.6;
+          pointMaxSpeed = Math.min(deviceSpeedKmh, calculatedSpeedKmh * 1.5);
+        }
+      }
+      if (pointMaxSpeed > maxSpeed) {
+        maxSpeed = pointMaxSpeed;
       }
 
       // Altitudes
@@ -696,7 +726,31 @@ export class TripManager {
       driving: 'drive',
     };
 
-    return mapping[dominant] || 'walk';
+    const mappedType = mapping[dominant] || 'walk';
+
+    // Transit override: if calculated avg speed suggests transit but per-point classification says walking,
+    // the user is likely on a train/bus where GPS device speed reads ~0
+    if (mappedType === 'walk' && locations.length >= 2) {
+      const duration = (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000;
+      if (duration > 0) {
+        let totalDist = 0;
+        for (let i = 1; i < locations.length; i++) {
+          totalDist += calculateDistance(
+            { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude },
+            { latitude: locations[i].latitude, longitude: locations[i].longitude }
+          );
+        }
+        const calcAvgSpeedKmh = (totalDist / duration) * 3.6;
+        if (calcAvgSpeedKmh > 10) {
+          console.log(
+            `[TripManager] Transit override: avg speed ${calcAvgSpeedKmh.toFixed(1)} km/h but classified as walking`
+          );
+          return 'drive';
+        }
+      }
+    }
+
+    return mappedType;
   }
 
   /**
