@@ -5,11 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, TextInput } from '@/components/ui';
 import { EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
+import { useRouter } from 'expo-router';
 import { authApi } from '@/lib/api';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
   const { signIn } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '' });
@@ -118,10 +120,7 @@ export default function LoginScreen() {
 
             <Text
               style={[styles.forgotPassword, { color: colors.primary }]}
-              onPress={() => {
-                // TODO: Navigate to forgot password screen
-                console.log('Forgot password');
-              }}
+              onPress={() => router.push('/(auth)/forgot-password')}
             >
               Forgot password?
             </Text>

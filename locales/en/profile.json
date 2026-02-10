@@ -46,6 +46,7 @@
     "rateUsSubtitle": "Rate us on the App Store"
   },
   "logout": "Log Out",
+  "deleteAccount": "Delete Account",
   "editProfileModal": {
     "title": "Edit Profile",
     "firstName": "First Name",

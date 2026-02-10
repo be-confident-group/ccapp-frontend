@@ -29,5 +29,11 @@
     "message": "Are you sure you want to delete this?",
     "confirmButton": "Delete",
     "cancelButton": "Cancel"
+  },
+  "deleteAccount": {
+    "title": "Delete Account",
+    "message": "This will permanently delete your account and all your data. This action cannot be undone.",
+    "confirmButton": "Delete Account",
+    "cancelButton": "Cancel"
   }
 }

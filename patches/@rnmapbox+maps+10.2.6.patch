@@ -1,0 +1,20 @@
+diff --git a/node_modules/@rnmapbox/maps/ios/RNMBX/RNMBXMapViewComponentView.mm b/node_modules/@rnmapbox/maps/ios/RNMBX/RNMBXMapViewComponentView.mm
+index 2d18a04..6bf59ad 100644
+--- a/node_modules/@rnmapbox/maps/ios/RNMBX/RNMBXMapViewComponentView.mm
++++ b/node_modules/@rnmapbox/maps/ios/RNMBX/RNMBXMapViewComponentView.mm
+@@ -40,6 +40,7 @@ - (instancetype)initWithComponentView:(RNMBXMapViewComponentView*)componentView
+ }
+ 
+ - (void)sendEvent:(id<RCTEvent>)event {
++    if (_componentView == nil) return;
+     NSDictionary* payload = [event arguments][2];
+     [_componentView dispatchCameraChangedEvent:payload];
+ }
+@@ -121,6 +122,7 @@ - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompo
+ }
+ 
+ - (void)dispatchCameraChangedEvent:(NSDictionary*)event {
++    if (self->_eventEmitter == nullptr) return;
+     const auto [type, json] = RNMBXStringifyEventData(event);
+     std::dynamic_pointer_cast<const facebook::react::RNMBXMapViewEventEmitter>(self->_eventEmitter)->onCameraChanged({type, json});
+ }

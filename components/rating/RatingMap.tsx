@@ -246,6 +246,15 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
     const cameraIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isMapReady, setIsMapReady] = useState(false);
 
+    // Clean up camera idle timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (cameraIdleTimeoutRef.current) {
+          clearTimeout(cameraIdleTimeoutRef.current);
+        }
+      };
+    }, []);
+
     // Filter out invalid coordinates to prevent Mapbox errors
     const route = filterValidCoordinates(rawRoute);
 

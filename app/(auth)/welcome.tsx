@@ -510,6 +510,15 @@ export default function WelcomeScreen() {
                       <Text style={styles.sendButtonText}>Sign In</Text>
                     )}
                   </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.forgotPasswordLink}
+                    onPress={() => router.push('/(auth)/forgot-password')}
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+                      Forgot password?
+                    </Text>
+                  </TouchableOpacity>
                 </>
               )}
             </Animated.View>
@@ -684,6 +693,14 @@ const styles = StyleSheet.create({
   },
   authButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  forgotPasswordLink: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

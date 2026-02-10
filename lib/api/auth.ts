@@ -203,6 +203,15 @@ export const authApi = {
   },
 
   /**
+   * Delete user account permanently
+   */
+  async deleteAccount(): Promise<void> {
+    await apiClient.delete('/api/delete-user/');
+    await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem('refreshToken');
+  },
+
+  /**
    * Get current user profile
    */
   async getProfile(): Promise<User> {
@@ -217,10 +226,28 @@ export const authApi = {
   },
 
   /**
-   * Change password
+   * Change password (logged-in user)
    */
   async changePassword(data: ChangePasswordRequest): Promise<void> {
     return apiClient.put<void>('/api/change-password/', data);
+  },
+
+  /**
+   * Request a password reset code (sent to email)
+   */
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/password-reset-request/', { email }, {
+      requiresAuth: false,
+    });
+  },
+
+  /**
+   * Confirm password reset with code and new password
+   */
+  async confirmPasswordReset(email: string, code: string, new_password: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/password-reset-confirm/', { email, code, new_password }, {
+      requiresAuth: false,
+    });
   },
 
   /**

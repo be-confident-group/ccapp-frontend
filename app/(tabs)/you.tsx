@@ -16,6 +16,7 @@ import {
   ArrowRightOnRectangleIcon,
   SunIcon,
   WrenchScrewdriverIcon,
+  TrashIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -117,6 +118,27 @@ export default function YouScreen() {
       },
       'alerts:logout.confirmButton',
       'alerts:logout.cancelButton',
+      'destructive'
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    showConfirmAlert(
+      'alerts:deleteAccount.title',
+      'alerts:deleteAccount.message',
+      async () => {
+        setLoading(true);
+        try {
+          await authApi.deleteAccount();
+          signOut();
+        } catch (error) {
+          console.error('Failed to delete account:', error);
+          Alert.alert(t('alerts:error.title'), t('alerts:error.generic'));
+          setLoading(false);
+        }
+      },
+      'alerts:deleteAccount.confirmButton',
+      'alerts:deleteAccount.cancelButton',
       'destructive'
     );
   };
@@ -497,6 +519,22 @@ export default function YouScreen() {
               iconPosition="left"
             />
           </View>
+
+          {/* Delete Account Button */}
+          <View style={styles.deleteAccountSection}>
+            <Button
+              title={t('profile:deleteAccount')}
+              onPress={handleDeleteAccount}
+              variant="outline"
+              size="large"
+              fullWidth
+              loading={loading}
+              icon={<TrashIcon size={20} color={colors.error} />}
+              iconPosition="left"
+              textStyle={{ color: colors.error }}
+              style={{ borderColor: colors.error }}
+            />
+          </View>
           </ScrollView>
         )}
 
@@ -613,6 +651,10 @@ const styles = StyleSheet.create({
   logoutSection: {
     paddingHorizontal: 24,
     marginTop: 16,
+  },
+  deleteAccountSection: {
+    paddingHorizontal: 24,
+    marginTop: 12,
     marginBottom: 32,
   },
 });
