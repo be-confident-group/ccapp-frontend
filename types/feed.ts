@@ -24,6 +24,8 @@ export interface Club {
   owner: SimpleProfile;
   members: SimpleProfile[];
   members_count: number;
+  share_code: string;
+  share_url: string;
 }
 
 /**

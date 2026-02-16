@@ -42,5 +42,10 @@
     "noGroupsMessage": "Join or create a group to get started",
     "noPosts": "No posts yet",
     "noPostsMessage": "Be the first to share something!"
+  },
+  "clubs": {
+    "shareTitle": "Join {{clubName}} on Radzi",
+    "shareMessage": "Check out {{clubName}} on Radzi!",
+    "invalidShareCode": "This share link is invalid or has expired."
   }
 }

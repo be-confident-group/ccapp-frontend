@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   FlatList,
   Alert,
+  Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -121,9 +123,20 @@ export default function ClubDetailScreen() {
     router.push(`/clubs/edit?id=${club.id}`);
   }, [club]);
 
-  const handleShareClub = useCallback(() => {
-    Alert.alert('Coming Soon', 'Group sharing will be available soon!');
-  }, []);
+  const handleShareClub = useCallback(async () => {
+    if (!club?.share_url) return;
+    try {
+      await Share.share({
+        title: t('clubs.shareTitle', { clubName: club.name }),
+        message: Platform.OS === 'android'
+          ? `${t('clubs.shareMessage', { clubName: club.name })}\n${club.share_url}`
+          : t('clubs.shareMessage', { clubName: club.name }),
+        url: Platform.OS === 'ios' ? club.share_url : undefined,
+      });
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  }, [club, t]);
 
   const handleLike = useCallback((postId: string) => {
     // Find the backend post to get club_id and is_liked

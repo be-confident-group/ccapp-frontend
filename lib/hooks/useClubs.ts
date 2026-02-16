@@ -16,6 +16,7 @@ export const clubKeys = {
   myClubs: () => [...clubKeys.all, 'my'] as const,
   details: () => [...clubKeys.all, 'detail'] as const,
   detail: (id: number) => [...clubKeys.details(), id] as const,
+  shareCode: (code: string) => [...clubKeys.all, 'share', code] as const,
 };
 
 /**
@@ -37,6 +38,17 @@ export function useMyClubs() {
     queryKey: clubKeys.myClubs(),
     queryFn: () => clubAPI.getMyClubs(),
     staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
+/**
+ * Hook to fetch a club by its share code
+ */
+export function useClubByShareCode(shareCode: string) {
+  return useQuery({
+    queryKey: clubKeys.shareCode(shareCode),
+    queryFn: () => clubAPI.getClubByShareCode(shareCode),
+    enabled: !!shareCode,
   });
 }
 

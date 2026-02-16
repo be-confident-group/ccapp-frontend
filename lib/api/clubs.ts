@@ -110,6 +110,18 @@ class ClubAPI {
       throw error;
     }
   }
+
+  /**
+   * Get a club by its share code
+   */
+  async getClubByShareCode(shareCode: string): Promise<Club> {
+    try {
+      return await apiClient.get<Club>(`/api/clubs/share/${shareCode}/`);
+    } catch (error) {
+      console.error('[ClubAPI] Error fetching club by share code:', error);
+      throw error;
+    }
+  }
 }
 
 export const clubAPI = new ClubAPI();
