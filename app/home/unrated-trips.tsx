@@ -62,8 +62,8 @@ export default function UnratedTripsScreen() {
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const [showInfoModal, setShowInfoModal] = useState(false);
 
-  // Fetch all trips from backend (including active trips that weren't properly stopped)
-  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips();
+  // Fetch completed trips from backend
+  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
 
   // Load rated trip IDs from local database
   const loadRatedTrips = useCallback(async () => {
@@ -94,6 +94,7 @@ export default function UnratedTripsScreen() {
     if (!backendTrips) return [];
 
     return backendTrips
+      .filter((trip) => trip.is_valid !== false) // Exclude invalid/drift trips
       .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
       .filter((trip) => trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
       .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips

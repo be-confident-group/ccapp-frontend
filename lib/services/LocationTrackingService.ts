@@ -11,6 +11,7 @@ import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
 import { ActivityClassifier } from './ActivityClassifier';
 import { TripDetectionService } from './TripDetectionService';
+import { syncService } from './SyncService';
 import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 
 const LOCATION_TASK_NAME = 'background-location-task';
@@ -224,6 +225,9 @@ async function handleForegroundResume(): Promise<void> {
   try {
     // Initialize database in case it's not ready
     await database.init();
+
+    // Clean up any invalid trips in local DB (GPS drift, too short, etc.)
+    await syncService.cleanupInvalidTrips();
 
     // Check for zombie trips
     await detectAndHandleZombieTrips();

@@ -6,6 +6,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { database } from '../database';
 import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip } from '../api/trips';
 import type { Trip } from '../database/db';
+import { TripValidationService } from './TripValidationService';
 
 export interface SyncResult {
   success: boolean;
@@ -50,7 +51,7 @@ class SyncService {
    */
   async getUnsyncedCount(): Promise<number> {
     try {
-      const unsyncedTrips = await database.getAllTrips({ synced: false });
+      const unsyncedTrips = await database.getAllTrips({ synced: false, status: 'completed' });
       return unsyncedTrips.length;
     } catch (error) {
       console.error('[SyncService] Error getting unsynced count:', error);
@@ -95,6 +96,42 @@ class SyncService {
       if (trip.synced === 1) {
         console.log(`[SyncService] Trip ${tripId} already synced`);
         return true;
+      }
+
+      // Skip trips that shouldn't be synced
+      if (trip.status !== 'completed') {
+        console.log(`[SyncService] Trip ${tripId} not completed (${trip.status}), skipping sync`);
+        return false;
+      }
+
+      // Validate minimum distances before syncing
+      const MIN_WALK_DISTANCE = 400;
+      const MIN_RIDE_DISTANCE = 1000;
+      if (trip.type === 'walk' && trip.distance < MIN_WALK_DISTANCE) {
+        console.log(`[SyncService] Walk trip ${tripId} too short (${trip.distance}m), skipping sync`);
+        return false;
+      }
+      if (trip.type === 'cycle' && trip.distance < MIN_RIDE_DISTANCE) {
+        console.log(`[SyncService] Cycle trip ${tripId} too short (${trip.distance}m), skipping sync`);
+        return false;
+      }
+      if (trip.type === 'drive' || trip.type === 'run') {
+        console.log(`[SyncService] Trip ${tripId} type '${trip.type}' not supported, skipping sync`);
+        return false;
+      }
+
+      // GPS drift validation — check if trip stayed in a tiny area
+      const locations = await database.getLocationsByTrip(tripId);
+      if (locations.length >= 2) {
+        const coords = locations.map(loc => ({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+        }));
+        const validation = TripValidationService.validateTrip(coords, trip.distance);
+        if (!validation.isValid) {
+          console.log(`[SyncService] Trip ${tripId} failed GPS drift check: ${validation.reasons.join('; ')}, skipping sync`);
+          return false;
+        }
       }
 
       // Transform to API format
@@ -349,6 +386,67 @@ class SyncService {
     if (error.message.includes('400')) {
       console.error('[SyncService] Validation error for trip:', error.message);
       // TODO: Mark trip as having validation error
+    }
+  }
+
+  /**
+   * Clean up existing invalid trips in local DB
+   * Cancels completed but unsynced trips that are too short or unsupported type.
+   * Call on app startup/foreground resume to clean up legacy drift trips.
+   */
+  async cleanupInvalidTrips(): Promise<number> {
+    try {
+      const completedTrips = await database.getAllTrips({ status: 'completed', synced: false });
+      let cleaned = 0;
+
+      const MIN_WALK_DISTANCE = 400;
+      const MIN_RIDE_DISTANCE = 1000;
+
+      for (const trip of completedTrips) {
+        let cancelReason: string | null = null;
+
+        // Check 1: Distance thresholds
+        if (trip.type === 'walk' && trip.distance < MIN_WALK_DISTANCE) {
+          cancelReason = `Walk too short (${trip.distance.toFixed(0)}m < ${MIN_WALK_DISTANCE}m)`;
+        } else if (trip.type === 'cycle' && trip.distance < MIN_RIDE_DISTANCE) {
+          cancelReason = `Cycle too short (${trip.distance.toFixed(0)}m < ${MIN_RIDE_DISTANCE}m)`;
+        } else if (trip.type === 'drive' || trip.type === 'run') {
+          cancelReason = `Unsupported type: ${trip.type}`;
+        }
+
+        // Check 2: GPS drift detection (spatial validation)
+        if (!cancelReason) {
+          const locations = await database.getLocationsByTrip(trip.id);
+          if (locations.length >= 2) {
+            const coords = locations.map(loc => ({
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+            }));
+            const validation = TripValidationService.validateTrip(coords, trip.distance);
+            if (!validation.isValid) {
+              cancelReason = `GPS drift: ${validation.reasons.join('; ')}`;
+            }
+          }
+        }
+
+        if (cancelReason) {
+          await database.updateTrip(trip.id, {
+            status: 'cancelled',
+            notes: cancelReason,
+          });
+          cleaned++;
+          console.log(`[SyncService] Cleaned trip ${trip.id}: ${cancelReason}`);
+        }
+      }
+
+      if (cleaned > 0) {
+        console.log(`[SyncService] Cleaned up ${cleaned} invalid trips total`);
+      }
+
+      return cleaned;
+    } catch (error) {
+      console.error('[SyncService] Error cleaning up invalid trips:', error);
+      return 0;
     }
   }
 
