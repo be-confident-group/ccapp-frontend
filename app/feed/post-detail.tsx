@@ -10,20 +10,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import {
   PaperAirplaneIcon,
   HeartIcon as HeartIconOutline,
 } from 'react-native-heroicons/outline';
+import { HeartIcon as HeartIconSolid } from 'react-native-heroicons/solid';
 import { useTranslation } from 'react-i18next';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { UserAvatar, PhotoGallery } from '@/components/feed';
-import { useAddComment, usePost } from '@/lib/hooks/usePosts';
+import { useAddComment, usePost, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
-import type { Post, PostComment } from '@/types/feed';
 import Header from '@/components/layout/Header';
 
 export default function PostDetailScreen() {
@@ -55,6 +55,7 @@ export default function PostDetailScreen() {
   const { data: post, isLoading } = usePost(resolvedClubId || 0, postId);
 
   const addCommentMutation = useAddComment();
+  const toggleLike = useTogglePostLike();
 
   const handlePostComment = useCallback(async () => {
     if (!commentText.trim() || !post) return;
@@ -215,10 +216,22 @@ export default function PostDetailScreen() {
 
             {/* Post Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
-                <HeartIconOutline size={24} color={colors.textMuted} />
+              <TouchableOpacity
+                style={styles.actionButton}
+                activeOpacity={0.7}
+                onPress={() => toggleLike.mutate({
+                  clubId: post.club_id,
+                  postId: post.id,
+                  isLiked: post.is_liked,
+                })}
+              >
+                {post.is_liked ? (
+                  <HeartIconSolid size={24} color="#EF4444" />
+                ) : (
+                  <HeartIconOutline size={24} color={colors.textMuted} />
+                )}
                 <ThemedText style={[styles.actionText, { color: colors.textMuted }]}>
-                  {t('feed.like', 'Like')}
+                  {post.likes_count} {post.likes_count === 1 ? t('feed.like', 'Like') : t('feed.likes', 'Likes')}
                 </ThemedText>
               </TouchableOpacity>
             </View>

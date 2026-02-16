@@ -65,8 +65,11 @@ export function useCreateClub() {
       queryClient.invalidateQueries({ queryKey: clubKeys.lists() });
       queryClient.invalidateQueries({ queryKey: clubKeys.myClubs() });
 
-      // Optimistically add to cache
-      queryClient.setQueryData<Club>(clubKeys.detail(newClub.id), newClub);
+      // Invalidate detail so the detail page fetches fresh complete data
+      // (the create response may not include owner/members)
+      if (newClub.id) {
+        queryClient.invalidateQueries({ queryKey: clubKeys.detail(newClub.id) });
+      }
     },
   });
 }
