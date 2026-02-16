@@ -22,7 +22,7 @@ export default {
       buildNumber: "1",
       supportsTablet: true,
       usesAppleSignIn: true,
-      associatedDomains: ["applinks:radzi.com"],
+      associatedDomains: ["applinks:www.radzi.com"],
       infoPlist: {
         NSPhotoLibraryUsageDescription: "Radzi needs access to your photo library to let you select and upload images for your profile picture and posts.",
         NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your cycling and walking activities while you use the app, and to show your position on the map.",
@@ -53,7 +53,7 @@ export default {
         {
           action: "VIEW",
           autoVerify: true,
-          data: [{ scheme: "https", host: "radzi.com", pathPrefix: "/clubs" }],
+          data: [{ scheme: "https", host: "www.radzi.com", pathPrefix: "/clubs" }],
           category: ["BROWSABLE", "DEFAULT"],
         },
       ],
