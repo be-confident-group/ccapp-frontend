@@ -17,6 +17,7 @@ import {
   SunIcon,
   WrenchScrewdriverIcon,
   TrashIcon,
+  LockClosedIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -29,6 +30,7 @@ import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { ActivityChart } from '@/components/profile/ActivityChart';
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
@@ -47,6 +49,7 @@ export default function YouScreen() {
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   const [userProfile, setUserProfile] = useState({
@@ -346,6 +349,12 @@ export default function YouScreen() {
                   subtitle={t('profile:account.editProfileSubtitle')}
                   onPress={() => setShowEditProfile(true)}
                   isFirst
+                />
+                <SettingsItem
+                  icon={<LockClosedIcon size={22} color={colors.text} />}
+                  title="Change Password"
+                  subtitle="Update your account password"
+                  onPress={() => setShowChangePassword(true)}
                   isLast
                 />
               </View>
@@ -482,6 +491,7 @@ export default function YouScreen() {
 
           {/* Developer Section - visible in preview/dev builds for testing */}
           <View style={styles.settingsSection}>
+            {/* Debug Tracking section hidden from users
             <ThemedText style={styles.sectionTitle}>Developer</ThemedText>
             <View style={[styles.settingsCard, styles.cardShadow]}>
               <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
@@ -504,6 +514,7 @@ export default function YouScreen() {
                 />
               </View>
             </View>
+            */}
           </View>
 
           {/* Log Out Button */}
@@ -544,6 +555,12 @@ export default function YouScreen() {
           onClose={() => setShowEditProfile(false)}
           profile={userProfile}
           onSave={handleSaveProfile}
+        />
+
+        {/* Change Password Modal */}
+        <ChangePasswordModal
+          visible={showChangePassword}
+          onClose={() => setShowChangePassword(false)}
         />
 
         {/* Language Picker Modal */}
