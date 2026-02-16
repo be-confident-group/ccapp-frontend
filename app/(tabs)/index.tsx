@@ -45,15 +45,17 @@ export default function HomeScreen() {
   const weatherIconName =
     (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
 
-  // Fetch trips from backend (including active trips that weren't properly stopped)
-  const { data: backendTrips, refetch: refetchTrips } = useTrips();
+  // Fetch completed trips from backend
+  const { data: backendTrips, refetch: refetchTrips } = useTrips({ status: 'completed' });
 
-  // Calculate unrated trips count
+  // Calculate unrated trips count (must match unrated-trips.tsx filtering)
   const unratedTripsCount = useMemo(() => {
     if (!backendTrips) return 0;
 
     return backendTrips
+      .filter((trip) => trip.is_valid !== false) // Exclude invalid/drift trips
       .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
+      .filter((trip) => trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
       .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
       .length;
   }, [backendTrips, ratedTripIds]);

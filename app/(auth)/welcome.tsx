@@ -31,6 +31,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const carouselData = [
   { id: '1', image: require('@/assets/images/carousel-1.png') },
   { id: '2', image: require('@/assets/images/carousel-2.png') },
+  { id: '3', image: require('@/assets/images/carousel-3.png') },
+  { id: '4', image: require('@/assets/images/carousel-4.png') },
 ];
 
 export default function WelcomeScreen() {
