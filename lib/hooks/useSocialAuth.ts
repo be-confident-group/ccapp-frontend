@@ -158,10 +158,13 @@ export function useSocialAuth() {
         throw new Error('No identity token received from Apple');
       }
 
-      // Send identity token (JWT) to backend
+      // Send identity token (JWT) and name to backend
+      // Apple only provides fullName on the FIRST sign-in, so we must send it now
       await authApi.socialLogin({
         provider: 'apple',
         id_token: identityToken,
+        first_name: credential.fullName?.givenName || undefined,
+        last_name: credential.fullName?.familyName || undefined,
       });
 
       // Update auth state - triggers navigation via AuthContext

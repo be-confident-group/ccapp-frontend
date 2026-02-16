@@ -22,6 +22,8 @@ export interface SocialLoginRequest {
   provider: 'google' | 'apple';
   id_token: string;
   access_token?: string; // Required for Google, not needed for Apple
+  first_name?: string; // Apple only: name from native credential (not in JWT)
+  last_name?: string;  // Apple only: name from native credential (not in JWT)
 }
 
 // Normalized auth response used by the app
