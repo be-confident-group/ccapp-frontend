@@ -87,8 +87,13 @@ export default function CreateClubScreen() {
       // Navigate to the new group detail page
       router.replace(`/clubs/${newClub.id}`);
     } catch (error) {
-      console.error('Error creating group:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create group');
+      const message = error instanceof Error ? error.message : '';
+      // Parse field-specific errors from API (format: "field: message")
+      if (message.includes('name:')) {
+        setErrors(prev => ({ ...prev, name: t('clubs.errors.nameExists', 'A group with this name already exists. Please choose a different name.') }));
+      } else {
+        setErrors(prev => ({ ...prev, name: t('clubs.errors.createFailed', 'Failed to create group. Please try again.') }));
+      }
     }
   }, [name, description, photoBase64, validateForm, createClubMutation]);
 

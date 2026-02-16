@@ -54,7 +54,7 @@ class ClubAPI {
       console.log('[ClubAPI] Creating club:', { name: data.name, hasPhoto: !!data.photo });
       return await apiClient.post<Club>('/api/clubs/', data);
     } catch (error) {
-      console.error('[ClubAPI] Error creating club:', error);
+      console.warn('[ClubAPI] Club creation failed:', (error as Error).message);
       throw error;
     }
   }
