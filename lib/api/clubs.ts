@@ -118,7 +118,7 @@ class ClubAPI {
     try {
       return await apiClient.get<Club>(`/api/clubs/share/${shareCode}/`);
     } catch (error) {
-      console.error('[ClubAPI] Error fetching club by share code:', error);
+      console.warn('[ClubAPI] Share code not found:', shareCode);
       throw error;
     }
   }

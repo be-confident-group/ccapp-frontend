@@ -336,7 +336,7 @@ export default function HomeScreen() {
                   <ThemedText style={styles.statValue}>
                     {kmToDistance(userProfile?.stats.total_distance_ride || 0).toFixed(1)}
                   </ThemedText>
-                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} ride</ThemedText>
+                  <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>{distanceUnit} cycled</ThemedText>
                 </View>
 
                 <View style={[styles.statDivider, { borderColor: colors.border }]} />
@@ -374,7 +374,7 @@ export default function HomeScreen() {
                   <ThemedText style={styles.summaryTitle}>{t('home:messages.greatProgress')}</ThemedText>
                 </View>
                 <ThemedText style={[styles.summaryText, { color: colors.textSecondary }]}>
-                  You've walked {formatDistance(userProfile?.stats.total_distance_walk || 0)} and rode {formatDistance(userProfile?.stats.total_distance_ride || 0)}, saving {formatWeight(userProfile?.stats.co2_saved || 0)} of CO₂. Keep up the amazing work!
+                  You've walked {formatDistance(userProfile?.stats.total_distance_walk || 0)} and cycled {formatDistance(userProfile?.stats.total_distance_ride || 0)}, saving {formatWeight(userProfile?.stats.co2_saved || 0)} of CO₂. Keep up the amazing work!
                 </ThemedText>
               </View>
               </View>

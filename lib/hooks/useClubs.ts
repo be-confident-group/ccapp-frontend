@@ -49,6 +49,8 @@ export function useClubByShareCode(shareCode: string) {
     queryKey: clubKeys.shareCode(shareCode),
     queryFn: () => clubAPI.getClubByShareCode(shareCode),
     enabled: !!shareCode,
+    retry: false,
+    gcTime: 0,
   });
 }
 
