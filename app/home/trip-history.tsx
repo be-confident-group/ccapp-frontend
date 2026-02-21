@@ -53,18 +53,7 @@ export default function TripHistoryScreen() {
   const [localLoading, setLocalLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
 
-  useEffect(() => {
-    loadLocalData();
-
-    // Auto-refresh local data every 30 seconds to keep unsynced count updated
-    const interval = setInterval(() => {
-      loadLocalData();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  async function loadLocalData() {
+  const loadLocalData = useCallback(async () => {
     try {
       setLocalLoading(true);
       await database.init();
@@ -86,7 +75,18 @@ export default function TripHistoryScreen() {
     } finally {
       setLocalLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadLocalData();
+
+    // Auto-refresh local data every 30 seconds to keep unsynced count updated
+    const interval = setInterval(() => {
+      loadLocalData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [loadLocalData]);
 
   // Convert backend trips to display format
   function backendToDisplay(trip: ApiTrip): DisplayTrip {
@@ -133,7 +133,7 @@ export default function TripHistoryScreen() {
           console.warn('[TripHistory] Auto-sync failed:', err);
         });
       }
-    }, [isOnline, unsyncedCount, syncing])
+    }, [isOnline, unsyncedCount, syncing, loadLocalData])
   );
 
   // Get the display trips based on data source, filter out invalid and unsupported types
@@ -148,7 +148,7 @@ export default function TripHistoryScreen() {
     // Online: show backend trips + any local trips not yet synced to backend
     const syncedClientIds = new Set(backendTrips.map(t => t.client_id));
     const unsyncedLocalTrips = localTrips.filter(
-      t => !t.synced && !syncedClientIds.has(t.id)
+      t => t.synced !== 1 && !syncedClientIds.has(t.id)
     );
 
     return [

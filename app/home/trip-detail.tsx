@@ -71,7 +71,7 @@ export default function TripDetailScreen() {
   }, [id]);
 
   // Fetch trip from backend if we have a numeric ID
-  const { data: backendTrip, isLoading, isError } = useTrip(tripId);
+  const { data: backendTrip, isLoading, isError } = useTrip(isLocalTrip ? 0 : tripId);
   const deleteTrip = useDeleteTrip();
   const updateTrip = useUpdateTrip();
 
