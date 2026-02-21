@@ -53,7 +53,8 @@ function getDisplayNote(rawNote: string | null): string | null {
 }
 
 export default function TripDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, local } = useLocalSearchParams<{ id: string; local?: string }>();
+  const isLocalTrip = local === 'true';
   const { colors, isDark } = useTheme();
   const { unitSystem, formatElevation, formatWeight } = useUnits();
   const { selectedLayer } = useMapLayer(isDark);
@@ -86,12 +87,18 @@ export default function TripDetailScreen() {
         setIsOnline(online);
       }
 
-      // Load from local DB if offline or backend fails
-      if (!online || isError) {
+      // Load from local DB if offline, backend fails, or explicitly a local trip
+      if (!online || isError || isLocalTrip) {
         try {
-          const local = await database.getTripByBackendId(tripId);
-          if (mounted && local) {
-            setLocalTrip(local);
+          let tripData: Trip | null = null;
+          if (isLocalTrip) {
+            // Load by local client ID (the `id` param is the local UUID)
+            tripData = await database.getTrip(id as string);
+          } else {
+            tripData = await database.getTripByBackendId(tripId);
+          }
+          if (mounted && tripData) {
+            setLocalTrip(tripData);
           }
         } catch (error) {
           console.error('[TripDetail] Error loading local trip:', error);
@@ -104,12 +111,12 @@ export default function TripDetailScreen() {
     return () => {
       mounted = false;
     };
-  }, [tripId, isError]);
+  }, [tripId, isError, isLocalTrip, id]);
 
   // Transform backend trip OR local trip to display format
   const tripDetails = useMemo(() => {
-    // Use backend trip if available
-    if (backendTrip) {
+    // Use backend trip if available, but skip it for explicitly local trips
+    if (!isLocalTrip && backendTrip) {
       // Transform route from backend format {lat, lng} to {latitude, longitude}
       const transformedRoute = backendTrip.route
         ? backendTrip.route.map(coord => ({
@@ -172,7 +179,7 @@ export default function TripDetailScreen() {
     }
 
     return null;
-  }, [backendTrip, localTrip]);
+  }, [backendTrip, localTrip, isLocalTrip]);
 
   function handleDelete() {
     Alert.alert(

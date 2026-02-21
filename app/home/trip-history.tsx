@@ -12,8 +12,8 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
 import { formatDistance as formatDistanceUtil, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -52,9 +52,6 @@ export default function TripHistoryScreen() {
   const [localTrips, setLocalTrips] = useState<DBTrip[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
-
-  // Determine which data source to use
-  const useLocalData = !isOnline || (!backendTrips && localTrips.length > 0);
 
   useEffect(() => {
     loadLocalData();
@@ -125,13 +122,44 @@ export default function TripHistoryScreen() {
     };
   }
 
+  // Auto-sync unsynced trips whenever this screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isOnline && unsyncedCount > 0 && !syncing) {
+        syncService.syncTrips().then(() => {
+          loadLocalData();
+          refetch();
+        }).catch(err => {
+          console.warn('[TripHistory] Auto-sync failed:', err);
+        });
+      }
+    }, [isOnline, unsyncedCount, syncing])
+  );
+
   // Get the display trips based on data source, filter out invalid and unsupported types
-  const displayTrips: DisplayTrip[] = (useLocalData
-    ? localTrips.map(localToDisplay)
-    : (backendTrips || [])
+  const displayTrips: DisplayTrip[] = useMemo(() => {
+    if (!isOnline || !backendTrips) {
+      // Offline: show all local completed trips
+      return localTrips
+        .map(localToDisplay)
+        .filter(trip => trip.type === 'walk' || trip.type === 'cycle');
+    }
+
+    // Online: show backend trips + any local trips not yet synced to backend
+    const syncedClientIds = new Set(backendTrips.map(t => t.client_id));
+    const unsyncedLocalTrips = localTrips.filter(
+      t => !t.synced && !syncedClientIds.has(t.id)
+    );
+
+    return [
+      ...(backendTrips)
         .filter(trip => trip.is_valid !== false)
-        .map(backendToDisplay)
-  ).filter(trip => trip.type === 'walk' || trip.type === 'cycle');
+        .map(backendToDisplay),
+      ...unsyncedLocalTrips.map(localToDisplay),
+    ]
+      .filter(trip => trip.type === 'walk' || trip.type === 'cycle')
+      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+  }, [isOnline, backendTrips, localTrips]);
 
   async function onRefresh() {
     await Promise.all([
@@ -182,8 +210,8 @@ export default function TripHistoryScreen() {
       if (item.backendId) {
         router.push(`/home/trip-detail?id=${item.backendId}`);
       } else {
-        // For unsynced trips, show local trip detail (or alert if not implemented)
-        Alert.alert('Trip Not Synced', 'This trip has not been synced to the server yet. Sync to view full details.');
+        // Navigate to local trip detail using local client ID
+        router.push(`/home/trip-detail?id=${item.clientId}&local=true`);
       }
     };
 
@@ -307,7 +335,7 @@ export default function TripHistoryScreen() {
         </View>
 
       {/* Offline Banner */}
-      {useLocalData && (
+      {(!isOnline || !backendTrips) && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.border }]}>
           <CloudIcon size={16} color={colors.textSecondary} />
           <ThemedText style={[styles.offlineText, { color: colors.textSecondary }]}>
