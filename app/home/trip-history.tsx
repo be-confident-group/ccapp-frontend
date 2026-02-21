@@ -99,7 +99,7 @@ export default function TripHistoryScreen() {
           console.warn('[TripHistory] Auto-sync failed:', err);
         });
       }
-    }, [isOnline, unsyncedCount, syncing, loadLocalData])
+    }, [isOnline, unsyncedCount, syncing, loadLocalData, refetch])
   );
 
   // Get the display trips based on data source, filter out invalid and unsupported types
