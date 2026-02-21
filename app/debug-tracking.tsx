@@ -117,7 +117,7 @@ export default function DebugTrackingScreen() {
   const [testingGps, setTestingGps] = useState(false);
   const [gpsTestResult, setGpsTestResult] = useState<string | null>(null);
   const [taskLog, setTaskLog] = useState<Array<{timestamp: string; platform: string; locationCount: number}>>([]);
-  const [errorLog, setErrorLog] = useState<Array<{timestamp: string; platform: string; platformVersion?: string; error: any}>>([]);
+  const [errorLog, setErrorLog] = useState<Array<{timestamp: string; platform: string; platformVersion: string; error: any}>>([]);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
 
   const loadDebugInfo = async () => {
@@ -847,8 +847,8 @@ export default function DebugTrackingScreen() {
               {taskLog.length === 0 ? (
                 <Text style={styles.monoText}>No task executions recorded yet</Text>
               ) : (
-                taskLog.slice(0, 10).map((entry, i) => (
-                  <Text key={i} style={styles.monoText}>
+                taskLog.slice(0, 10).map((entry) => (
+                  <Text key={entry.timestamp} style={styles.monoText}>
                     {new Date(entry.timestamp).toLocaleTimeString()} — {entry.locationCount} locations ({entry.platform})
                   </Text>
                 ))
@@ -861,8 +861,8 @@ export default function DebugTrackingScreen() {
                 <Text style={[styles.sectionTitle, { color: '#C62828' }]}>
                   Background Task Errors ({errorLog.length})
                 </Text>
-                {errorLog.map((entry, i) => (
-                  <View key={i} style={{ marginBottom: 8 }}>
+                {errorLog.map((entry) => (
+                  <View key={entry.timestamp} style={{ marginBottom: 8 }}>
                     <Text style={[styles.monoText, { color: '#C62828' }]}>
                       {new Date(entry.timestamp).toLocaleString()} [{entry.platform} {entry.platformVersion}]
                     </Text>

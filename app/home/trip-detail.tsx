@@ -14,7 +14,6 @@ import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip
 import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
-import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -322,7 +321,7 @@ export default function TripDetailScreen() {
 
   const mapStyle = getStyleURL();
 
-  const isDebugBuild = __DEV__ || Constants.easConfig?.buildProfile !== 'production';
+  const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
 
   // Create GeoJSON for route
   const routeGeoJSON = route.length > 0 ? {

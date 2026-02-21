@@ -3,7 +3,6 @@ import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import {
   UserIcon,
@@ -47,7 +46,7 @@ export default function YouScreen() {
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
   const { isTracking, toggleTracking, hasPermissions } = useTracking();
-  const isDebugBuild = __DEV__ || Constants.easConfig?.buildProfile !== 'production';
+  const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
