@@ -565,6 +565,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       await processLocationUpdates(accurateLocations);
     } catch (err) {
       console.error('[LocationTracking] Error processing locations:', err);
+      await logTrackingError(err);
     }
   }
 });
@@ -807,6 +808,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       // Reset tracking state for next trip
       lastStationaryTime = null;
       resetGpsStabilization();
+      TripDetectionService.resetState();
     }
   }
 }
