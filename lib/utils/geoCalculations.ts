@@ -97,7 +97,7 @@ export function formatSpeed(kmh: number | null | undefined, unit: 'metric' | 'im
 }
 
 /**
- * Format duration as HH:MM:SS or MM:SS
+ * Format duration as human-readable string (e.g. "1m 25s", "2h 30m")
  */
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -105,9 +105,12 @@ export function formatDuration(seconds: number): string {
   const secs = Math.floor(seconds % 60);
 
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours}h ${minutes}m`;
   }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  }
+  return `${secs}s`;
 }
 
 /**
