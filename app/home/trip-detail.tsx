@@ -103,7 +103,7 @@ export default function TripDetailScreen() {
           distance: backendTrip.distance * 1000, // Convert km to meters
           duration: backendTrip.duration,
           avg_speed: backendTrip.average_speed,
-          max_speed: backendTrip.average_speed, // Backend doesn't track max speed, use average
+          max_speed: null, // Backend doesn't return max_speed — hide the stat
           elevation_gain: backendTrip.elevation_gain || 0,
           co2_saved: backendTrip.co2_saved,
           notes: backendTrip.notes || null,
@@ -396,10 +396,12 @@ export default function TripDetailScreen() {
               <ThemedText style={styles.statValue}>{formatSpeed(trip.avg_speed, unitSystem)}</ThemedText>
             </View>
 
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Max Speed</ThemedText>
-              <ThemedText style={styles.statValue}>{formatSpeed(trip.max_speed, unitSystem)}</ThemedText>
-            </View>
+            {trip.max_speed != null && (
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Max Speed</ThemedText>
+                <ThemedText style={styles.statValue}>{formatSpeed(trip.max_speed, unitSystem)}</ThemedText>
+              </View>
+            )}
 
             <View style={styles.statItem}>
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Elevation</ThemedText>
