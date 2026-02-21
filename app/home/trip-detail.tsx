@@ -14,6 +14,7 @@ import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip
 import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
+import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -290,7 +291,6 @@ export default function TripDetailScreen() {
 
   const { trip, route } = tripDetails;
   const locationCount = route.length;
-  const routePointCount = tripDetails?.route?.length ?? 0;
   const tripColor = getTripTypeColor(trip.type);
   const tripName = getTripTypeName(trip.type);
   const date = new Date(trip.start_time);
@@ -314,6 +314,8 @@ export default function TripDetailScreen() {
   };
 
   const mapStyle = getStyleURL();
+
+  const isDebugBuild = __DEV__ || Constants.easConfig?.buildProfile !== 'production';
 
   // Create GeoJSON for route
   const routeGeoJSON = route.length > 0 ? {
@@ -484,7 +486,7 @@ export default function TripDetailScreen() {
           </View>
 
           {/* Beta Diagnostics */}
-          {__DEV__ && tripDetails && (
+          {isDebugBuild && tripDetails && (
             <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary, marginTop: Spacing.sm }]}>
               <TouchableOpacity
                 style={styles.infoRow}
@@ -515,7 +517,7 @@ export default function TripDetailScreen() {
                   </View>
                   <View style={styles.infoRow}>
                     <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>GPS Points</ThemedText>
-                    <ThemedText style={styles.infoValue}>{routePointCount}</ThemedText>
+                    <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
                   </View>
                   <View style={styles.infoRow}>
                     <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</ThemedText>
