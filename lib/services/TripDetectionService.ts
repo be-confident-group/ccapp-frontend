@@ -146,6 +146,17 @@ export class TripDetectionService {
   }
 
   /**
+   * Reset all detection state so the next location update starts fresh.
+   * TripDetectionService is stateless beyond its config (movement counters and
+   * stationary timers live in LocationTrackingService), so this resets config
+   * to defaults as a clean-slate operation and is safe to call after a zombie
+   * trip ends or tracking is manually stopped.
+   */
+  static resetState(): void {
+    this.resetConfig();
+  }
+
+  /**
    * Get human-readable explanation of current thresholds
    */
   static getConfigExplanation(): string {

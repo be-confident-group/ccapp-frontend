@@ -5,6 +5,7 @@
  * CRITICAL: TaskManager.defineTask MUST be called in GLOBAL SCOPE!
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform, AppState, AppStateStatus } from 'react-native';
@@ -39,7 +40,54 @@ const MAX_POSSIBLE_SPEED_MPS = 50; // 180 km/h - absolute physical limit for any
 let lastStoredLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
 
 // ===== ZOMBIE TRIP DETECTION =====
-const ZOMBIE_TRIP_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops at shops, cafes, etc.
+
+// ===== TRACKING ERROR AND TASK LOG =====
+const TRACKING_ERROR_LOG_KEY = '@tracking_errors';
+const TRACKING_TASK_LOG_KEY = '@tracking_task_log';
+const MAX_ERROR_LOG_ENTRIES = 20;
+const MAX_TASK_LOG_ENTRIES = 50;
+
+/**
+ * Persistently log a background task error for later diagnosis in the debug panel.
+ */
+async function logTrackingError(error: unknown): Promise<void> {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      platform: Platform.OS,
+      platformVersion: String(Platform.Version),
+      error: error instanceof Error
+        ? { message: error.message, name: error.name }
+        : String(error),
+    };
+    const raw = await AsyncStorage.getItem(TRACKING_ERROR_LOG_KEY);
+    const existing: typeof entry[] = raw ? JSON.parse(raw) : [];
+    const updated = [entry, ...existing].slice(0, MAX_ERROR_LOG_ENTRIES);
+    await AsyncStorage.setItem(TRACKING_ERROR_LOG_KEY, JSON.stringify(updated));
+  } catch {
+    // Never let logging crash the tracking task
+  }
+}
+
+/**
+ * Log a successful background task execution (for Android diagnostics).
+ */
+async function logBackgroundTaskExecution(locationCount: number): Promise<void> {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      platform: Platform.OS,
+      locationCount,
+    };
+    const raw = await AsyncStorage.getItem(TRACKING_TASK_LOG_KEY);
+    const existing: typeof entry[] = raw ? JSON.parse(raw) : [];
+    const updated = [entry, ...existing].slice(0, MAX_TASK_LOG_ENTRIES);
+    await AsyncStorage.setItem(TRACKING_TASK_LOG_KEY, JSON.stringify(updated));
+  } catch {
+    // Never let logging crash the tracking task
+  }
+}
 
 // ===== PERMISSION CHANGE CALLBACK =====
 let onPermissionDowngraded: (() => void) | null = null;
@@ -290,6 +338,7 @@ async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
     console.log(`[LocationTracking] Zombie trip ${tripId} cancelled: no locations`);
     lastStationaryTime = null;
     resetGpsStabilization();
+    TripDetectionService.resetState();
     return;
   }
 
@@ -344,6 +393,7 @@ async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
   // Reset tracking state
   lastStationaryTime = null;
   resetGpsStabilization();
+  TripDetectionService.resetState();
 }
 
 /**
@@ -468,6 +518,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     } else {
       // Real error - log and exit
       console.error('[LocationTracking] Task error:', error);
+      await logTrackingError(error);
       return;
     }
   }
@@ -480,6 +531,8 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       console.log('[LocationTracking] No location data available');
       return;
     }
+
+    await logBackgroundTaskExecution(locations.length);
 
     // Log raw location data for debugging
     console.log('[LocationTracking] Raw locations received:', locations.map((loc, i) => ({
@@ -1069,5 +1122,25 @@ export class LocationTrackingService {
       activeTrip,
       permissions,
     };
+  }
+}
+
+// ===== PERSISTENT LOG READERS =====
+
+export async function getTrackingErrorLog(): Promise<Array<{timestamp: string; platform: string; platformVersion: string; error: any}>> {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_ERROR_LOG_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getTrackingTaskLog(): Promise<Array<{timestamp: string; platform: string; locationCount: number}>> {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_TASK_LOG_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
   }
 }
