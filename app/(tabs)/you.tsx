@@ -3,6 +3,7 @@ import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import {
   UserIcon,
@@ -46,6 +47,7 @@ export default function YouScreen() {
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
   const { isTracking, toggleTracking, hasPermissions } = useTracking();
+  const isDebugBuild = __DEV__ || Constants.easConfig?.buildProfile !== 'production';
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -489,33 +491,33 @@ export default function YouScreen() {
             </View>
           </View>
 
-          {/* Developer Section - visible in preview/dev builds for testing */}
-          <View style={styles.settingsSection}>
-            {/* Debug Tracking section hidden from users
-            <ThemedText style={styles.sectionTitle}>Developer</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
+          {/* Developer Section - visible in dev and preview builds */}
+          {isDebugBuild && (
+            <View style={styles.settingsSection}>
+              <ThemedText style={styles.sectionTitle}>Developer</ThemedText>
+              <View style={[styles.settingsCard, styles.cardShadow]}>
+                <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
+                  {!isDark && (
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 0.3 }}
+                      style={styles.cardTopHighlight}
+                    />
+                  )}
+                  <SettingsItem
+                    icon={<WrenchScrewdriverIcon size={22} color={colors.text} />}
+                    title="Debug Tracking"
+                    subtitle="View real-time tracking status and diagnostics"
+                    onPress={() => router.push('/debug-tracking')}
+                    isFirst
+                    isLast
                   />
-                )}
-                <SettingsItem
-                  icon={<WrenchScrewdriverIcon size={22} color={colors.text} />}
-                  title="Debug Tracking"
-                  subtitle="View real-time tracking status and diagnostics"
-                  onPress={() => router.push('/debug-tracking')}
-                  isFirst
-                  isLast
-                />
+                </View>
               </View>
             </View>
-            */}
-          </View>
+          )}
 
           {/* Log Out Button */}
           <View style={styles.logoutSection}>

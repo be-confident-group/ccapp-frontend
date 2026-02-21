@@ -3,10 +3,11 @@
  * Shows real-time tracking status for testing without console access
  */
 
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Alert, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { LocationTrackingService } from '@/lib/services/LocationTrackingService';
+import { LocationTrackingService, getTrackingErrorLog, getTrackingTaskLog } from '@/lib/services/LocationTrackingService';
+import { syncService } from '@/lib/services/SyncService';
 import { TripDetectionService } from '@/lib/services/TripDetectionService';
 import { ActivityClassifier } from '@/lib/services/ActivityClassifier';
 import { SegmentDetector } from '@/lib/services/SegmentDetector';
@@ -115,6 +116,9 @@ export default function DebugTrackingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [testingGps, setTestingGps] = useState(false);
   const [gpsTestResult, setGpsTestResult] = useState<string | null>(null);
+  const [taskLog, setTaskLog] = useState<Array<{timestamp: string; platform: string; locationCount: number}>>([]);
+  const [errorLog, setErrorLog] = useState<Array<{timestamp: string; platform: string; platformVersion?: string; error: any}>>([]);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
 
   const loadDebugInfo = async () => {
     try {
@@ -349,6 +353,18 @@ export default function DebugTrackingScreen() {
         recentTrips,
         lastCompletedTrip: lastCompletedTripInfo,
       });
+
+      // Load background task log
+      const tLog = await getTrackingTaskLog();
+      setTaskLog(tLog);
+
+      // Load error log
+      const eLog = await getTrackingErrorLog();
+      setErrorLog(eLog);
+
+      // Load unsynced count
+      const count = await syncService.getUnsyncedCount();
+      setUnsyncedCount(count);
     } catch (err) {
       console.error('[DebugTracking] Error loading info:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -818,6 +834,61 @@ export default function DebugTrackingScreen() {
                 Total Locations: {debugInfo.databaseStats.totalLocations}
               </Text>
             </View>
+
+            {/* ===== SYNC STATUS ===== */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Sync Status</Text>
+              <Text style={styles.monoText}>Unsynced Trips: {unsyncedCount}</Text>
+            </View>
+
+            {/* ===== BACKGROUND TASK LOG ===== */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Background Task Log (last {taskLog.length})</Text>
+              {taskLog.length === 0 ? (
+                <Text style={styles.monoText}>No task executions recorded yet</Text>
+              ) : (
+                taskLog.slice(0, 10).map((entry, i) => (
+                  <Text key={i} style={styles.monoText}>
+                    {new Date(entry.timestamp).toLocaleTimeString()} — {entry.locationCount} locations ({entry.platform})
+                  </Text>
+                ))
+              )}
+            </View>
+
+            {/* ===== ERROR LOG ===== */}
+            {errorLog.length > 0 && (
+              <View style={[styles.section, { backgroundColor: '#FFEBEE' }]}>
+                <Text style={[styles.sectionTitle, { color: '#C62828' }]}>
+                  Background Task Errors ({errorLog.length})
+                </Text>
+                {errorLog.map((entry, i) => (
+                  <View key={i} style={{ marginBottom: 8 }}>
+                    <Text style={[styles.monoText, { color: '#C62828' }]}>
+                      {new Date(entry.timestamp).toLocaleString()} [{entry.platform} {entry.platformVersion}]
+                    </Text>
+                    <Text style={[styles.monoText, { color: '#C62828' }]}>
+                      {entry.error?.message || String(entry.error)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* ===== ANDROID SPECIFIC ===== */}
+            {Platform.OS === 'android' && (
+              <View style={[styles.section, { backgroundColor: '#E3F2FD' }]}>
+                <Text style={[styles.sectionTitle, { color: '#1565C0' }]}>Android Info</Text>
+                <Text style={styles.monoText}>Android Version: {Platform.Version}</Text>
+                <Text style={styles.monoText}>
+                  Last Task Execution: {taskLog[0]
+                    ? new Date(taskLog[0].timestamp).toLocaleString()
+                    : 'Never recorded'}
+                </Text>
+                <Text style={[styles.monoText, { color: errorLog.length > 0 ? '#C62828' : '#2E7D32' }]}>
+                  Errors: {errorLog.length === 0 ? 'None ✓' : `${errorLog.length} errors — check above`}
+                </Text>
+              </View>
+            )}
 
             {/* Last Completed Trip Debug Section */}
             {debugInfo.lastCompletedTrip && (
