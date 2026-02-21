@@ -27,6 +27,30 @@ import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
 import { TripManager } from '@/lib/services';
 
+/**
+ * Translates internal tracking notes to user-friendly explanations.
+ * Used for beta users to understand what happened to their trip.
+ */
+function getDisplayNote(rawNote: string | null): string | null {
+  if (!rawNote) return null;
+
+  if (rawNote.includes('[Auto-ended: background tracking timeout]')) {
+    return 'Trip ended automatically — no GPS signal was detected for 45 minutes. This can happen if the app was backgrounded, battery saver mode was on, or you were indoors for a long time.';
+  }
+  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('No locations recorded')) {
+    return 'Trip was cancelled — GPS could not be obtained when the trip started.';
+  }
+  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('below minimum')) {
+    return 'Trip was cancelled — the distance was too short to record (minimum is 400m for walks).';
+  }
+  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('not supported')) {
+    return 'Trip was cancelled — it was detected as a drive or run, which are not tracked.';
+  }
+
+  // Return raw note for anything we don't recognize
+  return rawNote;
+}
+
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, isDark } = useTheme();
@@ -36,6 +60,7 @@ export default function TripDetailScreen() {
   const [isOnline, setIsOnline] = useState(true);
   const [showTypeCorrection, setShowTypeCorrection] = useState(false);
   const [correcting, setCorrecting] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Try to parse as number (backend trip ID) or use as string (local client_id)
   const tripId = useMemo(() => {
@@ -265,6 +290,7 @@ export default function TripDetailScreen() {
 
   const { trip, route } = tripDetails;
   const locationCount = route.length;
+  const routePointCount = tripDetails?.route?.length ?? 0;
   const tripColor = getTripTypeColor(trip.type);
   const tripName = getTripTypeName(trip.type);
   const date = new Date(trip.start_time);
@@ -426,12 +452,15 @@ export default function TripDetailScreen() {
               <ThemedText style={styles.infoValue}>{trip.is_manual ? 'Manual' : 'Automatic'}</ThemedText>
             </View>
 
-            {trip.notes && (
-              <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Notes</ThemedText>
-                <ThemedText style={[styles.infoValue, { marginTop: 4 }]}>{trip.notes}</ThemedText>
-              </View>
-            )}
+            {(() => {
+              const displayNote = getDisplayNote(trip.notes);
+              return displayNote ? (
+                <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                  <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Notes</ThemedText>
+                  <ThemedText style={[styles.infoValue, { marginTop: 4 }]}>{displayNote}</ThemedText>
+                </View>
+              ) : null;
+            })()}
           </View>
 
           {/* Trip Type Correction */}
@@ -453,6 +482,57 @@ export default function TripDetailScreen() {
               </ThemedText>
             </TouchableOpacity>
           </View>
+
+          {/* Beta Diagnostics */}
+          {__DEV__ && tripDetails && (
+            <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary, marginTop: Spacing.sm }]}>
+              <TouchableOpacity
+                style={styles.infoRow}
+                onPress={() => setShowDiagnostics(!showDiagnostics)}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                  Beta Diagnostics
+                </ThemedText>
+                <MaterialCommunityIcons
+                  name={showDiagnostics ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {showDiagnostics && (
+                <>
+                  <View style={styles.infoRow}>
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Trip ID</ThemedText>
+                    <ThemedText style={[styles.infoValue, { fontSize: 11 }]} numberOfLines={1}>
+                      {tripDetails.trip.id}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Backend ID</ThemedText>
+                    <ThemedText style={styles.infoValue}>{tripId > 0 ? String(tripId) : 'Not synced'}</ThemedText>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>GPS Points</ThemedText>
+                    <ThemedText style={styles.infoValue}>{routePointCount}</ThemedText>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</ThemedText>
+                    <ThemedText style={styles.infoValue}>{tripDetails.trip.status}</ThemedText>
+                  </View>
+                  {tripDetails.trip.notes && (
+                    <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Raw Note</ThemedText>
+                      <ThemedText style={[styles.infoValue, { marginTop: 4, fontSize: 11 }]}>
+                        {tripDetails.trip.notes}
+                      </ThemedText>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
       </ThemedView>
