@@ -88,40 +88,6 @@ export default function TripHistoryScreen() {
     return () => clearInterval(interval);
   }, [loadLocalData]);
 
-  // Convert backend trips to display format
-  function backendToDisplay(trip: ApiTrip): DisplayTrip {
-    return {
-      id: trip.client_id,
-      backendId: trip.id,
-      type: trip.type,
-      isManual: trip.is_manual,
-      startTime: new Date(trip.start_timestamp),
-      distance: trip.distance * 1000, // km to meters
-      duration: trip.duration,
-      co2Saved: trip.co2_saved,
-      isSynced: true,
-      hasRoute: (trip.route && trip.route.length > 0) || false,
-      clientId: trip.client_id,
-    };
-  }
-
-  // Convert local trips to display format
-  function localToDisplay(trip: DBTrip): DisplayTrip {
-    return {
-      id: trip.id,
-      backendId: trip.backend_id || undefined,
-      type: trip.type,
-      isManual: trip.is_manual === 1,
-      startTime: new Date(trip.start_time),
-      distance: trip.distance, // already in meters
-      duration: trip.duration,
-      co2Saved: trip.co2_saved,
-      isSynced: trip.synced === 1,
-      hasRoute: !!trip.route_data,
-      clientId: trip.id,
-    };
-  }
-
   // Auto-sync unsynced trips whenever this screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -138,6 +104,38 @@ export default function TripHistoryScreen() {
 
   // Get the display trips based on data source, filter out invalid and unsupported types
   const displayTrips: DisplayTrip[] = useMemo(() => {
+    function backendToDisplay(trip: ApiTrip): DisplayTrip {
+      return {
+        id: trip.client_id,
+        backendId: trip.id,
+        type: trip.type,
+        isManual: trip.is_manual,
+        startTime: new Date(trip.start_timestamp),
+        distance: trip.distance * 1000, // km to meters
+        duration: trip.duration,
+        co2Saved: trip.co2_saved,
+        isSynced: true,
+        hasRoute: (trip.route && trip.route.length > 0) || false,
+        clientId: trip.client_id,
+      };
+    }
+
+    function localToDisplay(trip: DBTrip): DisplayTrip {
+      return {
+        id: trip.id,
+        backendId: trip.backend_id || undefined,
+        type: trip.type,
+        isManual: trip.is_manual === 1,
+        startTime: new Date(trip.start_time),
+        distance: trip.distance, // already in meters
+        duration: trip.duration,
+        co2Saved: trip.co2_saved,
+        isSynced: trip.synced === 1,
+        hasRoute: !!trip.route_data,
+        clientId: trip.id,
+      };
+    }
+
     if (!isOnline || !backendTrips) {
       // Offline: show all local completed trips
       return localTrips
@@ -335,7 +333,7 @@ export default function TripHistoryScreen() {
         </View>
 
       {/* Offline Banner */}
-      {(!isOnline || !backendTrips) && (
+      {(!isOnline || (!backendTrips && !isLoading)) && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.border }]}>
           <CloudIcon size={16} color={colors.textSecondary} />
           <ThemedText style={[styles.offlineText, { color: colors.textSecondary }]}>

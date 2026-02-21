@@ -39,6 +39,9 @@ import { authApi, User } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
 import * as Location from 'expo-location';
 
+// Build-time constant — true for dev and EAS preview builds, false for production
+const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
+
 export default function YouScreen() {
   const { t } = useTranslation();
   const { signOut } = useAuth();
@@ -46,7 +49,6 @@ export default function YouScreen() {
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
   const { isTracking, toggleTracking, hasPermissions } = useTracking();
-  const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);

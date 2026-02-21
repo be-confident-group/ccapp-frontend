@@ -27,6 +27,9 @@ import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
 import { TripManager } from '@/lib/services';
 
+// Build-time constant — true for dev and EAS preview builds, false for production
+const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
+
 /**
  * Translates internal tracking notes to user-friendly explanations.
  * Used for beta users to understand what happened to their trip.
@@ -41,7 +44,7 @@ function getDisplayNote(rawNote: string | null): string | null {
     return 'Trip was cancelled — GPS could not be obtained when the trip started.';
   }
   if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('below minimum')) {
-    return 'Trip was cancelled — the distance was too short to record (minimum is 400m for walks).';
+    return 'Trip was cancelled — the distance was too short to record.';
   }
   if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('not supported')) {
     return 'Trip was cancelled — it was detected as a drive or run, which are not tracked.';
@@ -320,8 +323,6 @@ export default function TripDetailScreen() {
   };
 
   const mapStyle = getStyleURL();
-
-  const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
 
   // Create GeoJSON for route
   const routeGeoJSON = route.length > 0 ? {
