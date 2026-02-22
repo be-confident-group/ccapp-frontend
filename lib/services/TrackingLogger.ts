@@ -26,7 +26,11 @@ export function trackingLog(level: LogLevel, message: string): void {
     logBuffer.shift();
   }
   for (const listener of listeners) {
-    listener(entry);
+    try {
+      listener(entry);
+    } catch {
+      // Never let a listener crash the logger
+    }
   }
 }
 

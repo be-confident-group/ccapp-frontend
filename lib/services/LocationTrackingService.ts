@@ -47,6 +47,14 @@ let lastStoredLocation: { latitude: number; longitude: number; timestamp: number
 // ===== SPEED CALCULATION FROM CONSECUTIVE POINTS =====
 let previousLocationForSpeed: { latitude: number; longitude: number; timestamp: number } | null = null;
 
+// ===== PROCESSING LOCK =====
+// Prevents foreground watcher and background task from processing concurrently
+let processingLock: Promise<void> | null = null;
+
+// ===== TRIP VALIDATION =====
+const MIN_WALK_DISTANCE = 400; // meters
+const MIN_RIDE_DISTANCE = 1000; // meters
+
 // ===== ZOMBIE TRIP DETECTION =====
 const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops at shops, cafes, etc.
 
@@ -284,22 +292,27 @@ async function handleAppStateChange(nextAppState: AppStateStatus): Promise<void>
   const isNowForeground = nextAppState === 'active';
   const isNowBackground = nextAppState === 'background' || nextAppState === 'inactive';
 
-  // App coming to foreground from background
-  if (wasBackground && isNowForeground) {
-    await handleForegroundResume();
+  try {
+    // App coming to foreground from background
+    if (wasBackground && isNowForeground) {
+      await handleForegroundResume();
 
-    // Start foreground watcher if tracking is enabled
-    const isTracking = await LocationTrackingService.isTracking();
-    if (isTracking) {
-      await startForegroundWatching();
+      // Start foreground watcher if tracking is enabled
+      const isTracking = await LocationTrackingService.isTracking();
+      if (isTracking) {
+        await startForegroundWatching();
+      }
     }
-  }
 
-  // App going to background
-  if (!wasBackground && isNowBackground) {
-    // Stop foreground watcher - rely on background task instead
-    stopForegroundWatching();
-    console.log('[LocationTracking] App going to background, stopped foreground watcher');
+    // App going to background
+    if (!wasBackground && isNowBackground) {
+      // Stop foreground watcher - rely on background task instead
+      stopForegroundWatching();
+      console.log('[LocationTracking] App going to background, stopped foreground watcher');
+    }
+  } catch (err) {
+    console.error('[LocationTracking] Error handling app state change:', err);
+    trackingLog('error', `App state change error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   currentAppState = nextAppState;
@@ -390,8 +403,6 @@ async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
   const dominantActivity = getDominantActivityType(locations);
 
   // Validate minimum distances and types
-  const MIN_WALK_DISTANCE = 400;
-  const MIN_RIDE_DISTANCE = 1000;
   let cancelReason: string | null = null;
 
   if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
@@ -539,7 +550,14 @@ export function isForegroundWatchingActive(): boolean {
  */
 async function processSingleLocationUpdate(location: Location.LocationObject): Promise<void> {
   await database.init();
-  await processLocationUpdates([location]);
+  // Serialize access to prevent foreground/background race conditions
+  if (processingLock) await processingLock;
+  processingLock = processLocationUpdates([location]);
+  try {
+    await processingLock;
+  } finally {
+    processingLock = null;
+  }
 }
 
 // ===== CRITICAL: GLOBAL SCOPE TASK DEFINITION =====
@@ -620,7 +638,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     trackingLog('info', `Processing ${accurateLocations.length} accurate locations`);
 
     try {
-      await processLocationUpdates(accurateLocations);
+      // Serialize access to prevent foreground/background race conditions
+      if (processingLock) await processingLock;
+      processingLock = processLocationUpdates(accurateLocations);
+      try {
+        await processingLock;
+      } finally {
+        processingLock = null;
+      }
     } catch (err) {
       console.error('[LocationTracking] Error processing locations:', err);
       trackingLog('error', `Error processing locations: ${err instanceof Error ? err.message : String(err)}`);
@@ -859,8 +884,6 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         }
 
         // Validate minimum distances and types before completing
-        const MIN_WALK_DISTANCE = 400;
-        const MIN_RIDE_DISTANCE = 1000;
         let cancelReason: string | null = null;
 
         if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
@@ -1140,8 +1163,9 @@ export class LocationTrackingService {
 
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
 
-    // Reset stationary tracking
+    // Reset all tracking state for clean restart
     lastStationaryTime = null;
+    resetGpsStabilization();
 
     console.log('[LocationTracking] ✓ Background tracking stopped');
     trackingLog('info', 'Tracking stopped');
