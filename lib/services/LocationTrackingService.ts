@@ -39,6 +39,9 @@ let isGpsStabilized = false;
 const MAX_POSSIBLE_SPEED_MPS = 50; // 180 km/h - absolute physical limit for any valid trip point
 let lastStoredLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
 
+// ===== SPEED CALCULATION FROM CONSECUTIVE POINTS =====
+let previousLocationForSpeed: { latitude: number; longitude: number; timestamp: number } | null = null;
+
 // ===== ZOMBIE TRIP DETECTION =====
 const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops at shops, cafes, etc.
 
@@ -160,6 +163,7 @@ function resetGpsStabilization(): void {
   stabilizationBuffer = [];
   isGpsStabilized = false;
   resetLastStoredLocation();
+  previousLocationForSpeed = null;
 }
 
 /**
@@ -575,6 +579,22 @@ console.log('[LocationTracking] ===== TASK REGISTERED =====');
 console.log('[LocationTracking] Background task name:', LOCATION_TASK_NAME);
 
 /**
+ * Calculate speed from consecutive GPS points when device speed is unavailable.
+ * iOS returns speed = -1 when it can't determine speed, so we fall back to
+ * distance / time between consecutive points.
+ */
+function calculateSpeedFromPoints(lat: number, lng: number, timestamp: number): number {
+  if (!previousLocationForSpeed) return 0;
+  const timeDiffSeconds = (timestamp - previousLocationForSpeed.timestamp) / 1000;
+  if (timeDiffSeconds <= 0 || timeDiffSeconds > 30) return 0;
+  const distance = calculateDistance(
+    { latitude: previousLocationForSpeed.latitude, longitude: previousLocationForSpeed.longitude },
+    { latitude: lat, longitude: lng }
+  );
+  return distance / timeDiffSeconds;
+}
+
+/**
  * Process location updates from background task
  * This runs in background when app receives location updates
  */
@@ -585,8 +605,19 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
   for (const location of locations) {
     const { latitude, longitude, altitude, accuracy, speed, heading } = location.coords;
     const timestamp = location.timestamp;
-    // iOS returns -1 for speed when unavailable, treat as 0
-    const currentSpeed = speed != null && speed >= 0 ? speed : 0; // m/s
+    // iOS returns -1 for speed when unavailable; calculate from consecutive GPS points
+    let currentSpeed: number;
+    if (speed != null && speed > 0) {
+      currentSpeed = speed;
+    } else {
+      currentSpeed = calculateSpeedFromPoints(latitude, longitude, timestamp);
+      if (currentSpeed > 0) {
+        console.log(
+          `[LocationTracking] Calculated speed from GPS points: ${mpsToKmh(currentSpeed).toFixed(1)} km/h (device speed: ${speed})`
+        );
+      }
+    }
+    previousLocationForSpeed = { latitude, longitude, timestamp };
 
     console.log(
       `[LocationTracking] Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, ` +
