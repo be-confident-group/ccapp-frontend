@@ -73,11 +73,6 @@ export interface HeatmapDataResponse {
 }
 
 /**
- * Heatmap mode type
- */
-export type HeatmapMode = 'global' | 'personal';
-
-/**
  * Heatmap style preset
  */
 export type HeatmapStyle = 'personal' | 'global' | 'custom';

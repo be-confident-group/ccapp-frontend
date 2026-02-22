@@ -55,6 +55,12 @@ export interface ThemeColors {
   inputBorder: string;
   inputPlaceholder: string;
 
+  // Additional UI elements
+  surface: string;
+  textTertiary: string;
+  primaryLight: string;
+  cardSecondary: string;
+
   // Overlays
   overlay: string;
   backdrop: string;
@@ -98,6 +104,12 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     inputBorder: '#E0E0E0',
     inputPlaceholder: '#9BA1A6',
 
+    // Additional UI elements
+    surface: '#F5F5F5',
+    textTertiary: '#B0B8C1',
+    primaryLight: 'rgba(13, 77, 99, 0.1)',
+    cardSecondary: '#F0F0F0',
+
     // Overlays
     overlay: 'rgba(0, 0, 0, 0.5)',
     backdrop: 'rgba(0, 0, 0, 0.3)',
@@ -138,6 +150,12 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     inputBackground: '#1F1F1F',
     inputBorder: '#333333',
     inputPlaceholder: '#687076',
+
+    // Additional UI elements
+    surface: '#1F1F1F',
+    textTertiary: '#555555',
+    primaryLight: 'rgba(20, 112, 138, 0.15)',
+    cardSecondary: '#2A2A2A',
 
     // Overlays
     overlay: 'rgba(0, 0, 0, 0.7)',

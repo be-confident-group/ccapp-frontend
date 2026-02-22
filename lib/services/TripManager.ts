@@ -19,6 +19,12 @@ import {
   parseRouteData,
 } from '../utils/geoCalculations';
 import type { TripType, TripStats, ManualTripDto, TripFilters } from '../../types/trip';
+
+interface CalculatedTripStats extends TripStats {
+  elevationLoss: number;
+  startTime: number;
+  endTime: number | null;
+}
 import type { Coordinate } from '../../types/location';
 import { syncService } from './SyncService';
 import { trophyAPI, type Trophy } from '../api/trophies';
@@ -300,7 +306,7 @@ export class TripManager {
       type: dominantActivity,
       end_time: now,
       distance: stats.totalDistance,
-      duration: stats.duration,
+      duration: stats.totalDuration,
       avg_speed: stats.avgSpeed,
       max_speed: stats.maxSpeed,
       elevation_gain: stats.elevationGain,
@@ -312,7 +318,7 @@ export class TripManager {
 
     console.log(`[TripManager] Stopped trip ${tripId}`, {
       distance: stats.totalDistance,
-      duration: stats.duration,
+      duration: stats.totalDuration,
       type: dominantActivity,
     });
 
@@ -523,7 +529,7 @@ export class TripManager {
     const co2Saved = calculateCO2Saved(data.distance / 1000);
     const calories = calculateCalories(
       data.distance / 1000,
-      data.type === 'run' ? 'running' : data.type === 'cycle' ? 'cycling' : 'walking',
+      data.type === 'cycle' ? 'cycling' : 'walking',
       70 // Default weight
     );
 
@@ -604,11 +610,11 @@ export class TripManager {
   /**
    * Calculate trip statistics from location points
    */
-  static calculateTripStats(locations: LocationPoint[]): TripStats {
+  static calculateTripStats(locations: LocationPoint[]): CalculatedTripStats {
     if (locations.length === 0) {
       return {
         totalDistance: 0,
-        duration: 0,
+        totalDuration: 0,
         avgSpeed: 0,
         maxSpeed: 0,
         elevationGain: 0,
@@ -662,10 +668,10 @@ export class TripManager {
     }
 
     // Duration in seconds
-    const duration = (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000;
+    const totalDuration = (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000;
 
     // Average speed in km/h
-    const avgSpeed = duration > 0 ? (totalDistance / duration) * 3.6 : 0;
+    const avgSpeed = totalDuration > 0 ? (totalDistance / totalDuration) * 3.6 : 0;
 
     // Elevation
     const elevationGain = calculateElevationGain(altitudes);
@@ -683,7 +689,7 @@ export class TripManager {
 
     return {
       totalDistance,
-      duration,
+      totalDuration,
       avgSpeed,
       maxSpeed,
       elevationGain,

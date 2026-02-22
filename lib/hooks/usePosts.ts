@@ -209,7 +209,7 @@ export function useTogglePostLike() {
 
       // Snapshot previous values for rollback
       const previousDetail = queryClient.getQueryData<Post>(postKeys.detail(clubId, postId));
-      const previousLists: Array<{ queryKey: unknown[]; data: Post[] }> = [];
+      const previousLists: Array<{ queryKey: readonly unknown[]; data: Post[] }> = [];
       const previousFeed: Array<{ queryKey: unknown[]; data: any }> = [];
 
       // Optimistically update post detail

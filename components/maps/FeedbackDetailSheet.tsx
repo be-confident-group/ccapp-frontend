@@ -49,8 +49,8 @@ export function FeedbackDetailSheet({ feedback, visible, onClose }: FeedbackDeta
     const days = Math.floor(hours / 24);
 
     if (hours < 1) return t('maps:feedback.just_now', 'Just now');
-    if (hours < 24) return t('maps:feedback.hours_ago', { count: hours }, `${hours}h ago`);
-    if (days < 7) return t('maps:feedback.days_ago', { count: days }, `${days}d ago`);
+    if (hours < 24) return t('maps:feedback.hours_ago', { count: hours, defaultValue: `${hours}h ago` });
+    if (days < 7) return t('maps:feedback.days_ago', { count: days, defaultValue: `${days}d ago` });
 
     return date.toLocaleDateString();
   };

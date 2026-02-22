@@ -92,8 +92,6 @@ export function useTrackingToggle() {
 
       // Start tracking
       await LocationTrackingService.startTracking({
-        accuracy: Location.Accuracy.Balanced,
-        distanceInterval: 50,
         showNotification: true,
       });
 

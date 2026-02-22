@@ -150,9 +150,9 @@ export default function CreateStandalonePostScreen() {
           )}
           <View style={styles.clubItemInfo}>
             <ThemedText style={styles.clubItemName}>{item.name}</ThemedText>
-            {item.member_count !== undefined && (
+            {item.members_count !== undefined && (
               <ThemedText style={[styles.clubItemMembers, { color: colors.textMuted }]}>
-                {item.member_count} {item.member_count === 1 ? 'member' : 'members'}
+                {item.members_count} {item.members_count === 1 ? 'member' : 'members'}
               </ThemedText>
             )}
           </View>

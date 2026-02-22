@@ -33,7 +33,7 @@ export async function testTripManager(): Promise<boolean> {
       ],
     };
 
-    const manualTrip = await TripManager.createManualTrip(manualTripData);
+    const { trip: manualTrip } = await TripManager.createManualTrip(manualTripData);
     console.log('[TripManager Test] ✓ Manual trip created:', manualTrip.id);
     console.log('  - Distance:', manualTrip.distance, 'm');
     console.log('  - Duration:', manualTrip.duration, 's');
@@ -87,9 +87,9 @@ export async function testTripManager(): Promise<boolean> {
 
     // Test 9: Export trip
     console.log('\n[TripManager Test] Test 9: Exporting trip...');
-    const exportedTrip = await TripManager.exportTrip(manualTrip.id);
+    const exportData = await TripManager.exportTrip(manualTrip.id);
     console.log('[TripManager Test] ✓ Trip exported');
-    console.log('  - Has route:', exportedTrip?.route.length || 0, 'points');
+    console.log('  - Has route:', exportData?.route.length || 0, 'points');
 
     // Test 10: Delete trip
     console.log('\n[TripManager Test] Test 10: Deleting trip...');
@@ -150,7 +150,7 @@ export async function testAutomaticTrip(): Promise<boolean> {
     console.log('[TripManager Test] ✓ Locations added');
 
     // Stop trip
-    const completedTrip = await TripManager.stopTrip(tripId);
+    const { trip: completedTrip } = await TripManager.stopTrip(tripId);
     console.log('[TripManager Test] ✓ Trip stopped');
     console.log('  - Status:', completedTrip?.status);
     console.log('  - Distance:', completedTrip?.distance, 'm');
