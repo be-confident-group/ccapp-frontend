@@ -33,8 +33,11 @@ let currentAppState: AppStateStatus = 'active';
 const MIN_ACCURACY_METERS = 100; // Reject points with accuracy worse than 100m (relaxed for real-world GPS)
 const TRIP_START_ACCURACY_METERS = 200; // Relaxed threshold for detecting movement before a trip starts
 const GPS_STABILIZATION_POINTS = 2; // Wait for 2 good readings before using (faster trip start)
+const GPS_STABILIZATION_TIMEOUT_MS = 15000; // 15 seconds
 let stabilizationBuffer: Location.LocationObject[] = [];
 let isGpsStabilized = false;
+let stabilizationStartTime: number | null = null;
+let bestStabilizationLocation: Location.LocationObject | null = null;
 
 // ===== GPS OUTLIER DETECTION =====
 const MAX_POSSIBLE_SPEED_MPS = 50; // 180 km/h - absolute physical limit for any valid trip point
@@ -123,6 +126,20 @@ function handleGpsStabilization(location: Location.LocationObject): boolean {
     return true;
   }
 
+  // Track when stabilization started
+  if (stabilizationStartTime === null) {
+    stabilizationStartTime = Date.now();
+  }
+
+  // Track best location seen so far (even if not "accurate" enough)
+  if (
+    !bestStabilizationLocation ||
+    (location.coords.accuracy ?? Infinity) < (bestStabilizationLocation.coords.accuracy ?? Infinity)
+  ) {
+    bestStabilizationLocation = location;
+  }
+
+  // Normal path: collect accurate readings
   if (isLocationAccurate(location)) {
     stabilizationBuffer.push(location);
     console.log(
@@ -134,11 +151,26 @@ function handleGpsStabilization(location: Location.LocationObject): boolean {
       console.log('[LocationTracking] GPS stabilized - ready to track');
       return true;
     }
-  } else {
-    console.log(
-      `[LocationTracking] Skipping inaccurate point during stabilization: ${location.coords.accuracy}m`
-    );
   }
+
+  // Timeout path: use best available location
+  const elapsed = Date.now() - stabilizationStartTime;
+  if (elapsed >= GPS_STABILIZATION_TIMEOUT_MS) {
+    console.warn(
+      `[LocationTracking] GPS stabilization timeout (${(elapsed / 1000).toFixed(0)}s). ` +
+      `Using best available point (accuracy: ${bestStabilizationLocation?.coords.accuracy?.toFixed(0) ?? 'unknown'}m)`
+    );
+    if (bestStabilizationLocation && stabilizationBuffer.length === 0) {
+      stabilizationBuffer.push(bestStabilizationLocation);
+    }
+    isGpsStabilized = true;
+    return true;
+  }
+
+  console.log(
+    `[LocationTracking] Waiting for GPS stabilization (${(elapsed / 1000).toFixed(0)}s elapsed, ` +
+    `accuracy: ${location.coords.accuracy?.toFixed(0) ?? 'unknown'}m)`
+  );
 
   return false;
 }
@@ -164,6 +196,8 @@ function getBestInitialLocation(): Location.LocationObject | null {
 function resetGpsStabilization(): void {
   stabilizationBuffer = [];
   isGpsStabilized = false;
+  stabilizationStartTime = null;
+  bestStabilizationLocation = null;
   resetLastStoredLocation();
   previousLocationForSpeed = null;
 }
