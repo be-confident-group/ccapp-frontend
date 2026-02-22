@@ -31,6 +31,7 @@ let currentAppState: AppStateStatus = 'active';
 
 // ===== GPS STABILIZATION =====
 const MIN_ACCURACY_METERS = 100; // Reject points with accuracy worse than 100m (relaxed for real-world GPS)
+const TRIP_START_ACCURACY_METERS = 200; // Relaxed threshold for detecting movement before a trip starts
 const GPS_STABILIZATION_POINTS = 2; // Wait for 2 good readings before using (faster trip start)
 let stabilizationBuffer: Location.LocationObject[] = [];
 let isGpsStabilized = false;
@@ -453,8 +454,12 @@ export async function startForegroundWatching(): Promise<void> {
       },
       async (location) => {
         console.log('[LocationTracking] Foreground watcher received location');
-        // Process location the same way as background task
-        if (isLocationAccurate(location)) {
+        // Use relaxed threshold before trip starts, strict during trip
+        const activeTrip = await database.getActiveTrip();
+        const threshold = activeTrip ? MIN_ACCURACY_METERS : TRIP_START_ACCURACY_METERS;
+        const accuracy = location.coords.accuracy;
+        const isAcceptable = accuracy === null || accuracy === undefined || accuracy <= threshold;
+        if (isAcceptable) {
           try {
             await processSingleLocationUpdate(location);
           } catch (err) {
@@ -462,7 +467,7 @@ export async function startForegroundWatching(): Promise<void> {
           }
         } else {
           console.log(
-            `[LocationTracking] Foreground: skipped inaccurate location (${location.coords.accuracy}m)`
+            `[LocationTracking] Foreground: skipped inaccurate location (${accuracy}m, threshold: ${threshold}m)`
           );
         }
       }
@@ -549,13 +554,20 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       timestamp: new Date(loc.timestamp).toISOString(),
     })));
 
-    // Filter by accuracy - reject points with accuracy worse than threshold
-    const accurateLocations = locations.filter(isLocationAccurate);
+    // Filter by accuracy - use relaxed threshold before trip starts, strict during trip
+    await database.init();
+    const activeTrip = await database.getActiveTrip();
+    const accuracyThreshold = activeTrip ? MIN_ACCURACY_METERS : TRIP_START_ACCURACY_METERS;
+    const accurateLocations = locations.filter(loc => {
+      const accuracy = loc.coords.accuracy;
+      if (accuracy === null || accuracy === undefined) return true;
+      return accuracy <= accuracyThreshold;
+    });
     const filteredCount = locations.length - accurateLocations.length;
 
     if (filteredCount > 0) {
       console.log(
-        `[LocationTracking] Filtered ${filteredCount}/${locations.length} inaccurate locations (>${MIN_ACCURACY_METERS}m)`
+        `[LocationTracking] Filtered ${filteredCount}/${locations.length} inaccurate locations (>${accuracyThreshold}m)`
       );
     }
 
