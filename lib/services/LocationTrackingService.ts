@@ -1061,8 +1061,8 @@ export class LocationTrackingService {
     }
 
     if (bgStatus !== 'granted') {
-      console.warn(
-        '[LocationTracking] Background permission not granted - tracking may stop when app is backgrounded'
+      throw new Error(
+        'Background location permission not granted. Please enable "Always" location access in Settings for reliable tracking.'
       );
     }
 
@@ -1071,26 +1071,32 @@ export class LocationTrackingService {
 
     // Start background location updates
     // CRITICAL: Do NOT use deferredUpdatesInterval - iOS may never wake the app!
-    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-      accuracy: Location.Accuracy.High, // High accuracy for fitness tracking
-      timeInterval: 5000, // Request updates every 5 seconds
-      distanceInterval: 10, // Or every 10 meters (reduced for better tracking)
-      showsBackgroundLocationIndicator: true,
+    try {
+      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+        accuracy: Location.Accuracy.High, // High accuracy for fitness tracking
+        timeInterval: 5000, // Request updates every 5 seconds
+        distanceInterval: 10, // Or every 10 meters (reduced for better tracking)
+        showsBackgroundLocationIndicator: true,
 
-      // iOS-specific
-      activityType: Location.ActivityType.Fitness,
-      pausesUpdatesAutomatically: false,
+        // iOS-specific
+        activityType: Location.ActivityType.Fitness,
+        pausesUpdatesAutomatically: false,
 
-      // Android-specific
-      foregroundService:
-        Platform.OS === 'android' && config.showNotification !== false
-          ? {
-              notificationTitle: 'Radzi is tracking your activity',
-              notificationBody: 'Tap to return to app',
-              notificationColor: '#1E88E5',
-            }
-          : undefined,
-    });
+        // Android-specific
+        foregroundService:
+          Platform.OS === 'android' && config.showNotification !== false
+            ? {
+                notificationTitle: 'Radzi is tracking your activity',
+                notificationBody: 'Tap to return to app',
+                notificationColor: '#1E88E5',
+              }
+            : undefined,
+      });
+    } catch (error) {
+      console.error('[LocationTracking] Failed to start location updates:', error);
+      await logTrackingError(error);
+      throw error; // Re-throw so TrackingContext can handle it
+    }
 
     console.log('[LocationTracking] Config: timeInterval=5000ms, distanceInterval=10m, accuracy=High');
 

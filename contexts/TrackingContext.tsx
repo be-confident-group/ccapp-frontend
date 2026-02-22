@@ -135,7 +135,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('[TrackingContext] Error toggling tracking:', error);
-      Alert.alert('Error', 'Failed to toggle tracking. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to toggle tracking. Please try again.';
+      Alert.alert('Tracking Error', message);
     } finally {
       setIsLoading(false);
     }
