@@ -14,6 +14,7 @@ import { ActivityClassifier } from './ActivityClassifier';
 import { TripDetectionService } from './TripDetectionService';
 import { syncService } from './SyncService';
 import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
+import { trackingLog } from './TrackingLogger';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -145,6 +146,7 @@ function handleGpsStabilization(location: Location.LocationObject): boolean {
     console.log(
       `[LocationTracking] GPS stabilization: ${stabilizationBuffer.length}/${GPS_STABILIZATION_POINTS} accurate readings`
     );
+    trackingLog('info', `GPS stabilization: ${stabilizationBuffer.length}/${GPS_STABILIZATION_POINTS} accurate readings`);
 
     if (stabilizationBuffer.length >= GPS_STABILIZATION_POINTS) {
       isGpsStabilized = true;
@@ -160,6 +162,7 @@ function handleGpsStabilization(location: Location.LocationObject): boolean {
       `[LocationTracking] GPS stabilization timeout (${(elapsed / 1000).toFixed(0)}s). ` +
       `Using best available point (accuracy: ${bestStabilizationLocation?.coords.accuracy?.toFixed(0) ?? 'unknown'}m)`
     );
+    trackingLog('warn', `GPS stabilization timeout, using best point`);
     if (bestStabilizationLocation && stabilizationBuffer.length === 0) {
       stabilizationBuffer.push(bestStabilizationLocation);
     }
@@ -546,6 +549,7 @@ async function processSingleLocationUpdate(location: Location.LocationObject): P
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   console.log('[LocationTracking] ===== BACKGROUND TASK FIRED =====');
+  trackingLog('info', 'Background task fired');
   console.log('[LocationTracking] Task data received:', {
     hasData: !!data,
     hasError: !!error,
@@ -603,19 +607,23 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       console.log(
         `[LocationTracking] Filtered ${filteredCount}/${locations.length} inaccurate locations (>${accuracyThreshold}m)`
       );
+      trackingLog('info', `Filtered ${filteredCount}/${locations.length} inaccurate locations (>${accuracyThreshold}m)`);
     }
 
     if (accurateLocations.length === 0) {
       console.log('[LocationTracking] All locations filtered due to low accuracy');
+      trackingLog('warn', 'All locations filtered due to low accuracy');
       return;
     }
 
     console.log(`[LocationTracking] Processing ${accurateLocations.length} accurate location updates`);
+    trackingLog('info', `Processing ${accurateLocations.length} accurate locations`);
 
     try {
       await processLocationUpdates(accurateLocations);
     } catch (err) {
       console.error('[LocationTracking] Error processing locations:', err);
+      trackingLog('error', `Error processing locations: ${err instanceof Error ? err.message : String(err)}`);
       await logTrackingError(err);
     }
   }
@@ -662,6 +670,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         console.log(
           `[LocationTracking] Calculated speed from GPS points: ${mpsToKmh(currentSpeed).toFixed(1)} km/h (device speed: ${speed})`
         );
+        trackingLog('info', `Speed from GPS: ${mpsToKmh(currentSpeed).toFixed(1)}km/h (device: ${speed})`);
       }
     }
     previousLocationForSpeed = { latitude, longitude, timestamp };
@@ -670,6 +679,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       `[LocationTracking] Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}, ` +
       `speed: ${mpsToKmh(currentSpeed).toFixed(1)} km/h, accuracy: ${accuracy?.toFixed(0) || 'unknown'}m`
     );
+    trackingLog('info', `Location: speed=${mpsToKmh(currentSpeed).toFixed(1)}km/h, accuracy=${accuracy?.toFixed(0) || '?'}m`);
 
     // Get active trip
     let activeTrip = await database.getActiveTrip();
@@ -710,6 +720,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           `[LocationTracking] ✓ Started new trip: ${tripId} ` +
           `(using ${stabilizationBuffer.length} stabilization points, best accuracy: ${startCoords.accuracy?.toFixed(0) || 'unknown'}m)`
         );
+        trackingLog('info', `Started trip: ${tripId}`);
 
         // Store all stabilization buffer locations as the trip's initial points
         for (const bufferedLoc of stabilizationBuffer) {
@@ -740,6 +751,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           resetGpsStabilization();
         }
         console.log('[LocationTracking] Not moving enough to start trip');
+        trackingLog('info', 'Not moving enough to start trip');
         continue;
       }
     }
@@ -754,6 +766,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       if (!lastStationaryTime) {
         lastStationaryTime = timestamp;
         console.log('[LocationTracking] User became stationary');
+        trackingLog('info', 'User became stationary');
       }
     } else {
       // User is moving again, reset stationary time
@@ -789,6 +802,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     console.log(
       `[LocationTracking] ✓ Stored location (${classification.type}, ${classification.confidence}% confidence)`
     );
+    trackingLog('info', `Stored location (${classification.type})`);
 
     // ===== UPDATE TRIP STATS =====
     const allLocations = await database.getLocationsByTrip(activeTrip.id);
@@ -818,6 +832,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       // Check if trip is significant enough to keep
       if (TripDetectionService.shouldDiscardTrip(stats.duration, stats.totalDistance)) {
         console.log('[LocationTracking] Trip too short, discarding');
+        trackingLog('warn', 'Trip too short, discarding');
         await database.updateTrip(activeTrip.id, {
           status: 'cancelled',
           end_time: timestamp,
@@ -825,6 +840,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         });
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
+        trackingLog('info', 'Ending trip (stationary too long)');
 
         // Post-hoc transit detection using pattern analysis
         const speeds = allLocations.map(loc => loc.speed || 0);
@@ -1092,6 +1108,7 @@ export class LocationTrackingService {
       });
     } catch (error) {
       console.error('[LocationTracking] Failed to start location updates:', error);
+      trackingLog('error', `Failed to start location updates: ${error instanceof Error ? error.message : String(error)}`);
       await logTrackingError(error);
       throw error; // Re-throw so TrackingContext can handle it
     }
@@ -1099,6 +1116,7 @@ export class LocationTrackingService {
     console.log('[LocationTracking] Config: timeInterval=5000ms, distanceInterval=10m, accuracy=High');
 
     console.log('[LocationTracking] ✓ Background tracking started');
+    trackingLog('info', 'Tracking started');
 
     // Also start foreground watcher if app is in foreground for real-time updates
     if (currentAppState === 'active') {
@@ -1126,6 +1144,7 @@ export class LocationTrackingService {
     lastStationaryTime = null;
 
     console.log('[LocationTracking] ✓ Background tracking stopped');
+    trackingLog('info', 'Tracking stopped');
   }
 
   /**
