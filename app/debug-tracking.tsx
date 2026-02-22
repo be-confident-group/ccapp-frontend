@@ -3,8 +3,8 @@
  * Shows real-time tracking status for testing without console access
  */
 
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Alert, Platform } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Alert, Platform, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { LocationTrackingService, getTrackingErrorLog, getTrackingTaskLog } from '@/lib/services/LocationTrackingService';
 import { syncService } from '@/lib/services/SyncService';
@@ -13,6 +13,7 @@ import { ActivityClassifier } from '@/lib/services/ActivityClassifier';
 import { SegmentDetector } from '@/lib/services/SegmentDetector';
 import { database } from '@/lib/database';
 import { useTheme } from '@/contexts/ThemeContext';
+import { onTrackingLog, getTrackingLogBuffer, clearTrackingLogBuffer, type LogEntry } from '@/lib/services/TrackingLogger';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 
@@ -110,7 +111,7 @@ interface DebugInfo {
 }
 
 export default function DebugTrackingScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +120,40 @@ export default function DebugTrackingScreen() {
   const [taskLog, setTaskLog] = useState<Array<{timestamp: string; platform: string; locationCount: number}>>([]);
   const [errorLog, setErrorLog] = useState<Array<{timestamp: string; platform: string; platformVersion: string; error: any}>>([]);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [consoleLogs, setConsoleLogs] = useState<LogEntry[]>([]);
+  const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
+  const consoleScrollViewRef = useRef<ScrollView>(null);
+
+  const MAX_CONSOLE_LOGS = 200;
+
+  useEffect(() => {
+    // Load existing buffer
+    setConsoleLogs(getTrackingLogBuffer());
+
+    // Subscribe to new entries
+    const unsubscribe = onTrackingLog((entry) => {
+      setConsoleLogs(prev => [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry]);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  function formatLogTime(timestamp: number): string {
+    const d = new Date(timestamp);
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${d.getMilliseconds().toString().padStart(3, '0')}`;
+  }
+
+  function getLogColor(level: LogEntry['level']): string {
+    switch (level) {
+      case 'error': return '#EF4444';
+      case 'warn': return '#F59E0B';
+      default: return colors.text;
+    }
+  }
+
+  const filteredLogs = logFilter === 'all'
+    ? consoleLogs
+    : consoleLogs.filter(l => l.level === logFilter);
 
   const loadDebugInfo = async () => {
     try {
@@ -526,6 +561,62 @@ export default function DebugTrackingScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
+
+        {/* ===== LIVE CONSOLE ===== */}
+        <View style={[styles.section, { backgroundColor: isDark ? '#1a1a2e' : '#f0f0f5' }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0, color: colors.text }]}>Live Console ({filteredLogs.length})</Text>
+            <TouchableOpacity onPress={() => { clearTrackingLogBuffer(); setConsoleLogs([]); }}>
+              <Text style={{ color: colors.primary, fontSize: 14 }}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Filter buttons */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            {(['all', 'info', 'warn', 'error'] as const).map(level => (
+              <TouchableOpacity
+                key={level}
+                onPress={() => setLogFilter(level)}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  backgroundColor: logFilter === level ? colors.primary : (isDark ? '#333' : '#ddd'),
+                }}
+              >
+                <Text style={{
+                  fontSize: 12,
+                  color: logFilter === level ? '#fff' : colors.text,
+                  fontWeight: logFilter === level ? '600' : '400',
+                }}>
+                  {level.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Log entries */}
+          <ScrollView
+            style={{ maxHeight: 300 }}
+            ref={consoleScrollViewRef}
+            onContentSizeChange={() => consoleScrollViewRef.current?.scrollToEnd({ animated: false })}
+          >
+            {filteredLogs.length === 0 ? (
+              <Text style={[styles.monoText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+                No log entries yet. Start tracking to see live output.
+              </Text>
+            ) : (
+              filteredLogs.map((entry, i) => (
+                <Text
+                  key={`${entry.timestamp}-${i}`}
+                  style={[styles.monoText, { color: getLogColor(entry.level), fontSize: 11, lineHeight: 16 }]}
+                >
+                  {formatLogTime(entry.timestamp)} [{entry.level.charAt(0).toUpperCase()}] {entry.message}
+                </Text>
+              ))
+            )}
+          </ScrollView>
+        </View>
 
         {/* Test GPS Button */}
         <Pressable
