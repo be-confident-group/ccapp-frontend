@@ -11,6 +11,8 @@ import {
   initializeAppStateListener,
   cleanupAppStateListener,
   setOnPermissionDowngraded,
+  setTrackingPreference,
+  getTrackingPreference,
 } from '@/lib/services/LocationTrackingService';
 import { database } from '@/lib/database';
 import * as Location from 'expo-location';
@@ -66,10 +68,23 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       setIsTracking(tracking);
 
       const perms = await LocationTrackingService.checkPermissions();
-      setHasPermissions(
+      const hasPerms =
         perms.foreground === Location.PermissionStatus.GRANTED &&
-        perms.background === Location.PermissionStatus.GRANTED
-      );
+        perms.background === Location.PermissionStatus.GRANTED;
+      setHasPermissions(hasPerms);
+
+      // Auto-resume: if user previously enabled tracking but it's not running
+      if (!tracking && hasPerms) {
+        const wantsTracking = await getTrackingPreference();
+        if (wantsTracking) {
+          console.log('[TrackingContext] Auto-resuming tracking after app restart');
+          try {
+            await startTracking();
+          } catch (err) {
+            console.error('[TrackingContext] Failed to auto-resume tracking:', err);
+          }
+        }
+      }
     } catch (error) {
       console.error('[TrackingContext] Error checking status:', error);
     }
@@ -85,6 +100,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         // Stop tracking
         await LocationTrackingService.stopTracking();
         setIsTracking(false);
+        await setTrackingPreference(false);
         console.log('[TrackingContext] Tracking stopped');
       } else {
         // Check permissions first
@@ -138,6 +154,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       });
 
       setIsTracking(true);
+      await setTrackingPreference(true);
       console.log('[TrackingContext] Tracking started');
     } catch (error) {
       console.error('[TrackingContext] Error starting tracking:', error);

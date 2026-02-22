@@ -50,6 +50,7 @@ const TRACKING_ERROR_LOG_KEY = '@tracking_errors';
 const TRACKING_TASK_LOG_KEY = '@tracking_task_log';
 const MAX_ERROR_LOG_ENTRIES = 20;
 const MAX_TASK_LOG_ENTRIES = 50;
+const TRACKING_PREFERENCE_KEY = '@tracking_preference_enabled';
 
 /**
  * Persistently log a background task error for later diagnosis in the debug panel.
@@ -1175,5 +1176,18 @@ export async function getTrackingTaskLog(): Promise<Array<{timestamp: string; pl
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
+  }
+}
+
+export async function setTrackingPreference(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(TRACKING_PREFERENCE_KEY, JSON.stringify(enabled));
+}
+
+export async function getTrackingPreference(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PREFERENCE_KEY);
+    return raw ? JSON.parse(raw) === true : false;
+  } catch {
+    return false;
   }
 }
