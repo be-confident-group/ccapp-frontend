@@ -149,8 +149,6 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
       // Start tracking
       await LocationTrackingService.startTracking({
-        accuracy: Location.Accuracy.Balanced,
-        distanceInterval: 50,
         showNotification: true,
       });
 

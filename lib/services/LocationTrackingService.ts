@@ -1023,8 +1023,6 @@ function getDominantActivityType(locations: LocationPoint[]): 'walk' | 'run' | '
 // ===== PUBLIC SERVICE CLASS =====
 
 export interface TrackingConfig {
-  accuracy?: Location.LocationAccuracy;
-  distanceInterval?: number;
   showNotification?: boolean;
 }
 
