@@ -6,6 +6,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Alert } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { LocationTrackingService } from '@/lib/services';
 import {
   initializeAppStateListener,
@@ -146,6 +147,16 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     try {
       // Initialize database
       await database.init();
+
+      // Request notification permission (non-blocking — tracking works even if denied)
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          await Notifications.requestPermissionsAsync();
+        }
+      } catch {
+        // Notification permission is not critical
+      }
 
       // Start tracking
       await LocationTrackingService.startTracking({

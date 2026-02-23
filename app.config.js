@@ -28,6 +28,7 @@ export default {
         NSLocationWhenInUseUsageDescription: "Radzi needs your location to track your cycling and walking activities while you use the app, and to show your position on the map.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Radzi needs continuous access to your location to automatically record complete trips even when the app is in the background or closed. This ensures no part of your journey is missed.",
         NSMotionUsageDescription: "Radzi uses motion data to detect your activity type (walking, running, cycling) for more accurate automatic tracking.",
+        NSUserNotificationsUsageDescription: "Radzi uses notifications to let you know when a trip is being recorded in the background.",
         UIBackgroundModes: ["location"],
         ITSAppUsesNonExemptEncryption: false,
       },
@@ -48,6 +49,7 @@ export default {
         "FOREGROUND_SERVICE_LOCATION",
         "com.google.android.gms.permission.ACTIVITY_RECOGNITION",
         "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "POST_NOTIFICATIONS",
       ],
       intentFilters: [
         {
@@ -102,6 +104,15 @@ export default {
         {
           RNMapboxMapsImpl: "mapbox",
           RNMapboxMapsVersion: "11.16.0"
+        },
+      ],
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/images/icon.png",
+          color: "#1E88E5",
+          defaultChannel: "default",
+          sounds: [],
         },
       ],
       "expo-web-browser",

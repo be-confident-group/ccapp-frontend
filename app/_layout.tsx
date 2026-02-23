@@ -2,7 +2,18 @@
 // This ensures TaskManager.defineTask() executes before any location updates arrive
 import '@/lib/services/LocationTrackingService';
 
+import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+
+// Configure how notifications are handled when the app is in the foreground.
+// We suppress the banner (not intrusive) but the notification still appears in the tray.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: false,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';

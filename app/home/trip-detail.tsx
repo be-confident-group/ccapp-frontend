@@ -20,12 +20,10 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, Vie
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { useTrip, useDeleteTrip, useUpdateTrip } from '@/lib/hooks/useTrips';
+import { useTrip, useDeleteTrip } from '@/lib/hooks/useTrips';
 import { database } from '@/lib/database';
 import type { Trip } from '@/lib/database/db';
-import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
-import { TripManager } from '@/lib/services';
 
 // Build-time constant — true for dev and EAS preview builds, false for production
 const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
@@ -62,11 +60,7 @@ export default function TripDetailScreen() {
   const { selectedLayer } = useMapLayer(isDark);
   const [localTrip, setLocalTrip] = useState<Trip | null>(null);
   const [isOnline, setIsOnline] = useState(true);
-  const [showTypeCorrection, setShowTypeCorrection] = useState(false);
-  const [correcting, setCorrecting] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [confirmTypeOverride, setConfirmTypeOverride] = useState<TripType | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
 
   // Try to parse as number (backend trip ID) or use as string (local client_id)
   const tripId = useMemo(() => {
@@ -77,7 +71,6 @@ export default function TripDetailScreen() {
   // Fetch trip from backend if we have a numeric ID
   const { data: backendTrip, isLoading, isError } = useTrip(isLocalTrip ? 0 : tripId);
   const deleteTrip = useDeleteTrip();
-  const updateTrip = useUpdateTrip();
 
   // Check network status and load from local DB if offline or backend fails
   useEffect(() => {
@@ -209,101 +202,6 @@ export default function TripDetailScreen() {
               Alert.alert('Error', 'Invalid trip ID');
             }
           },
-        },
-      ]
-    );
-  }
-
-  async function handleCorrectType(newType: TripType) {
-    if (!tripDetails) return;
-
-    setCorrecting(true);
-    setShowTypeCorrection(false);
-
-    try {
-      // Update local database
-      if (localTrip) {
-        await TripManager.updateTrip(localTrip.id, { type: newType });
-      }
-
-      // Update backend if trip is synced
-      if (tripId > 0) {
-        updateTrip.mutate(
-          { id: tripId, data: { type: newType } },
-          {
-            onSuccess: () => {
-              Alert.alert('Success', `Trip type updated to ${newType}`);
-            },
-            onError: (error) => {
-              console.error('[TripDetail] Error updating trip type:', error);
-              Alert.alert('Error', 'Failed to update trip type on server');
-            },
-          }
-        );
-      } else {
-        Alert.alert('Success', `Trip type updated to ${newType}`);
-      }
-    } catch (error) {
-      console.error('[TripDetail] Error correcting trip type:', error);
-      Alert.alert('Error', 'Failed to update trip type');
-    } finally {
-      setCorrecting(false);
-    }
-  }
-
-  async function handleConfirmTrip() {
-    if (!backendTrip) return;
-    const selectedType = confirmTypeOverride ?? backendTrip.type;
-    setIsConfirming(true);
-    try {
-      await updateTrip.mutateAsync({
-        id: backendTrip.id,
-        data: { user_confirmed: true, type: selectedType },
-      });
-    } catch (error) {
-      console.error('[TripDetail] Error confirming trip:', error);
-      Alert.alert('Error', 'Failed to confirm trip');
-    } finally {
-      setIsConfirming(false);
-    }
-  }
-
-  async function handleNotMyTrip() {
-    if (!backendTrip) return;
-    setIsConfirming(true);
-    try {
-      await updateTrip.mutateAsync({
-        id: backendTrip.id,
-        data: { user_confirmed: false },
-      });
-    } catch (error) {
-      console.error('[TripDetail] Error flagging trip:', error);
-      Alert.alert('Error', 'Failed to flag trip');
-    } finally {
-      setIsConfirming(false);
-    }
-  }
-
-  function showTypeCorrectionModal() {
-    if (!tripDetails) return;
-
-    const currentType = tripDetails.trip.type;
-    const options = [
-      { type: 'walk' as TripType, label: 'Walking', icon: 'walk' },
-      { type: 'cycle' as TripType, label: 'Cycling', icon: 'bicycle' },
-    ].filter(opt => opt.type !== currentType);
-
-    Alert.alert(
-      'Correct Trip Type',
-      `Current type: ${currentType}. What should this trip be?`,
-      [
-        ...options.map(opt => ({
-          text: opt.label,
-          onPress: () => handleCorrectType(opt.type),
-        })),
-        {
-          text: 'Cancel',
-          style: 'cancel',
         },
       ]
     );
@@ -449,81 +347,6 @@ export default function TripDetailScreen() {
             </View>
           </View>
 
-          {/* Confirmation card — only when trip is synced and not yet reviewed */}
-          {backendTrip && backendTrip.user_confirmed === null && (
-            <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-              <ThemedText style={[styles.confirmTitle, { color: colors.text }]}>
-                Was this trip correct?
-              </ThemedText>
-
-              {/* Type selector */}
-              <View style={styles.typeSelector}>
-                {(['walk', 'cycle'] as TripType[]).map((type) => {
-                  const selected = (confirmTypeOverride ?? backendTrip.type) === type;
-                  const tColor = getTripTypeColor(type);
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.typeOption,
-                        {
-                          backgroundColor: selected ? tColor + '25' : colors.background,
-                          borderColor: selected ? tColor : colors.border,
-                        },
-                      ]}
-                      onPress={() => setConfirmTypeOverride(type)}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons
-                        name={getTripTypeIcon(type) as any}
-                        size={18}
-                        color={selected ? tColor : colors.textSecondary}
-                      />
-                      <ThemedText
-                        style={[
-                          styles.typeOptionText,
-                          { color: selected ? tColor : colors.textSecondary },
-                        ]}
-                      >
-                        {getTripTypeName(type)}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Confirm / Not my trip buttons */}
-              <View style={styles.confirmActions}>
-                {isConfirming ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
-                      onPress={handleConfirmTrip}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>
-                        Confirm
-                      </ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
-                      onPress={handleNotMyTrip}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>
-                        Not my trip
-                      </ThemedText>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </View>
-          )}
-
           {/* Stats Grid */}
           <View style={[styles.statsGrid, { backgroundColor: colors.backgroundSecondary }]}>
             <View style={styles.statItem}>
@@ -580,26 +403,6 @@ export default function TripDetailScreen() {
                 </View>
               ) : null;
             })()}
-          </View>
-
-          {/* Trip Type Correction */}
-          <View style={[styles.correctionCard, { backgroundColor: colors.backgroundSecondary }]}>
-            <View style={styles.correctionHeader}>
-              <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.textSecondary} />
-              <ThemedText style={[styles.correctionQuestion, { color: colors.textSecondary }]}>
-                Was this trip categorized correctly?
-              </ThemedText>
-            </View>
-            <TouchableOpacity
-              style={[styles.correctionButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-              onPress={showTypeCorrectionModal}
-              disabled={correcting}
-            >
-              <MaterialCommunityIcons name="pencil" size={18} color={colors.primary} />
-              <ThemedText style={[styles.correctionButtonText, { color: colors.primary }]}>
-                {correcting ? 'Updating...' : 'Report Issue'}
-              </ThemedText>
-            </TouchableOpacity>
           </View>
 
           {/* Beta Diagnostics */}
@@ -775,86 +578,6 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  correctionCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  correctionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  correctionQuestion: {
-    fontSize: 14,
-    flex: 1,
-  },
-  correctionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-  },
-  correctionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  confirmCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-  },
-  confirmTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  typeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1.5,
-  },
-  typeOptionText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  confirmActions: {
-    flexDirection: 'row',
-    gap: 10,
-    minHeight: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  confirmBtnText: {
-    fontSize: 13,
     fontWeight: '600',
   },
 });

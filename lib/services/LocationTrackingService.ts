@@ -7,6 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
@@ -64,6 +65,57 @@ const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops 
 // Eliminates single GPS spike false positives.
 const CONSECUTIVE_MOVEMENT_REQUIRED = 3;
 let consecutiveMovementCount = 0;
+
+// ===== TRIP RECORDING NOTIFICATION =====
+let activeTripNotificationId: string | null = null;
+let lastNotificationUpdateTime = 0;
+const NOTIFICATION_UPDATE_INTERVAL_MS = 60 * 1000; // Update body every 60s
+
+async function showTripRecordingNotification(tripId: string): Promise<void> {
+  try {
+    activeTripNotificationId = `trip-recording-${tripId}`;
+    lastNotificationUpdateTime = Date.now();
+    await Notifications.scheduleNotificationAsync({
+      identifier: activeTripNotificationId,
+      content: {
+        title: 'Trip recording in progress',
+        body: '0.0 km recorded',
+      },
+      trigger: null,
+    });
+  } catch {
+    // Never let notification errors crash tracking
+  }
+}
+
+async function updateTripRecordingNotification(distanceMeters: number): Promise<void> {
+  if (!activeTripNotificationId) return;
+  try {
+    const km = (distanceMeters / 1000).toFixed(1);
+    await Notifications.dismissNotificationAsync(activeTripNotificationId);
+    await Notifications.scheduleNotificationAsync({
+      identifier: activeTripNotificationId,
+      content: {
+        title: 'Trip recording in progress',
+        body: `${km} km recorded`,
+      },
+      trigger: null,
+    });
+    lastNotificationUpdateTime = Date.now();
+  } catch {
+    // Never let notification errors crash tracking
+  }
+}
+
+async function dismissTripRecordingNotification(): Promise<void> {
+  if (!activeTripNotificationId) return;
+  try {
+    await Notifications.dismissNotificationAsync(activeTripNotificationId);
+    activeTripNotificationId = null;
+  } catch {
+    // Never let notification errors crash tracking
+  }
+}
 
 // ===== TRACKING ERROR AND TASK LOG =====
 const TRACKING_ERROR_LOG_KEY = '@tracking_errors';
@@ -758,6 +810,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         activeTrip = await database.getActiveTrip();
         lastStationaryTime = null; // Reset stationary tracking
         consecutiveMovementCount = 0; // Reset counter after trip starts
+        await showTripRecordingNotification(tripId);
 
         console.log(
           `[LocationTracking] ✓ Started new trip: ${tripId} ` +
@@ -867,6 +920,11 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       updated_at: timestamp,
     });
 
+    // ===== UPDATE RECORDING NOTIFICATION (every 60s) =====
+    if (activeTripNotificationId && Date.now() - lastNotificationUpdateTime > NOTIFICATION_UPDATE_INTERVAL_MS) {
+      await updateTripRecordingNotification(stats.totalDistance);
+    }
+
     // ===== CHECK IF SHOULD END TRIP =====
     if (
       TripDetectionService.shouldEndTrip(
@@ -885,6 +943,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           end_time: timestamp,
           updated_at: timestamp,
         });
+        await dismissTripRecordingNotification();
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
         trackingLog('info', 'Ending trip (stationary too long)');
@@ -907,11 +966,13 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
 
         // Validate and finalize trip (checks distance, type, speed, GPS drift)
         await TripValidationService.validateAndFinalizeTrip(activeTrip.id, timestamp);
+        await dismissTripRecordingNotification();
       }
 
       // Reset tracking state for next trip
       lastStationaryTime = null;
       consecutiveMovementCount = 0;
+      activeTripNotificationId = null;
       resetGpsStabilization();
       TripDetectionService.resetState();
     }

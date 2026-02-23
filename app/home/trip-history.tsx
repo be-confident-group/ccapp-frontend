@@ -341,9 +341,8 @@ export default function TripHistoryScreen() {
               activeOpacity={0.7}
             >
               <ThemedText style={[styles.allTripsText, { color: colors.primary }]}>
-                All
+                All Trips
               </ThemedText>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -358,18 +357,23 @@ export default function TripHistoryScreen() {
         </View>
       )}
 
-      {/* Unconfirmed trips review prompt */}
+      {/* Unconfirmed trips review prompt — floating card */}
       {unconfirmedCount > 0 && (
         <TouchableOpacity
-          style={[styles.reviewBanner, { backgroundColor: '#FF5722' + '15', borderColor: '#FF5722' + '40' }]}
+          style={[styles.reviewCard, { backgroundColor: colors.card }]}
           onPress={() => router.push('/home/all-trips')}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FF5722" />
-          <ThemedText style={[styles.reviewBannerText, { color: '#FF5722' }]}>
-            {unconfirmedCount} trip{unconfirmedCount !== 1 ? 's' : ''} need your review
-          </ThemedText>
-          <MaterialCommunityIcons name="chevron-right" size={16} color="#FF5722" style={styles.reviewChevron} />
+          <View style={[styles.reviewCardIcon, { backgroundColor: '#FF5722' + '20' }]}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#FF5722" />
+          </View>
+          <View style={styles.reviewCardContent}>
+            <ThemedText style={styles.reviewCardTitle}>Trips need your review</ThemedText>
+            <ThemedText style={[styles.reviewCardSub, { color: colors.textSecondary }]}>
+              {unconfirmedCount} trip{unconfirmedCount !== 1 ? 's' : ''} waiting for confirmation
+            </ThemedText>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       )}
 
@@ -574,20 +578,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  reviewBanner: {
+  reviewCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    gap: 8,
+    margin: 16,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    gap: 12,
   },
-  reviewBannerText: {
+  reviewCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reviewCardContent: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
   },
-  reviewChevron: {
-    marginLeft: 'auto',
+  reviewCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewCardSub: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });
