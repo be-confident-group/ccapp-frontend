@@ -223,8 +223,14 @@ export default function AllTripsScreen() {
           </View>
 
           {/* Confirmation banner — only when synced and not yet reviewed */}
+          {/* Wrapped in TouchableOpacity with empty onPress to consume the press event
+              and prevent it from bubbling up to the parent card's navigation handler */}
           {item.isSynced && item.backendId && item.userConfirmed === null && (
-            <View style={[styles.confirmBanner, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={[styles.confirmBanner, { backgroundColor: colors.background, borderColor: colors.border }]}
+            >
               <ThemedText style={[styles.confirmQuestion, { color: colors.textSecondary }]}>
                 Was this trip accurate?
               </ThemedText>
@@ -252,7 +258,7 @@ export default function AllTripsScreen() {
                   </>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Unsynced trips: prompt to sync */}
