@@ -26,7 +26,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { useTrips, useUpdateTrip } from '@/lib/hooks/useTrips';
+import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
 
 interface DisplayTrip {
@@ -48,11 +48,9 @@ export default function AllTripsScreen() {
 
   // Fetch ALL trips from backend (no is_valid filter — we want to see everything)
   const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
-  const updateTrip = useUpdateTrip();
 
   const [localTrips, setLocalTrips] = useState<DBTrip[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
 
   const loadLocalData = useCallback(async () => {
     try {
@@ -120,33 +118,10 @@ export default function AllTripsScreen() {
     ].sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
   }, [backendTrips, localTrips]);
 
-  async function handleConfirm(tripId: number) {
-    setConfirmingId(tripId);
-    try {
-      await updateTrip.mutateAsync({ id: tripId, data: { user_confirmed: true } });
-    } catch (error) {
-      console.error('[AllTrips] Error confirming trip:', error);
-    } finally {
-      setConfirmingId(null);
-    }
-  }
-
-  async function handleFlag(tripId: number) {
-    setConfirmingId(tripId);
-    try {
-      await updateTrip.mutateAsync({ id: tripId, data: { user_confirmed: false } });
-    } catch (error) {
-      console.error('[AllTrips] Error flagging trip:', error);
-    } finally {
-      setConfirmingId(null);
-    }
-  }
-
   function renderTrip({ item }: { item: DisplayTrip }) {
     const tripColor = getTripTypeColor(item.type);
     const tripIcon = getTripTypeIcon(item.type);
     const tripName = getTripTypeName(item.type);
-    const isProcessing = item.backendId ? confirmingId === item.backendId : false;
 
     const handlePress = () => {
       if (item.backendId) {
@@ -192,85 +167,41 @@ export default function AllTripsScreen() {
     };
 
     return (
-      <TouchableOpacity
-        style={[styles.tripCard, { backgroundColor: colors.card }]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
-          <MaterialCommunityIcons name={tripIcon as any} size={24} color={tripColor} />
-        </View>
-
-        <View style={styles.tripDetails}>
-          <View style={styles.tripHeader}>
-            <ThemedText style={styles.tripType}>{tripName}</ThemedText>
-            {statusBadge()}
+      // Outer container is a plain View — no nested-touchable conflicts possible
+      <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
+        {/* Tappable top section navigates to trip detail */}
+        <TouchableOpacity
+          style={styles.tripCardTappable}
+          onPress={handlePress}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
+            <MaterialCommunityIcons name={tripIcon as any} size={24} color={tripColor} />
           </View>
 
-          <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
-            {item.startTime.toLocaleDateString()} at{' '}
-            {item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </ThemedText>
+          <View style={styles.tripDetails}>
+            <View style={styles.tripHeader}>
+              <ThemedText style={styles.tripType}>{tripName}</ThemedText>
+              {statusBadge()}
+            </View>
 
-          <View style={styles.tripStats}>
-            <ThemedText style={[styles.statValue, { color: colors.text }]}>
-              {formatDistanceUtil(item.distance, unitSystem)}
+            <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
+              {item.startTime.toLocaleDateString()} at{' '}
+              {item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </ThemedText>
-            <ThemedText style={[styles.separator, { color: colors.textSecondary }]}> · </ThemedText>
-            <ThemedText style={[styles.statValue, { color: colors.text }]}>
-              {formatDuration(item.duration)}
-            </ThemedText>
-          </View>
 
-          {/* Confirmation banner — only when synced and not yet reviewed */}
-          {/* Wrapped in TouchableOpacity with empty onPress to consume the press event
-              and prevent it from bubbling up to the parent card's navigation handler */}
-          {item.isSynced && item.backendId && item.userConfirmed === null && (
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
-              style={[styles.confirmBanner, { backgroundColor: colors.background, borderColor: colors.border }]}
-            >
-              <ThemedText style={[styles.confirmQuestion, { color: colors.textSecondary }]}>
-                Was this trip accurate?
+            <View style={styles.tripStats}>
+              <ThemedText style={[styles.statValue, { color: colors.text }]}>
+                {formatDistanceUtil(item.distance, unitSystem)}
               </ThemedText>
-              <View style={styles.confirmButtons}>
-                {isProcessing ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
-                      onPress={() => handleConfirm(item.backendId!)}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="check" size={14} color="#4CAF50" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>Yes, this was me</ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#FF5722' + '20', borderColor: '#FF5722' }]}
-                      onPress={() => handleFlag(item.backendId!)}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="close" size={14} color="#FF5722" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#FF5722' }]}>Not accurate</ThemedText>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* Unsynced trips: prompt to sync */}
-          {!item.isSynced && (
-            <View style={[styles.confirmBanner, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <ThemedText style={[styles.confirmQuestion, { color: colors.textSecondary }]}>
-                Sync this trip to confirm or flag it
+              <ThemedText style={[styles.separator, { color: colors.textSecondary }]}> · </ThemedText>
+              <ThemedText style={[styles.statValue, { color: colors.text }]}>
+                {formatDuration(item.duration)}
               </ThemedText>
             </View>
-          )}
-        </View>
-      </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -318,11 +249,16 @@ export default function AllTripsScreen() {
         </View>
 
         {unconfirmedCount > 0 && (
-          <View style={[styles.reviewBanner, { backgroundColor: '#FF5722' + '15', borderColor: '#FF5722' + '40' }]}>
-            <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FF5722" />
-            <ThemedText style={[styles.reviewBannerText, { color: '#FF5722' }]}>
-              {unconfirmedCount} trip{unconfirmedCount !== 1 ? 's' : ''} need your review
-            </ThemedText>
+          <View style={[styles.reviewCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.reviewCardIcon, { backgroundColor: '#FF5722' + '20' }]}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#FF5722" />
+            </View>
+            <View style={styles.reviewCardContent}>
+              <ThemedText style={styles.reviewCardTitle}>Trips need your review</ThemedText>
+              <ThemedText style={[styles.reviewCardSub, { color: colors.textSecondary }]}>
+                {unconfirmedCount} trip{unconfirmedCount !== 1 ? 's' : ''} waiting for confirmation
+              </ThemedText>
+            </View>
           </View>
         )}
 
@@ -396,22 +332,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   placeholder: { width: 40 },
-  reviewBanner: {
+  reviewCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+    margin: 16,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    gap: 12,
   },
-  reviewBannerText: {
-    fontSize: 13,
-    fontWeight: '500',
+  reviewCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reviewCardContent: {
+    flex: 1,
+  },
+  reviewCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewCardSub: {
+    fontSize: 12,
+    marginTop: 2,
   },
   list: { padding: 16 },
   tripCard: {
-    flexDirection: 'row',
-    padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     elevation: 2,
@@ -419,6 +373,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  tripCardTappable: {
+    flexDirection: 'row',
+    padding: 16,
   },
   tripIcon: {
     width: 56,
@@ -466,35 +425,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     fontSize: 14,
-  },
-  confirmBanner: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  confirmQuestion: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  confirmBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  confirmBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   empty: {
     flex: 1,

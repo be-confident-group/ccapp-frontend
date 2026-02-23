@@ -74,6 +74,19 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         perms.background === Location.PermissionStatus.GRANTED;
       setHasPermissions(hasPerms);
 
+      // Request notification permission if tracking is active and we haven't asked yet.
+      // This handles users who upgrade to a version with notifications while already tracking.
+      if (tracking || hasPerms) {
+        try {
+          const { status } = await Notifications.getPermissionsAsync();
+          if (status === 'undetermined') {
+            await Notifications.requestPermissionsAsync();
+          }
+        } catch {
+          // Notification permission is not critical
+        }
+      }
+
       // Auto-resume: if user previously enabled tracking but it's not running
       if (!tracking && hasPerms) {
         const wantsTracking = await getTrackingPreference();

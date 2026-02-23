@@ -20,9 +20,10 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, Vie
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { useTrip, useDeleteTrip } from '@/lib/hooks/useTrips';
+import { useTrip, useDeleteTrip, useUpdateTrip } from '@/lib/hooks/useTrips';
 import { database } from '@/lib/database';
 import type { Trip } from '@/lib/database/db';
+import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
 
 // Build-time constant — true for dev and EAS preview builds, false for production
@@ -61,6 +62,8 @@ export default function TripDetailScreen() {
   const [localTrip, setLocalTrip] = useState<Trip | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [confirmTypeOverride, setConfirmTypeOverride] = useState<TripType | null>(null);
+  const [confirmedLocally, setConfirmedLocally] = useState(false);
 
   // Try to parse as number (backend trip ID) or use as string (local client_id)
   const tripId = useMemo(() => {
@@ -71,6 +74,7 @@ export default function TripDetailScreen() {
   // Fetch trip from backend if we have a numeric ID
   const { data: backendTrip, isLoading, isError } = useTrip(isLocalTrip ? 0 : tripId);
   const deleteTrip = useDeleteTrip();
+  const updateTrip = useUpdateTrip();
 
   // Check network status and load from local DB if offline or backend fails
   useEffect(() => {
@@ -205,6 +209,39 @@ export default function TripDetailScreen() {
         },
       ]
     );
+  }
+
+  async function handleConfirmTrip() {
+    if (!backendTrip) return;
+    const selectedType = confirmTypeOverride ?? backendTrip.type;
+    // Hide the card immediately — prevents re-render crash from cache update
+    setConfirmedLocally(true);
+    try {
+      await updateTrip.mutateAsync({
+        id: backendTrip.id,
+        data: { user_confirmed: true, type: selectedType },
+      });
+    } catch (error) {
+      setConfirmedLocally(false);
+      console.error('[TripDetail] Error confirming trip:', error);
+      Alert.alert('Error', 'Failed to confirm trip');
+    }
+  }
+
+  async function handleNotMyTrip() {
+    if (!backendTrip) return;
+    // Hide the card immediately — prevents re-render crash from cache update
+    setConfirmedLocally(true);
+    try {
+      await updateTrip.mutateAsync({
+        id: backendTrip.id,
+        data: { user_confirmed: false },
+      });
+    } catch (error) {
+      setConfirmedLocally(false);
+      console.error('[TripDetail] Error flagging trip:', error);
+      Alert.alert('Error', 'Failed to flag trip');
+    }
   }
 
   if (isLoading) {
@@ -346,6 +383,73 @@ export default function TripDetailScreen() {
               </ThemedText>
             </View>
           </View>
+
+          {/* Confirmation card — shown when trip hasn't been reviewed yet */}
+          {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
+            <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+              {/* Type selector */}
+              <View style={styles.typeSelector}>
+                {(['walk', 'cycle'] as TripType[]).map((type) => {
+                  const selected = (confirmTypeOverride ?? backendTrip.type) === type;
+                  const tColor = getTripTypeColor(type);
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.typeOption,
+                        {
+                          backgroundColor: selected ? tColor + '25' : colors.background,
+                          borderColor: selected ? tColor : colors.border,
+                        },
+                      ]}
+                      onPress={() => setConfirmTypeOverride(type)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons
+                        name={getTripTypeIcon(type) as any}
+                        size={18}
+                        color={selected ? tColor : colors.textSecondary}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.typeOptionText,
+                          { color: selected ? tColor : colors.textSecondary },
+                        ]}
+                      >
+                        {getTripTypeName(type)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Confirm / Not my trip */}
+              <View style={styles.confirmActions}>
+                {updateTrip.isPending ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
+                      onPress={handleConfirmTrip}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
+                      <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>Confirm</ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
+                      onPress={handleNotMyTrip}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
+                      <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>Not my trip</ThemedText>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Stats Grid */}
           <View style={[styles.statsGrid, { backgroundColor: colors.backgroundSecondary }]}>
@@ -578,6 +682,52 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  typeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  confirmBtnText: {
+    fontSize: 13,
     fontWeight: '600',
   },
 });

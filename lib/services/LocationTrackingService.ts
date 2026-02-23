@@ -7,13 +7,13 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
 import { ActivityClassifier } from './ActivityClassifier';
 import { TripDetectionService } from './TripDetectionService';
 import { TripValidationService } from './TripValidationService';
+import { TripManager } from './TripManager';
 import { syncService } from './SyncService';
 import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 import { trackingLog } from './TrackingLogger';
@@ -54,8 +54,6 @@ let previousLocationForSpeed: { latitude: number; longitude: number; timestamp: 
 let processingLock: Promise<void> | null = null;
 
 // ===== TRIP VALIDATION =====
-const MIN_WALK_DISTANCE = 400; // meters
-const MIN_RIDE_DISTANCE = 1000; // meters
 
 // ===== ZOMBIE TRIP DETECTION =====
 const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops at shops, cafes, etc.
@@ -68,40 +66,20 @@ let consecutiveMovementCount = 0;
 
 // ===== TRIP RECORDING NOTIFICATION =====
 let activeTripNotificationId: string | null = null;
-let lastNotificationUpdateTime = 0;
-const NOTIFICATION_UPDATE_INTERVAL_MS = 60 * 1000; // Update body every 60s
 
 async function showTripRecordingNotification(tripId: string): Promise<void> {
   try {
+    const Notifications = await import('expo-notifications');
     activeTripNotificationId = `trip-recording-${tripId}`;
-    lastNotificationUpdateTime = Date.now();
     await Notifications.scheduleNotificationAsync({
       identifier: activeTripNotificationId,
       content: {
         title: 'Trip recording in progress',
-        body: '0.0 km recorded',
+        body: 'Your activity is being tracked',
+        sticky: true,
       },
       trigger: null,
     });
-  } catch {
-    // Never let notification errors crash tracking
-  }
-}
-
-async function updateTripRecordingNotification(distanceMeters: number): Promise<void> {
-  if (!activeTripNotificationId) return;
-  try {
-    const km = (distanceMeters / 1000).toFixed(1);
-    await Notifications.dismissNotificationAsync(activeTripNotificationId);
-    await Notifications.scheduleNotificationAsync({
-      identifier: activeTripNotificationId,
-      content: {
-        title: 'Trip recording in progress',
-        body: `${km} km recorded`,
-      },
-      trigger: null,
-    });
-    lastNotificationUpdateTime = Date.now();
   } catch {
     // Never let notification errors crash tracking
   }
@@ -110,6 +88,7 @@ async function updateTripRecordingNotification(distanceMeters: number): Promise<
 async function dismissTripRecordingNotification(): Promise<void> {
   if (!activeTripNotificationId) return;
   try {
+    const Notifications = await import('expo-notifications');
     await Notifications.dismissNotificationAsync(activeTripNotificationId);
     activeTripNotificationId = null;
   } catch {
@@ -439,68 +418,30 @@ async function detectAndHandleZombieTrips(): Promise<void> {
 /**
  * End a zombie trip with proper validation
  */
-async function endZombieTrip(tripId: string, endTime: number): Promise<void> {
-  const locations = await database.getLocationsByTrip(tripId);
-  const now = Date.now();
+async function endZombieTrip(tripId: string, _endTime: number): Promise<void> {
+  console.log(`[LocationTracking] Ending zombie trip ${tripId} via TripManager`);
 
-  if (locations.length < 2) {
+  try {
+    // Delegate to TripManager which handles:
+    // - Multi-modal segment detection & sub-trip creation
+    // - Per-segment validation (distance, type, speed, GPS drift)
+    // - Syncing completed trips to backend
+    const result = await TripManager.stopTrip(tripId);
+    console.log(`[LocationTracking] Zombie trip result:`, {
+      tripStatus: result.trip?.status,
+      synced: result.synced,
+      trophies: result.newTrophies.length,
+    });
+  } catch (error) {
+    console.error(`[LocationTracking] TripManager.stopTrip failed for zombie trip:`, error);
+    // Fallback: cancel the trip so it doesn't stay stuck as active
+    const now = Date.now();
     await database.updateTrip(tripId, {
       status: 'cancelled',
-      end_time: endTime,
-      notes: '[Auto-ended zombie] No locations recorded',
+      end_time: _endTime,
+      notes: `[Auto-ended zombie] Error: ${error instanceof Error ? error.message : 'Unknown'}`,
       updated_at: now,
     });
-    console.log(`[LocationTracking] Zombie trip ${tripId} cancelled: no locations`);
-    lastStationaryTime = null;
-    resetGpsStabilization();
-    TripDetectionService.resetState();
-    return;
-  }
-
-  // Calculate stats and determine type
-  const stats = calculateTripStatistics(locations);
-  const dominantActivity = getDominantActivityType(locations);
-
-  // Validate minimum distances and types
-  let cancelReason: string | null = null;
-
-  if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
-    cancelReason = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
-  } else if (dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
-    cancelReason = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
-  } else if (dominantActivity === 'drive' || dominantActivity === 'run') {
-    cancelReason = `Trip type '${dominantActivity}' not supported`;
-  }
-
-  if (cancelReason) {
-    await database.updateTrip(tripId, {
-      status: 'cancelled',
-      end_time: endTime,
-      notes: `[Auto-ended zombie] ${cancelReason}`,
-      updated_at: now,
-    });
-    console.log(`[LocationTracking] Zombie trip ${tripId} cancelled: ${cancelReason}`);
-  } else {
-    // Build route_data from existing locations for backend sync
-    const routeForSync = locations.map((loc) => ({
-      lat: Number(loc.latitude.toFixed(6)),
-      lng: Number(loc.longitude.toFixed(6)),
-      timestamp: new Date(loc.timestamp).toISOString(),
-    }));
-
-    await database.updateTrip(tripId, {
-      status: 'completed',
-      end_time: endTime,
-      type: dominantActivity,
-      distance: stats.totalDistance,
-      duration: stats.duration,
-      avg_speed: stats.avgSpeed,
-      max_speed: stats.maxSpeed,
-      route_data: JSON.stringify(routeForSync),
-      notes: '[Auto-ended: background tracking timeout]',
-      updated_at: now,
-    });
-    console.log(`[LocationTracking] Zombie trip ${tripId} completed (${dominantActivity}, ${stats.totalDistance.toFixed(0)}m)`);
   }
 
   // Reset tracking state
@@ -920,11 +861,6 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       updated_at: timestamp,
     });
 
-    // ===== UPDATE RECORDING NOTIFICATION (every 60s) =====
-    if (activeTripNotificationId && Date.now() - lastNotificationUpdateTime > NOTIFICATION_UPDATE_INTERVAL_MS) {
-      await updateTripRecordingNotification(stats.totalDistance);
-    }
-
     // ===== CHECK IF SHOULD END TRIP =====
     if (
       TripDetectionService.shouldEndTrip(
@@ -943,36 +879,34 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           end_time: timestamp,
           updated_at: timestamp,
         });
-        await dismissTripRecordingNotification();
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
         trackingLog('info', 'Ending trip (stationary too long)');
 
-        // Post-hoc transit detection using pattern analysis
-        const speeds = allLocations.map(loc => loc.speed || 0);
-        const locationPoints = allLocations.map(loc => ({
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          timestamp: loc.timestamp,
-          speed: loc.speed ?? undefined,
-        }));
-        const patternClassification = ActivityClassifier.classifyWithPatterns(speeds, locationPoints);
-
-        if (patternClassification.possibleTransit) {
-          console.log('[LocationTracking] Transit pattern detected at trip end - marking as drive');
-          dominantActivity = 'drive';
-          await database.updateTrip(activeTrip.id, { type: 'drive', updated_at: timestamp });
+        // Delegate to TripManager which handles:
+        // - Multi-modal segment detection & sub-trip creation
+        // - Per-segment validation (distance, type, speed, GPS drift)
+        // - Syncing completed trips to backend
+        try {
+          const result = await TripManager.stopTrip(activeTrip.id);
+          console.log(`[LocationTracking] TripManager.stopTrip result:`, {
+            tripStatus: result.trip?.status,
+            synced: result.synced,
+            trophies: result.newTrophies.length,
+          });
+        } catch (error) {
+          console.error('[LocationTracking] TripManager.stopTrip failed:', error);
+          // Fallback: at least mark the trip as completed so it's not stuck as active
+          await TripValidationService.validateAndFinalizeTrip(activeTrip.id, timestamp);
         }
-
-        // Validate and finalize trip (checks distance, type, speed, GPS drift)
-        await TripValidationService.validateAndFinalizeTrip(activeTrip.id, timestamp);
-        await dismissTripRecordingNotification();
       }
+
+      // Dismiss trip recording notification
+      await dismissTripRecordingNotification();
 
       // Reset tracking state for next trip
       lastStationaryTime = null;
       consecutiveMovementCount = 0;
-      activeTripNotificationId = null;
       resetGpsStabilization();
       TripDetectionService.resetState();
     }

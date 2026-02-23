@@ -6,7 +6,6 @@
  */
 
 import { database, type Trip as DBTrip, type LocationPoint } from '../database';
-import { LocationTrackingService } from './LocationTrackingService';
 import { SegmentDetector } from './SegmentDetector';
 import {
   calculateDistance,
@@ -34,7 +33,7 @@ import { TripValidationService } from './TripValidationService';
 export class TripManager {
   /**
    * Start a new automatic trip (for background tracking)
-   * This is called automatically by LocationTrackingService
+   * This is called automatically by the background location task
    */
   static async startAutomaticTrip(userId: string, type?: TripType): Promise<string> {
     const tripId = `trip_${Date.now()}_${Math.random().toString(36).substring(7)}`;

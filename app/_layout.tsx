@@ -6,13 +6,18 @@ import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 
 // Configure how notifications are handled when the app is in the foreground.
-// We suppress the banner (not intrusive) but the notification still appears in the tray.
+// Trip recording notifications are shown; all others are suppressed.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const isTripRecording = notification.request.identifier?.startsWith('trip-recording-');
+    return {
+      shouldShowAlert: isTripRecording,
+      shouldShowBanner: isTripRecording,
+      shouldShowList: isTripRecording,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    };
+  },
 });
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

@@ -76,9 +76,10 @@ export function useUpdateTrip() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<ApiTripCreate> & { user_confirmed?: boolean | null } }) =>
       tripAPI.updateTrip(id, data),
-    onSuccess: (updatedTrip, { id }) => {
-      // Update cache
-      queryClient.setQueryData<ApiTrip>(tripKeys.detail(id), updatedTrip);
+    onSuccess: (_, { id }) => {
+      // Invalidate detail — PATCH response may omit heavy fields like route,
+      // so we refetch the full object instead of replacing the cache.
+      queryClient.invalidateQueries({ queryKey: tripKeys.detail(id) });
 
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: tripKeys.lists() });
