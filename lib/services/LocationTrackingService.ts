@@ -12,6 +12,7 @@ import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
 import { ActivityClassifier } from './ActivityClassifier';
 import { TripDetectionService } from './TripDetectionService';
+import { TripValidationService } from './TripValidationService';
 import { syncService } from './SyncService';
 import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 import { trackingLog } from './TrackingLogger';
@@ -57,6 +58,12 @@ const MIN_RIDE_DISTANCE = 1000; // meters
 
 // ===== ZOMBIE TRIP DETECTION =====
 const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops at shops, cafes, etc.
+
+// ===== CONSECUTIVE MOVEMENT COUNTER =====
+// Require multiple readings above speed threshold before starting a trip.
+// Eliminates single GPS spike false positives.
+const CONSECUTIVE_MOVEMENT_REQUIRED = 3;
+let consecutiveMovementCount = 0;
 
 // ===== TRACKING ERROR AND TASK LOG =====
 const TRACKING_ERROR_LOG_KEY = '@tracking_errors';
@@ -713,6 +720,16 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     if (!activeTrip) {
       // Check if we should start a new trip
       if (TripDetectionService.shouldStartTrip(currentSpeed)) {
+        consecutiveMovementCount++;
+        console.log(`[LocationTracking] Movement detected (${consecutiveMovementCount}/${CONSECUTIVE_MOVEMENT_REQUIRED} required)`);
+        trackingLog('info', `Movement ${consecutiveMovementCount}/${CONSECUTIVE_MOVEMENT_REQUIRED}`);
+
+        if (consecutiveMovementCount < CONSECUTIVE_MOVEMENT_REQUIRED) {
+          // Not enough consecutive readings yet — buffer GPS for stabilization
+          handleGpsStabilization(location);
+          continue;
+        }
+
         // Wait for GPS to stabilize before starting trip
         if (!handleGpsStabilization(location)) {
           console.log('[LocationTracking] Waiting for GPS to stabilize before starting trip');
@@ -740,6 +757,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
 
         activeTrip = await database.getActiveTrip();
         lastStationaryTime = null; // Reset stationary tracking
+        consecutiveMovementCount = 0; // Reset counter after trip starts
 
         console.log(
           `[LocationTracking] ✓ Started new trip: ${tripId} ` +
@@ -770,7 +788,11 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         stabilizationBuffer = [];
         continue; // Move to next location
       } else {
-        // Not moving enough - reset stabilization if we have buffered points
+        // Not moving enough - reset consecutive counter and stabilization
+        if (consecutiveMovementCount > 0) {
+          console.log('[LocationTracking] Speed dropped, resetting movement counter');
+          consecutiveMovementCount = 0;
+        }
         if (stabilizationBuffer.length > 0) {
           console.log('[LocationTracking] Speed dropped, resetting GPS stabilization');
           resetGpsStabilization();
@@ -883,47 +905,13 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
           await database.updateTrip(activeTrip.id, { type: 'drive', updated_at: timestamp });
         }
 
-        // Validate minimum distances and types before completing
-        let cancelReason: string | null = null;
-
-        if (dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
-          cancelReason = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
-        } else if (dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
-          cancelReason = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
-        } else if (dominantActivity === 'drive' || dominantActivity === 'run') {
-          cancelReason = `Trip type '${dominantActivity}' not supported (only walk/cycle allowed)`;
-        }
-
-        if (cancelReason) {
-          console.log(`[LocationTracking] Trip ${activeTrip.id} cancelled: ${cancelReason}`);
-          await database.updateTrip(activeTrip.id, {
-            status: 'cancelled',
-            end_time: timestamp,
-            notes: cancelReason,
-            updated_at: timestamp,
-          });
-        } else {
-          // Build route_data for backend sync (ISO 8601 timestamps)
-          const routeForSync = allLocations.map((loc) => ({
-            lat: Number(loc.latitude.toFixed(6)),
-            lng: Number(loc.longitude.toFixed(6)),
-            timestamp: new Date(loc.timestamp).toISOString(),
-          }));
-          const routeDataJson = JSON.stringify(routeForSync);
-
-          console.log(`[LocationTracking] Built route with ${routeForSync.length} points for sync`);
-
-          await database.updateTrip(activeTrip.id, {
-            status: 'completed',
-            end_time: timestamp,
-            route_data: routeDataJson,
-            updated_at: timestamp,
-          });
-        }
+        // Validate and finalize trip (checks distance, type, speed, GPS drift)
+        await TripValidationService.validateAndFinalizeTrip(activeTrip.id, timestamp);
       }
 
       // Reset tracking state for next trip
       lastStationaryTime = null;
+      consecutiveMovementCount = 0;
       resetGpsStabilization();
       TripDetectionService.resetState();
     }

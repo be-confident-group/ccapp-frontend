@@ -218,93 +218,17 @@ export class TripManager {
     // Single-modal trip - continue with normal validation
     console.log(`[TripManager] Single-modal trip (${dominantActivity}), continuing with normal processing...`);
 
-    // Validate trip against quality thresholds
-    const MIN_WALK_DISTANCE = 400; // meters
-    const MIN_RIDE_DISTANCE = 1000; // meters (1 km)
-    const MAX_SPEED_THRESHOLD = 30; // km/h
-
-    let validationError: string | null = null;
-
-    // Check 1: Max speed exceeds threshold (indicates driving)
-    if (stats.maxSpeed > MAX_SPEED_THRESHOLD) {
-      validationError = `Max speed (${stats.maxSpeed.toFixed(1)} km/h) exceeds threshold (${MAX_SPEED_THRESHOLD} km/h)`;
-      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
-    }
-
-    // Check 2: Walk trip below minimum distance
-    if (!validationError && dominantActivity === 'walk' && stats.totalDistance < MIN_WALK_DISTANCE) {
-      validationError = `Walk distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
-      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
-    }
-
-    // Check 3: Cycle trip below minimum distance
-    if (!validationError && dominantActivity === 'cycle' && stats.totalDistance < MIN_RIDE_DISTANCE) {
-      validationError = `Ride distance (${stats.totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
-      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
-    }
-
-    // Check 4: Running or driving types should be filtered
-    if (!validationError && (dominantActivity === 'run' || dominantActivity === 'drive')) {
-      validationError = `Trip type '${dominantActivity}' not supported (only walk/cycle allowed)`;
-      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationError}`);
-    }
-
-    // Check 5: Trip quality validation (GPS drift detection)
-    if (!validationError) {
-      const coords = locations.map(loc => ({ latitude: loc.latitude, longitude: loc.longitude }));
-      const validation = TripValidationService.validateTrip(coords, stats.totalDistance);
-
-      if (!validation.isValid) {
-        validationError = validation.reasons.join('; ');
-        console.log(`[TripManager] Trip ${tripId} cancelled (GPS drift detected): ${validationError}`);
-      }
-    }
-
-    // If validation failed, cancel the trip
-    if (validationError) {
-      await database.updateTrip(tripId, {
-        status: 'cancelled',
-        end_time: now,
-        notes: validationError,
-        updated_at: now,
-      });
-      console.log(`[TripManager] Trip ${tripId} cancelled due to validation failure`);
-      return {
-        trip: await database.getTrip(tripId),
-        synced: false,
-        newTrophies: [],
-      };
-    }
-
-    // Build route data for sync - convert timestamps to ISO 8601 format for backend
-    const routeForSync = locations.map((loc) => ({
-      lat: Number(loc.latitude.toFixed(6)),
-      lng: Number(loc.longitude.toFixed(6)),
-      timestamp: new Date(loc.timestamp).toISOString(),  // Convert Unix ms → ISO 8601
-    }));
-
-    // Validate we have enough points for distance calculation
-    if (routeForSync.length < 2) {
-      console.warn(
-        `[TripManager] Trip ${tripId} has only ${routeForSync.length} route point(s). ` +
-        `Backend requires >= 2 for distance calculation.`
-      );
-    }
-
-    const routeDataJson = JSON.stringify(routeForSync);
-
-    console.log(`[TripManager] Built route with ${routeForSync.length} points for sync`, {
-      tripId,
-      firstPoint: routeForSync[0],
-      lastPoint: routeForSync[routeForSync.length - 1],
-      sampleTimestampFormat: routeForSync[0]?.timestamp,
+    // Ensure DB has the final dominant type and key stats before validation reads them
+    await database.updateTrip(tripId, {
+      type: dominantActivity,
+      distance: stats.totalDistance,
+      max_speed: stats.maxSpeed,
+      updated_at: now,
     });
 
-    // Update trip with stats AND route_data for backend sync
-    await database.updateTrip(tripId, {
-      status: 'completed',
+    // Validate and finalize trip (checks distance, type, speed, GPS drift; writes route_data)
+    const validationResult = await TripValidationService.validateAndFinalizeTrip(tripId, now, {
       type: dominantActivity,
-      end_time: now,
       distance: stats.totalDistance,
       duration: stats.totalDuration,
       avg_speed: stats.avgSpeed,
@@ -312,9 +236,16 @@ export class TripManager {
       elevation_gain: stats.elevationGain,
       calories: stats.calories,
       co2_saved: stats.co2Saved,
-      route_data: routeDataJson,
-      updated_at: now,
     });
+
+    if (!validationResult.isValid) {
+      console.log(`[TripManager] Trip ${tripId} cancelled: ${validationResult.reason}`);
+      return {
+        trip: await database.getTrip(tripId),
+        synced: false,
+        newTrophies: [],
+      };
+    }
 
     console.log(`[TripManager] Stopped trip ${tripId}`, {
       distance: stats.totalDistance,

@@ -173,6 +173,7 @@ export default function MapsScreen() {
 
     return backendTrips
       .filter((trip) =>
+        trip.is_valid !== false &&
         trip.route &&
         trip.route.length > 0 &&
         (trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips

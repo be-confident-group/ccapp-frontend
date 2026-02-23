@@ -104,36 +104,6 @@ class SyncService {
         return false;
       }
 
-      // Validate minimum distances before syncing
-      const MIN_WALK_DISTANCE = 400;
-      const MIN_RIDE_DISTANCE = 1000;
-      if (trip.type === 'walk' && trip.distance < MIN_WALK_DISTANCE) {
-        console.log(`[SyncService] Walk trip ${tripId} too short (${trip.distance}m), skipping sync`);
-        return false;
-      }
-      if (trip.type === 'cycle' && trip.distance < MIN_RIDE_DISTANCE) {
-        console.log(`[SyncService] Cycle trip ${tripId} too short (${trip.distance}m), skipping sync`);
-        return false;
-      }
-      if (trip.type === 'drive' || trip.type === 'run') {
-        console.log(`[SyncService] Trip ${tripId} type '${trip.type}' not supported, skipping sync`);
-        return false;
-      }
-
-      // GPS drift validation — check if trip stayed in a tiny area
-      const locations = await database.getLocationsByTrip(tripId);
-      if (locations.length >= 2) {
-        const coords = locations.map(loc => ({
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-        }));
-        const validation = TripValidationService.validateTrip(coords, trip.distance);
-        if (!validation.isValid) {
-          console.log(`[SyncService] Trip ${tripId} failed GPS drift check: ${validation.reasons.join('; ')}, skipping sync`);
-          return false;
-        }
-      }
-
       // Transform to API format
       const apiTrip = transformTripForApi(trip as DBTrip);
 

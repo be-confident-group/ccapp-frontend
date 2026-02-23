@@ -40,6 +40,7 @@ export interface ApiTrip {
   distance: number; // Backend calculated (km)
   status: TripStatus;
   is_valid: boolean;
+  user_confirmed: boolean | null;
   elevation_gain?: number;
   notes?: string;
   created_at: string;
@@ -375,7 +376,7 @@ class TripAPI {
   /**
    * Update a trip
    */
-  async updateTrip(id: number, updates: Partial<ApiTripCreate>): Promise<ApiTrip> {
+  async updateTrip(id: number, updates: Partial<ApiTripCreate> & { user_confirmed?: boolean | null }): Promise<ApiTrip> {
     try {
       return await apiClient.patch<ApiTrip>(`/api/trips/${id}/`, updates);
     } catch (error) {

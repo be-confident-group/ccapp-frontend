@@ -29,7 +29,7 @@ export function FeedHeader({
           onPress={onLeaderboardPress}
           activeOpacity={0.7}
         >
-          <TrophyIcon size={24} color={colors.icon} />
+          <TrophyIcon size={28} color={colors.icon} />
         </TouchableOpacity>
 
         {/* My Groups */}
@@ -38,7 +38,7 @@ export function FeedHeader({
           onPress={onMyClubsPress}
           activeOpacity={0.7}
         >
-          <UsersIcon size={24} color={colors.icon} />
+          <UsersIcon size={28} color={colors.icon} />
         </TouchableOpacity>
       </View>
     </View>

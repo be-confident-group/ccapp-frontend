@@ -74,7 +74,7 @@ export function useUpdateTrip() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<ApiTripCreate> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Partial<ApiTripCreate> & { user_confirmed?: boolean | null } }) =>
       tripAPI.updateTrip(id, data),
     onSuccess: (updatedTrip, { id }) => {
       // Update cache

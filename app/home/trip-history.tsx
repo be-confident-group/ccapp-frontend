@@ -102,6 +102,12 @@ export default function TripHistoryScreen() {
     }, [isOnline, unsyncedCount, syncing, loadLocalData, refetch])
   );
 
+  // Count trips awaiting user review (synced, unconfirmed)
+  const unconfirmedCount = useMemo(() => {
+    if (!backendTrips) return 0;
+    return backendTrips.filter(t => t.user_confirmed === null).length;
+  }, [backendTrips]);
+
   // Get the display trips based on data source, filter out invalid and unsupported types
   const displayTrips: DisplayTrip[] = useMemo(() => {
     function backendToDisplay(trip: ApiTrip): DisplayTrip {
@@ -309,27 +315,37 @@ export default function TripHistoryScreen() {
             )}
           </View>
 
-          {/* Sync Button */}
-          {unsyncedCount > 0 && (
+          {/* Right side: sync button + All Trips link */}
+          <View style={styles.headerRight}>
+            {unsyncedCount > 0 && (
+              <TouchableOpacity
+                style={styles.syncButton}
+                onPress={handleSyncAll}
+                disabled={syncing || !isOnline}
+                activeOpacity={0.7}
+              >
+                {syncing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="cloud-sync"
+                    size={24}
+                    color={isOnline ? colors.primary : colors.textSecondary}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.syncButton}
-              onPress={handleSyncAll}
-              disabled={syncing || !isOnline}
+              style={styles.allTripsButton}
+              onPress={() => router.push('/home/all-trips')}
               activeOpacity={0.7}
             >
-              {syncing ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <MaterialCommunityIcons
-                  name="cloud-sync"
-                  size={24}
-                  color={isOnline ? colors.primary : colors.textSecondary}
-                />
-              )}
+              <ThemedText style={[styles.allTripsText, { color: colors.primary }]}>
+                All
+              </ThemedText>
+              <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
             </TouchableOpacity>
-          )}
-
-          {unsyncedCount === 0 && <View style={styles.placeholder} />}
+          </View>
         </View>
 
       {/* Offline Banner */}
@@ -340,6 +356,21 @@ export default function TripHistoryScreen() {
             {isOnline ? 'Showing local data' : 'Offline - showing local trips'}
           </ThemedText>
         </View>
+      )}
+
+      {/* Unconfirmed trips review prompt */}
+      {unconfirmedCount > 0 && (
+        <TouchableOpacity
+          style={[styles.reviewBanner, { backgroundColor: '#FF5722' + '15', borderColor: '#FF5722' + '40' }]}
+          onPress={() => router.push('/home/all-trips')}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FF5722" />
+          <ThemedText style={[styles.reviewBannerText, { color: '#FF5722' }]}>
+            {unconfirmedCount} trip{unconfirmedCount !== 1 ? 's' : ''} need your review
+          </ThemedText>
+          <MaterialCommunityIcons name="chevron-right" size={16} color="#FF5722" style={styles.reviewChevron} />
+        </TouchableOpacity>
       )}
 
       {displayTrips.length === 0 ? (
@@ -527,5 +558,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  allTripsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  allTripsText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  reviewBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  reviewChevron: {
+    marginLeft: 'auto',
   },
 });

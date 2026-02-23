@@ -65,6 +65,8 @@ export default function TripDetailScreen() {
   const [showTypeCorrection, setShowTypeCorrection] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [confirmTypeOverride, setConfirmTypeOverride] = useState<TripType | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Try to parse as number (backend trip ID) or use as string (local client_id)
   const tripId = useMemo(() => {
@@ -249,6 +251,39 @@ export default function TripDetailScreen() {
     }
   }
 
+  async function handleConfirmTrip() {
+    if (!backendTrip) return;
+    const selectedType = confirmTypeOverride ?? backendTrip.type;
+    setIsConfirming(true);
+    try {
+      await updateTrip.mutateAsync({
+        id: backendTrip.id,
+        data: { user_confirmed: true, type: selectedType },
+      });
+    } catch (error) {
+      console.error('[TripDetail] Error confirming trip:', error);
+      Alert.alert('Error', 'Failed to confirm trip');
+    } finally {
+      setIsConfirming(false);
+    }
+  }
+
+  async function handleNotMyTrip() {
+    if (!backendTrip) return;
+    setIsConfirming(true);
+    try {
+      await updateTrip.mutateAsync({
+        id: backendTrip.id,
+        data: { user_confirmed: false },
+      });
+    } catch (error) {
+      console.error('[TripDetail] Error flagging trip:', error);
+      Alert.alert('Error', 'Failed to flag trip');
+    } finally {
+      setIsConfirming(false);
+    }
+  }
+
   function showTypeCorrectionModal() {
     if (!tripDetails) return;
 
@@ -413,6 +448,81 @@ export default function TripDetailScreen() {
               </ThemedText>
             </View>
           </View>
+
+          {/* Confirmation card — only when trip is synced and not yet reviewed */}
+          {backendTrip && backendTrip.user_confirmed === null && (
+            <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+              <ThemedText style={[styles.confirmTitle, { color: colors.text }]}>
+                Was this trip correct?
+              </ThemedText>
+
+              {/* Type selector */}
+              <View style={styles.typeSelector}>
+                {(['walk', 'cycle'] as TripType[]).map((type) => {
+                  const selected = (confirmTypeOverride ?? backendTrip.type) === type;
+                  const tColor = getTripTypeColor(type);
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.typeOption,
+                        {
+                          backgroundColor: selected ? tColor + '25' : colors.background,
+                          borderColor: selected ? tColor : colors.border,
+                        },
+                      ]}
+                      onPress={() => setConfirmTypeOverride(type)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons
+                        name={getTripTypeIcon(type) as any}
+                        size={18}
+                        color={selected ? tColor : colors.textSecondary}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.typeOptionText,
+                          { color: selected ? tColor : colors.textSecondary },
+                        ]}
+                      >
+                        {getTripTypeName(type)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Confirm / Not my trip buttons */}
+              <View style={styles.confirmActions}>
+                {isConfirming ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
+                      onPress={handleConfirmTrip}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
+                      <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>
+                        Confirm
+                      </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
+                      onPress={handleNotMyTrip}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
+                      <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>
+                        Not my trip
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Stats Grid */}
           <View style={[styles.statsGrid, { backgroundColor: colors.backgroundSecondary }]}>
@@ -694,6 +804,57 @@ const styles = StyleSheet.create({
   },
   correctionButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  typeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  confirmBtnText: {
+    fontSize: 13,
     fontWeight: '600',
   },
 });

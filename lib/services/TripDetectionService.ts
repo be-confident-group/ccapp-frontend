@@ -20,9 +20,9 @@ export class TripDetectionService {
     stationarySpeedThreshold: 0.5,    // ~1.8 km/h
     stationaryTimeThreshold: 180,      // 3 minutes
     stationaryDistanceThreshold: 50,   // 50 meters
-    minTripDuration: 60,               // 1 minute
-    minTripDistance: 100,              // 100 meters
-    movementSpeedThreshold: 0.7,       // ~2.5 km/h (lowered for easier trip start detection)
+    minTripDuration: 90,               // 1.5 minutes (raised from 60s to reduce drift trips)
+    minTripDistance: 200,              // 200 meters (raised from 100m — drift rarely accumulates 200m)
+    movementSpeedThreshold: 1.0,       // ~3.6 km/h (raised from 0.7 — GPS noise is typically < 0.8 m/s)
   };
 
   /**
@@ -139,9 +139,9 @@ export class TripDetectionService {
       stationarySpeedThreshold: 0.5,
       stationaryTimeThreshold: 180,
       stationaryDistanceThreshold: 50,
-      minTripDuration: 60,
-      minTripDistance: 100,
-      movementSpeedThreshold: 0.7,
+      minTripDuration: 90,
+      minTripDistance: 200,
+      movementSpeedThreshold: 1.0,
     };
   }
 

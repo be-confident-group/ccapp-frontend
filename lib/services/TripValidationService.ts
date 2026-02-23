@@ -12,6 +12,8 @@ import {
   calculateBoundingBoxDimensions,
   type Coordinate,
 } from '../utils/geoCalculations';
+import { database } from '../database';
+import type { Trip } from '../database/db';
 
 /**
  * Validation metrics calculated for each trip
@@ -202,5 +204,100 @@ export class TripValidationService {
    */
   static resetConfig(): void {
     this.config = { ...DEFAULT_CONFIG };
+  }
+
+  /**
+   * Validate a trip and update its status in the database.
+   *
+   * Runs all quality checks (distance thresholds, unsupported type,
+   * max speed, GPS drift) and then either cancels the trip or marks
+   * it completed with route_data built from its location points.
+   *
+   * @param tripId - Local trip ID
+   * @param endTime - Timestamp (ms) to record as end_time
+   * @param additionalFields - Extra fields to merge into the completed-trip update
+   *   (e.g. distance, avg_speed, etc. from the caller's stats computation)
+   * @returns { isValid, reason }
+   */
+  static async validateAndFinalizeTrip(
+    tripId: string,
+    endTime: number,
+    additionalFields?: Partial<Trip>
+  ): Promise<{ isValid: boolean; reason?: string }> {
+    const MIN_WALK_DISTANCE = 400;   // meters
+    const MIN_RIDE_DISTANCE = 1000;  // meters
+    const MAX_SPEED_KMH = 30;        // km/h
+
+    const trip = await database.getTrip(tripId);
+    if (!trip) {
+      return { isValid: false, reason: 'Trip not found' };
+    }
+
+    const locations = await database.getLocationsByTrip(tripId);
+    const tripType = trip.type;
+    const totalDistance = trip.distance;
+    const maxSpeedKmh = trip.max_speed;
+
+    let reason: string | null = null;
+
+    // Check 1: Max speed (indicates driving / GPS spike)
+    if (maxSpeedKmh > MAX_SPEED_KMH) {
+      reason = `Max speed (${maxSpeedKmh.toFixed(1)} km/h) exceeds threshold (${MAX_SPEED_KMH} km/h)`;
+    }
+
+    // Check 2: Minimum distance by type
+    if (!reason && tripType === 'walk' && totalDistance < MIN_WALK_DISTANCE) {
+      reason = `Walk distance (${totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
+    }
+    if (!reason && tripType === 'cycle' && totalDistance < MIN_RIDE_DISTANCE) {
+      reason = `Ride distance (${totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
+    }
+
+    // Check 3: Unsupported type
+    if (!reason && (tripType === 'run' || tripType === 'drive')) {
+      reason = `Trip type '${tripType}' not supported (only walk/cycle allowed)`;
+    }
+
+    // Check 4: GPS drift detection
+    if (!reason && locations.length >= 2) {
+      const coords = locations.map(loc => ({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      }));
+      const driftResult = this.validateTrip(coords, totalDistance);
+      if (!driftResult.isValid) {
+        reason = driftResult.reasons.join('; ');
+      }
+    }
+
+    if (reason) {
+      console.log(`[TripValidation] Trip ${tripId} cancelled: ${reason}`);
+      await database.updateTrip(tripId, {
+        status: 'cancelled',
+        end_time: endTime,
+        notes: reason,
+        updated_at: endTime,
+      });
+      return { isValid: false, reason };
+    }
+
+    // Build route_data from location points
+    const routeForSync = locations.map(loc => ({
+      lat: Number(loc.latitude.toFixed(6)),
+      lng: Number(loc.longitude.toFixed(6)),
+      timestamp: new Date(loc.timestamp).toISOString(),
+    }));
+
+    console.log(`[TripValidation] Trip ${tripId} valid — building route with ${routeForSync.length} points`);
+
+    await database.updateTrip(tripId, {
+      status: 'completed',
+      end_time: endTime,
+      route_data: JSON.stringify(routeForSync),
+      updated_at: endTime,
+      ...additionalFields,
+    });
+
+    return { isValid: true };
   }
 }

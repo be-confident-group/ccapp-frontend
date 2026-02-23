@@ -11,14 +11,13 @@ import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 're
 import {
   ArrowsPointingOutIcon,
   BeakerIcon,
-  BellIcon,
   ChevronDownIcon,
   FireIcon,
-  TrophyIcon
+  TrophyIcon,
+  UsersIcon
 } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { formatDate } from '@/lib/i18n/formatters';
 import { useTracking } from '@/contexts/TrackingContext';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
@@ -155,12 +154,17 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
           <ThemedText type="subtitle" style={styles.headerDate}>
-            {t('home:header.date', { date: formatDate(new Date(), { month: 'long', day: 'numeric' }) })}
+            {userProfile?.name ? `Hi, ${userProfile.name}!` : 'Hi there!'}
           </ThemedText>
 
-          <TouchableOpacity style={styles.headerIcon}>
-            <BellIcon size={28} color={colors.icon} />
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.headerIcon} onPress={() => router.push('/feed/leaderboards')} activeOpacity={0.7}>
+              <TrophyIcon size={28} color={colors.icon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIcon} onPress={() => router.push('/clubs/my-clubs')} activeOpacity={0.7}>
+              <UsersIcon size={28} color={colors.icon} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Dropdown Menu for Tracking State */}
@@ -649,9 +653,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
   },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   headerIcon: {
     width: 40,
-    height: 20,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
