@@ -60,7 +60,6 @@ export default function TripDetailScreen() {
   const { unitSystem, formatElevation, formatWeight } = useUnits();
   const { selectedLayer } = useMapLayer(isDark);
   const [localTrip, setLocalTrip] = useState<Trip | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [confirmTypeOverride, setConfirmTypeOverride] = useState<TripType | null>(null);
   const [confirmedLocally, setConfirmedLocally] = useState(false);
@@ -83,10 +82,6 @@ export default function TripDetailScreen() {
     const checkNetworkAndLoadLocal = async () => {
       const netState = await NetInfo.fetch();
       const online = netState.isConnected ?? false;
-
-      if (mounted) {
-        setIsOnline(online);
-      }
 
       // Load from local DB if offline, backend fails, or explicitly a local trip
       if (!online || isError || isLocalTrip) {
@@ -149,11 +144,18 @@ export default function TripDetailScreen() {
 
     // Fallback to local trip if offline or backend fails
     if (localTrip) {
-      // Parse route_data JSON string
-      let parsedRoute: any[] = [];
+      // Parse route_data JSON string.
+      // route_data is stored as {lat, lng, timestamp} — normalize to {latitude, longitude}
+      // so the Mapbox coordinate mapping ([coord.longitude, coord.latitude]) works correctly.
+      let parsedRoute: Array<{ latitude: number; longitude: number; timestamp?: string }> = [];
       if (localTrip.route_data) {
         try {
-          parsedRoute = JSON.parse(localTrip.route_data);
+          const raw = JSON.parse(localTrip.route_data);
+          parsedRoute = raw.map((p: any) => ({
+            latitude: p.latitude ?? p.lat,
+            longitude: p.longitude ?? p.lng,
+            timestamp: p.timestamp,
+          }));
         } catch (error) {
           console.error('[TripDetail] Error parsing route_data:', error);
         }

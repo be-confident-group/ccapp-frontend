@@ -13,8 +13,9 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
 import { formatDistance as formatDistanceUtil, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -51,6 +52,10 @@ export default function AllTripsScreen() {
 
   const [localTrips, setLocalTrips] = useState<DBTrip[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
+  // Cached backend trips for offline use — populated from AsyncStorage when backend unavailable
+  const [cachedBackendTrips, setCachedBackendTrips] = useState<ApiTrip[] | null>(null);
+
+  const TRIPS_CACHE_KEY = '@all_trips_cache';
 
   const loadLocalData = useCallback(async () => {
     try {
@@ -65,6 +70,22 @@ export default function AllTripsScreen() {
     }
   }, []);
 
+  // Load cached backend trips from AsyncStorage on mount (for offline fallback)
+  useEffect(() => {
+    AsyncStorage.getItem(TRIPS_CACHE_KEY)
+      .then(raw => {
+        if (raw) setCachedBackendTrips(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Persist backend trips to AsyncStorage whenever a fresh fetch succeeds
+  useEffect(() => {
+    if (backendTrips) {
+      AsyncStorage.setItem(TRIPS_CACHE_KEY, JSON.stringify(backendTrips)).catch(() => {});
+    }
+  }, [backendTrips]);
+
   useFocusEffect(
     useCallback(() => {
       loadLocalData();
@@ -72,6 +93,9 @@ export default function AllTripsScreen() {
   );
 
   const displayTrips: DisplayTrip[] = useMemo(() => {
+    // Use live data when online, fall back to AsyncStorage cache when offline
+    const resolvedBackendTrips = backendTrips ?? cachedBackendTrips ?? null;
+
     function backendToDisplay(trip: ApiTrip): DisplayTrip {
       return {
         id: trip.client_id,
@@ -101,22 +125,22 @@ export default function AllTripsScreen() {
       };
     }
 
-    if (!backendTrips) {
+    if (!resolvedBackendTrips) {
       return localTrips
         .map(localToDisplay)
         .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     }
 
-    const syncedClientIds = new Set(backendTrips.map(t => t.client_id));
+    const syncedClientIds = new Set(resolvedBackendTrips.map(t => t.client_id));
     const unsyncedLocalTrips = localTrips.filter(
       t => t.synced !== 1 && !syncedClientIds.has(t.id)
     );
 
     return [
-      ...backendTrips.map(backendToDisplay),
+      ...resolvedBackendTrips.map(backendToDisplay),
       ...unsyncedLocalTrips.map(localToDisplay),
     ].sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-  }, [backendTrips, localTrips]);
+  }, [backendTrips, cachedBackendTrips, localTrips]);
 
   function renderTrip({ item }: { item: DisplayTrip }) {
     const tripColor = getTripTypeColor(item.type);
