@@ -22,6 +22,9 @@ export interface Trip {
   updated_at: number;
   synced: number;
   backend_id: number | null;
+  ml_activity_type: 'walk' | 'run' | 'cycle' | 'drive' | null;
+  ml_confidence: number | null;
+  classification_method: 'ml' | 'speed';
 }
 
 export interface LocationPoint {
@@ -52,6 +55,26 @@ export interface SyncQueueItem {
   retry_count: number;
   created_at: number;
   last_attempt: number | null;
+}
+
+export interface ActivityWindow {
+  id?: number;
+  trip_id: string;
+  t_start: number;
+  t_end: number;
+  label: string; // 'walking' | 'cycling' | 'running' | 'vehicle'
+  confidence: number;
+  probs_json: string;
+  created_at?: number;
+}
+
+export interface SensorBatch {
+  id?: number;
+  trip_id: string;
+  seq: number;
+  payload_json: string;
+  synced?: number;
+  created_at?: number;
 }
 
 export interface RouteRating {
@@ -468,6 +491,90 @@ class Database {
     return results;
   }
 
+  // ===== ACTIVITY WINDOWS (ML classifications) =====
+
+  async insertActivityWindow(window: ActivityWindow): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      `INSERT INTO activity_windows (trip_id, t_start, t_end, label, confidence, probs_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        window.trip_id,
+        window.t_start,
+        window.t_end,
+        window.label,
+        window.confidence,
+        window.probs_json,
+        window.created_at ?? Date.now(),
+      ]
+    );
+  }
+
+  async getActivityWindowsByTrip(tripId: string): Promise<ActivityWindow[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<ActivityWindow>(
+      'SELECT * FROM activity_windows WHERE trip_id = ? ORDER BY t_start ASC',
+      [tripId]
+    );
+  }
+
+  async deleteActivityWindowsByTrip(tripId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync('DELETE FROM activity_windows WHERE trip_id = ?', [tripId]);
+  }
+
+  // ===== SENSOR BATCHES (raw IMU for retraining) =====
+
+  async insertSensorBatch(batch: SensorBatch): Promise<number> {
+    const db = await this.getDb();
+    const result = await db.runAsync(
+      `INSERT INTO sensor_batches (trip_id, seq, payload_json, synced, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        batch.trip_id,
+        batch.seq,
+        batch.payload_json,
+        batch.synced ?? 0,
+        batch.created_at ?? Date.now(),
+      ]
+    );
+    return result.lastInsertRowId as number;
+  }
+
+  async getUnsyncedSensorBatches(limit: number = 50): Promise<SensorBatch[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<SensorBatch>(
+      'SELECT * FROM sensor_batches WHERE synced = 0 ORDER BY trip_id ASC, seq ASC LIMIT ?',
+      [limit]
+    );
+  }
+
+  async getSensorBatchesByTrip(tripId: string): Promise<SensorBatch[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<SensorBatch>(
+      'SELECT * FROM sensor_batches WHERE trip_id = ? ORDER BY seq ASC',
+      [tripId]
+    );
+  }
+
+  async markSensorBatchSynced(id: number): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync('UPDATE sensor_batches SET synced = 1 WHERE id = ?', [id]);
+  }
+
+  async deleteSensorBatchesByTrip(tripId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync('DELETE FROM sensor_batches WHERE trip_id = ?', [tripId]);
+  }
+
+  async countUnsyncedSensorBatches(): Promise<number> {
+    const db = await this.getDb();
+    const result = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM sensor_batches WHERE synced = 0'
+    );
+    return result?.count ?? 0;
+  }
+
   // ===== UTILITY =====
 
   async clearAllData(): Promise<void> {
@@ -476,6 +583,8 @@ class Database {
     await db.execAsync('DELETE FROM locations');
     await db.execAsync('DELETE FROM sync_queue');
     await db.execAsync('DELETE FROM route_ratings');
+    await db.execAsync('DELETE FROM activity_windows');
+    await db.execAsync('DELETE FROM sensor_batches');
     console.log('[Database] All data cleared');
   }
 

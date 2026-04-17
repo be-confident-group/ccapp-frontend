@@ -7,6 +7,7 @@
 
 import { database, type Trip as DBTrip, type LocationPoint } from '../database';
 import { SegmentDetector } from './SegmentDetector';
+import { MLSegmentDetector } from './MLSegmentDetector';
 import {
   calculateDistance,
   calculateSpeed,
@@ -93,11 +94,14 @@ export class TripManager {
     const stats = this.calculateTripStats(locations);
     const dominantActivity = this.getDominantActivity(locations);
 
-    // SEGMENT ANALYSIS: Detect multi-modal trips
-    console.log(`[TripManager] Analyzing trip ${tripId} for segments...`);
-    const segmentAnalysis = SegmentDetector.analyzeTrip(locations);
+    // SEGMENT ANALYSIS: Detect multi-modal trips using ML, falling back to speed.
+    console.log(`[TripManager] Analyzing trip ${tripId} for segments (ML-first)...`);
+    const segmentAnalysis = await MLSegmentDetector.analyzeTrip(tripId, locations);
+    const classificationMethod = segmentAnalysis.classificationMethod;
 
     console.log(`[TripManager] Segment analysis complete:`, {
+      method: classificationMethod,
+      mlWindows: segmentAnalysis.mlWindowCount,
       isMultiModal: segmentAnalysis.isMultiModal,
       segmentCount: segmentAnalysis.segments.length,
       types: segmentAnalysis.segments.map(s => s.type),
@@ -110,24 +114,22 @@ export class TripManager {
       const subTrips: DBTrip[] = [];
       const syncedSubTrips: string[] = [];
 
+      // Minimum segment distances per class. Backend accepts all 4 types;
+      // we still drop runs/drives that are too short to be meaningful data.
+      const MIN_SEGMENT_DIST: Record<TripType, number> = {
+        walk: 400,
+        run: 400,
+        cycle: 1000,
+        drive: 1000,
+      };
+
       for (let i = 0; i < segmentAnalysis.segments.length; i++) {
         const segment = segmentAnalysis.segments[i];
         const subTripId = `${tripId}_segment${i}`;
 
-        // Validate segment before creating sub-trip
-        const MIN_WALK_DIST = 400;
-        const MIN_RIDE_DIST = 1000;
-
-        if (segment.type === 'walk' && segment.distance < MIN_WALK_DIST) {
-          console.log(`[TripManager] Skipping walk segment ${i}: ${segment.distance.toFixed(0)}m < ${MIN_WALK_DIST}m`);
-          continue;
-        }
-        if (segment.type === 'cycle' && segment.distance < MIN_RIDE_DIST) {
-          console.log(`[TripManager] Skipping cycle segment ${i}: ${segment.distance.toFixed(0)}m < ${MIN_RIDE_DIST}m`);
-          continue;
-        }
-        if (segment.type === 'drive' || segment.type === 'run') {
-          console.log(`[TripManager] Skipping ${segment.type} segment ${i}: unsupported type`);
+        const minDist = MIN_SEGMENT_DIST[segment.type] ?? 400;
+        if (segment.distance < minDist) {
+          console.log(`[TripManager] Skipping ${segment.type} segment ${i}: ${segment.distance.toFixed(0)}m < ${minDist}m`);
           continue;
         }
 
@@ -169,6 +171,9 @@ export class TripManager {
           updated_at: now,
           synced: 0,
           backend_id: null,
+          ml_activity_type: classificationMethod === 'ml' ? segment.type : null,
+          ml_confidence: classificationMethod === 'ml' ? segment.confidence / 100 : null,
+          classification_method: classificationMethod,
         });
 
         const subTrip = await database.getTrip(subTripId);
@@ -214,20 +219,31 @@ export class TripManager {
       };
     }
 
-    // Single-modal trip - continue with normal validation
-    console.log(`[TripManager] Single-modal trip (${dominantActivity}), continuing with normal processing...`);
+    // Single-modal trip - continue with normal validation.
+    // Prefer the ML-derived dominant type when ML ran; fall back to speed-based.
+    const finalType: TripType =
+      classificationMethod === 'ml' && segmentAnalysis.dominantType
+        ? segmentAnalysis.dominantType
+        : dominantActivity;
+
+    console.log(
+      `[TripManager] Single-modal trip (${finalType}, via ${classificationMethod}), continuing with normal processing...`,
+    );
 
     // Ensure DB has the final dominant type and key stats before validation reads them
     await database.updateTrip(tripId, {
-      type: dominantActivity,
+      type: finalType,
       distance: stats.totalDistance,
       max_speed: stats.maxSpeed,
+      ml_activity_type: classificationMethod === 'ml' ? finalType : null,
+      ml_confidence: classificationMethod === 'ml' ? segmentAnalysis.confidence / 100 : null,
+      classification_method: classificationMethod,
       updated_at: now,
     });
 
     // Validate and finalize trip (checks distance, type, speed, GPS drift; writes route_data)
     const validationResult = await TripValidationService.validateAndFinalizeTrip(tripId, now, {
-      type: dominantActivity,
+      type: finalType,
       distance: stats.totalDistance,
       duration: stats.totalDuration,
       avg_speed: stats.avgSpeed,
@@ -249,7 +265,8 @@ export class TripManager {
     console.log(`[TripManager] Stopped trip ${tripId}`, {
       distance: stats.totalDistance,
       duration: stats.totalDuration,
-      type: dominantActivity,
+      type: finalType,
+      method: classificationMethod,
     });
 
     const completedTrip = await database.getTrip(tripId);

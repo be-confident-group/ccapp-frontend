@@ -30,6 +30,7 @@ import { Spacing } from '@/constants/theme';
 import { database, type Trip } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
+import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 
 // Transform backend ApiTrip to local Trip format for the card component
 function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
@@ -96,7 +97,7 @@ export default function UnratedTripsScreen() {
     return backendTrips
       .filter((trip) => trip.is_valid !== false) // Exclude invalid/drift trips
       .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
-      .filter((trip) => trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
+      .filter((trip) => isVisibleTripType(trip.type)) // v1: only walk + cycle
       .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
       .map(transformApiTripToLocal);
   }, [backendTrips, ratedTripIds]);

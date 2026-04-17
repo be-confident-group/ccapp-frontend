@@ -25,6 +25,9 @@ export interface ApiTripCreate {
   status?: TripStatus;
   elevation_gain?: number;
   notes?: string;
+  ml_activity_type?: TripType | null;
+  ml_confidence?: number | null;
+  classification_method?: 'ml' | 'speed';
 }
 
 export interface ApiTrip {
@@ -88,6 +91,9 @@ export interface DBTrip {
   created_at: number;
   updated_at: number;
   synced: number; // 0 or 1
+  ml_activity_type?: TripType | null;
+  ml_confidence?: number | null;
+  classification_method?: 'ml' | 'speed';
 }
 
 /**
@@ -226,6 +232,10 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
     status: dbTrip.status,
     elevation_gain: dbTrip.elevation_gain > 0 ? dbTrip.elevation_gain : undefined,
     notes: dbTrip.notes || undefined,
+    classification_method: dbTrip.classification_method ?? 'speed',
+    ml_activity_type: dbTrip.ml_activity_type ?? undefined,
+    ml_confidence:
+      typeof dbTrip.ml_confidence === 'number' ? dbTrip.ml_confidence : undefined,
   };
 
   console.log('[TripAPI] Transformed trip payload:', {
@@ -434,6 +444,26 @@ class TripAPI {
       } as any);
     } catch (error) {
       console.error('[TripAPI] Error unsharing trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload a raw IMU sensor batch recorded during a trip. Used by the
+   * frontend to ship the `sensor_batches` table to the backend for future
+   * model retraining.
+   *
+   * The payload is an opaque JSON blob produced by `sensorBuffer.flushRawBatch`
+   * — schema is owned by the backend endpoint and kept stable by contract.
+   */
+  async uploadSensorBatch(
+    tripId: number,
+    payload: unknown,
+  ): Promise<void> {
+    try {
+      await apiClient.post(`/api/trips/${tripId}/sensor-data/`, payload);
+    } catch (error) {
+      console.error('[TripAPI] Error uploading sensor batch:', error);
       throw error;
     }
   }

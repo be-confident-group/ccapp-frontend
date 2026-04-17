@@ -13,6 +13,7 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
 import { formatDistance as formatDistanceUtil, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -128,6 +129,7 @@ export default function AllTripsScreen() {
     if (!resolvedBackendTrips) {
       return localTrips
         .map(localToDisplay)
+        .filter((t) => isVisibleTripType(t.type))
         .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     }
 
@@ -139,7 +141,9 @@ export default function AllTripsScreen() {
     return [
       ...resolvedBackendTrips.map(backendToDisplay),
       ...unsyncedLocalTrips.map(localToDisplay),
-    ].sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    ]
+      .filter((t) => isVisibleTripType(t.type))
+      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
   }, [backendTrips, cachedBackendTrips, localTrips]);
 
   function renderTrip({ item }: { item: DisplayTrip }) {

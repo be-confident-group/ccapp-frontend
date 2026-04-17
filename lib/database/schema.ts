@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 export const SCHEMA = {
   trips: `
@@ -25,7 +25,10 @@ export const SCHEMA = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       synced INTEGER DEFAULT 0,
-      backend_id INTEGER
+      backend_id INTEGER,
+      ml_activity_type TEXT,
+      ml_confidence REAL,
+      classification_method TEXT DEFAULT 'speed'
     )
   `,
 
@@ -78,6 +81,35 @@ export const SCHEMA = {
       updated_at INTEGER NOT NULL
     )
   `,
+
+  // Per-window ML predictions produced by the on-device classifier.
+  // One row per 256-sample window (~5.12 s at 50 Hz).
+  activity_windows: `
+    CREATE TABLE IF NOT EXISTS activity_windows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      t_start INTEGER NOT NULL,
+      t_end INTEGER NOT NULL,
+      label TEXT NOT NULL,
+      confidence REAL NOT NULL,
+      probs_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
+    )
+  `,
+
+  // Rolling raw IMU chunks (~60 s each) uploaded to the backend for model
+  // retraining. Stored as opaque JSON so the frontend does not need to know
+  // the final sample-data schema.
+  sensor_batches: `
+    CREATE TABLE IF NOT EXISTS sensor_batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      payload_json TEXT NOT NULL,
+      synced INTEGER DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -89,6 +121,9 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_location_timestamp ON locations(timestamp)',
   'CREATE INDEX IF NOT EXISTS idx_rating_trip ON route_ratings(trip_id)',
   'CREATE INDEX IF NOT EXISTS idx_rating_synced ON route_ratings(synced)',
+  'CREATE INDEX IF NOT EXISTS idx_activity_windows_trip ON activity_windows(trip_id, t_start)',
+  'CREATE INDEX IF NOT EXISTS idx_sensor_batches_trip ON sensor_batches(trip_id, seq)',
+  'CREATE INDEX IF NOT EXISTS idx_sensor_batches_synced ON sensor_batches(synced)',
 ];
 
 export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
@@ -188,6 +223,39 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
       console.log('[Database] Migration 3->4: Successfully removed FOREIGN KEY constraint');
     } catch (error) {
       console.log('[Database] Migration 3->4: Error during migration', error);
+    }
+  }
+
+  // Migration from version 4 to 5: Add activity_windows + sensor_batches tables,
+  // and ML classification columns on trips.
+  if (from < 5 && to >= 5) {
+    console.log('[Database] Migration 4->5: Adding activity_windows + sensor_batches + ML columns');
+    try {
+      await db.execAsync(SCHEMA.activity_windows);
+      await db.execAsync(SCHEMA.sensor_batches);
+      for (const stmt of [
+        'ALTER TABLE trips ADD COLUMN ml_activity_type TEXT',
+        'ALTER TABLE trips ADD COLUMN ml_confidence REAL',
+        "ALTER TABLE trips ADD COLUMN classification_method TEXT DEFAULT 'speed'",
+      ]) {
+        try {
+          await db.execAsync(stmt);
+        } catch (err) {
+          console.log(`[Database] Migration 4->5: ALTER skipped (likely exists): ${stmt}`);
+        }
+      }
+      await db.execAsync(
+        'CREATE INDEX IF NOT EXISTS idx_activity_windows_trip ON activity_windows(trip_id, t_start)'
+      );
+      await db.execAsync(
+        'CREATE INDEX IF NOT EXISTS idx_sensor_batches_trip ON sensor_batches(trip_id, seq)'
+      );
+      await db.execAsync(
+        'CREATE INDEX IF NOT EXISTS idx_sensor_batches_synced ON sensor_batches(synced)'
+      );
+      console.log('[Database] Migration 4->5: Tables created');
+    } catch (error) {
+      console.log('[Database] Migration 4->5: Error (may already exist)', error);
     }
   }
 

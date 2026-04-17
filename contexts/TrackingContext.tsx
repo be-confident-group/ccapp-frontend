@@ -17,11 +17,13 @@ import {
 } from '@/lib/services/LocationTrackingService';
 import { database } from '@/lib/database';
 import * as Location from 'expo-location';
+import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
 
 interface TrackingContextType {
   isTracking: boolean;
   hasPermissions: boolean;
   isLoading: boolean;
+  liveActivity: LiveActivityState | null;
   toggleTracking: () => Promise<void>;
   checkStatus: () => Promise<void>;
 }
@@ -32,6 +34,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [isTracking, setIsTracking] = useState(false);
   const [hasPermissions, setHasPermissions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [liveActivity, setLiveActivity] = useState<LiveActivityState | null>(null);
 
   // Initialize AppState listener and check initial status
   useEffect(() => {
@@ -53,6 +56,9 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       checkStatus();
     });
 
+    // Subscribe to live ML activity updates
+    streamingSegmenter.setListener(setLiveActivity);
+
     // Check initial status
     checkStatus();
 
@@ -60,6 +66,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     return () => {
       cleanupAppStateListener();
       setOnPermissionDowngraded(null);
+      streamingSegmenter.setListener(null);
     };
   }, []);
 
@@ -191,6 +198,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         isTracking,
         hasPermissions,
         isLoading,
+        liveActivity,
         toggleTracking,
         checkStatus,
       }}

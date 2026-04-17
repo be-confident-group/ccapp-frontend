@@ -17,6 +17,7 @@ import { TripManager } from './TripManager';
 import { syncService } from './SyncService';
 import { calculateDistance, mpsToKmh } from '../utils/geoCalculations';
 import { trackingLog } from './TrackingLogger';
+import { sensorBuffer } from '../activity/sensorBuffer';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -421,6 +422,13 @@ async function detectAndHandleZombieTrips(): Promise<void> {
 async function endZombieTrip(tripId: string, _endTime: number): Promise<void> {
   console.log(`[LocationTracking] Ending zombie trip ${tripId} via TripManager`);
 
+  // Flush + detach sensor buffer so the final raw batch is persisted.
+  try {
+    await sensorBuffer.detachTrip();
+  } catch (err) {
+    console.warn('[LocationTracking] sensorBuffer.detachTrip failed on zombie end:', err);
+  }
+
   try {
     // Delegate to TripManager which handles:
     // - Multi-modal segment detection & sub-trip creation
@@ -751,6 +759,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         activeTrip = await database.getActiveTrip();
         lastStationaryTime = null; // Reset stationary tracking
         consecutiveMovementCount = 0; // Reset counter after trip starts
+        sensorBuffer.attachTrip(tripId);
         await showTripRecordingNotification(tripId);
 
         console.log(
@@ -882,6 +891,10 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       } else {
         console.log('[LocationTracking] Ending trip (stationary for too long)');
         trackingLog('info', 'Ending trip (stationary too long)');
+
+        // Flush any pending raw sensor batch + detach the sensor buffer BEFORE
+        // running the segmenter so that MLSegmentDetector has every window.
+        await sensorBuffer.detachTrip();
 
         // Delegate to TripManager which handles:
         // - Multi-modal segment detection & sub-trip creation
@@ -1124,6 +1137,22 @@ export class LocationTrackingService {
     console.log('[LocationTracking] ✓ Background tracking started');
     trackingLog('info', 'Tracking started');
 
+    // Start IMU sensor buffer for on-device ML activity classification.
+    // Subscriptions only run while app is in the foreground; we still start
+    // here so that as soon as the user opens the app during a background
+    // trip, sampling begins.
+    try {
+      await sensorBuffer.start();
+    } catch (err) {
+      console.warn('[LocationTracking] sensorBuffer failed to start (ML will fall back to speed):', err);
+    }
+
+    // Re-attach sensor buffer to an existing active trip (app restart case)
+    const existing = await database.getActiveTrip();
+    if (existing && sensorBuffer.getActiveTripId() !== existing.id) {
+      sensorBuffer.attachTrip(existing.id);
+    }
+
     // Also start foreground watcher if app is in foreground for real-time updates
     if (currentAppState === 'active') {
       await startForegroundWatching();
@@ -1149,6 +1178,12 @@ export class LocationTrackingService {
     // Reset all tracking state for clean restart
     lastStationaryTime = null;
     resetGpsStabilization();
+
+    try {
+      await sensorBuffer.stop();
+    } catch (err) {
+      console.warn('[LocationTracking] sensorBuffer failed to stop:', err);
+    }
 
     console.log('[LocationTracking] ✓ Background tracking stopped');
     trackingLog('info', 'Tracking stopped');

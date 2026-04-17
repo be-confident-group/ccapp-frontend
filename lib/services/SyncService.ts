@@ -305,6 +305,10 @@ class SyncService {
 
       console.log(`[SyncService] Sync complete: ${result.syncedCount} synced, ${result.failedCount} failed`);
 
+      // Fire-and-forget: push any pending raw IMU batches to the backend now
+      // that the parent trips have backend_ids.
+      void this.syncSensorBatches();
+
       return result;
     } catch (error) {
       console.error('[SyncService] Sync error:', error);
@@ -375,13 +379,14 @@ class SyncService {
       for (const trip of completedTrips) {
         let cancelReason: string | null = null;
 
-        // Check 1: Distance thresholds
+        // Check 1: Distance thresholds. We now sync all 4 ML types (walk, cycle,
+        // run, drive); the backend is responsible for `is_valid` on run/drive.
+        // Frontend still skips very short walk/cycle trips because the UI
+        // shows these and they're usually drift.
         if (trip.type === 'walk' && trip.distance < MIN_WALK_DISTANCE) {
           cancelReason = `Walk too short (${trip.distance.toFixed(0)}m < ${MIN_WALK_DISTANCE}m)`;
         } else if (trip.type === 'cycle' && trip.distance < MIN_RIDE_DISTANCE) {
           cancelReason = `Cycle too short (${trip.distance.toFixed(0)}m < ${MIN_RIDE_DISTANCE}m)`;
-        } else if (trip.type === 'drive' || trip.type === 'run') {
-          cancelReason = `Unsupported type: ${trip.type}`;
         }
 
         // Check 2: GPS drift detection (spatial validation)
@@ -421,6 +426,91 @@ class SyncService {
   }
 
   /**
+   * Upload any queued raw IMU sensor batches to the backend for trips that
+   * have already been synced. Batches for unsynced trips are skipped and
+   * will be retried on the next sync cycle.
+   *
+   * Runs best-effort: individual batch failures are logged but don't abort
+   * the loop. Successfully uploaded batches are marked `synced = 1` and
+   * then deleted locally to keep the SQLite db bounded.
+   */
+  async syncSensorBatches(maxBatches = 100): Promise<{
+    uploaded: number;
+    failed: number;
+    skipped: number;
+  }> {
+    const result = { uploaded: 0, failed: 0, skipped: 0 };
+
+    try {
+      const isOnline = await this.checkNetwork();
+      if (!isOnline) return result;
+
+      const pending = await database.getUnsyncedSensorBatches(maxBatches);
+      if (pending.length === 0) return result;
+
+      // Cache tripId → backendId lookups so we don't hit SQLite per batch.
+      const backendIdCache = new Map<string, number | null>();
+      const deletedTripIds = new Set<string>();
+
+      for (const batch of pending) {
+        if (batch.id === undefined) continue;
+
+        let backendId = backendIdCache.get(batch.trip_id);
+        if (backendId === undefined) {
+          const trip = await database.getTrip(batch.trip_id);
+          backendId = trip?.backend_id ?? null;
+          backendIdCache.set(batch.trip_id, backendId);
+        }
+
+        if (backendId == null) {
+          result.skipped++;
+          continue;
+        }
+
+        try {
+          const payload = safeJsonParse(batch.payload_json);
+          await tripAPI.uploadSensorBatch(backendId, payload);
+          await database.markSensorBatchSynced(batch.id);
+          result.uploaded++;
+          deletedTripIds.add(batch.trip_id);
+        } catch (err) {
+          console.warn(
+            `[SyncService] Failed to upload sensor batch ${batch.id} (trip ${batch.trip_id}):`,
+            err instanceof Error ? err.message : err,
+          );
+          result.failed++;
+        }
+      }
+
+      // Best-effort prune: if every batch for a trip is synced, drop the
+      // rows locally. (Leave them if any failed to avoid re-upload loss.)
+      if (result.failed === 0) {
+        for (const tripId of deletedTripIds) {
+          try {
+            await database.deleteSensorBatchesByTrip(tripId);
+          } catch (err) {
+            console.warn(
+              `[SyncService] Failed to prune sensor batches for ${tripId}:`,
+              err instanceof Error ? err.message : err,
+            );
+          }
+        }
+      }
+
+      if (result.uploaded > 0 || result.failed > 0) {
+        console.log(
+          `[SyncService] Sensor batch sync: ${result.uploaded} uploaded, ${result.failed} failed, ${result.skipped} skipped`,
+        );
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[SyncService] syncSensorBatches crashed:', error);
+      return result;
+    }
+  }
+
+  /**
    * Get last sync time
    */
   getLastSyncTime(): number | null {
@@ -432,6 +522,15 @@ class SyncService {
    */
   isCurrentlySyncing(): boolean {
     return this.isSyncing;
+  }
+}
+
+function safeJsonParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Server can still accept a string; preferable over losing the data.
+    return raw;
   }
 }
 

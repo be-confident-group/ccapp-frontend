@@ -25,6 +25,7 @@ import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
 import { trophyAPI, type Trophy, type UserProfile } from '@/lib/api/trophies';
 import { database } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
+import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -54,7 +55,7 @@ export default function HomeScreen() {
     return backendTrips
       .filter((trip) => trip.is_valid !== false) // Exclude invalid/drift trips
       .filter((trip) => trip.route && trip.route.length > 0) // Only trips with route data
-      .filter((trip) => trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
+      .filter((trip) => isVisibleTripType(trip.type)) // v1: only walk + cycle (run/drive hidden)
       .filter((trip) => !ratedTripIds.has(trip.client_id)) // Only unrated trips
       .length;
   }, [backendTrips, ratedTripIds]);

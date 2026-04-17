@@ -27,6 +27,7 @@ import { StyleSheet, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
+import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import type { Trip as DBTrip } from '@/lib/database/db';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
@@ -176,7 +177,7 @@ export default function MapsScreen() {
         trip.is_valid !== false &&
         trip.route &&
         trip.route.length > 0 &&
-        (trip.type === 'walk' || trip.type === 'cycle') // Only walk and cycle trips
+        isVisibleTripType(trip.type) // v1: only walk + cycle
       )
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .map(transformApiTripToLocal);

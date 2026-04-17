@@ -12,6 +12,7 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { database, type Trip as DBTrip } from '@/lib/database';
 import { formatDistance as formatDistanceUtil, formatDuration } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
@@ -143,10 +144,11 @@ export default function TripHistoryScreen() {
     }
 
     if (!isOnline || !backendTrips) {
-      // Offline: show all local completed trips
+      // Offline: show all local completed trips (filtered to the v1 visible
+      // trip types — running and drive trips are stored but hidden).
       return localTrips
         .map(localToDisplay)
-        .filter(trip => trip.type === 'walk' || trip.type === 'cycle');
+        .filter((trip) => isVisibleTripType(trip.type));
     }
 
     // Online: show backend trips + any local trips not yet synced to backend
@@ -161,7 +163,7 @@ export default function TripHistoryScreen() {
         .map(backendToDisplay),
       ...unsyncedLocalTrips.map(localToDisplay),
     ]
-      .filter(trip => trip.type === 'walk' || trip.type === 'cycle')
+      .filter((trip) => isVisibleTripType(trip.type))
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
   }, [isOnline, backendTrips, localTrips]);
 
