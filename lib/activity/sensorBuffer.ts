@@ -328,13 +328,31 @@ class SensorBuffer {
     }
     if (this.rawBatch.length === 0 && this.rawBatchGyro.length === 0) return;
 
-    const payload = {
-      trip_id: this.tripId,
-      seq: this.rawBatchSeq,
-      sample_rate_hz: SAMPLE_RATE_HZ,
-      acc: this.rawBatch,
-      gyro: this.rawBatchGyro,
-    };
+    // Build an interleaved array matching the backend SensorDataBatch schema:
+    // { data: [{ t, ax, ay, az, gx, gy, gz }, ...] }
+    // We pair each accelerometer reading with the nearest gyroscope reading by time.
+    const accArr = this.rawBatch;
+    const gyroArr = this.rawBatchGyro;
+    const interleaved: Array<{
+      t: number; ax: number; ay: number; az: number;
+      gx: number; gy: number; gz: number;
+    }> = [];
+
+    let gi = 0;
+    for (const a of accArr) {
+      // Advance gyro pointer to the closest sample by timestamp
+      while (
+        gi + 1 < gyroArr.length &&
+        Math.abs(gyroArr[gi + 1].t - a.t) <= Math.abs(gyroArr[gi].t - a.t)
+      ) {
+        gi++;
+      }
+      const g = gyroArr[gi] ?? { x: 0, y: 0, z: 0 };
+      interleaved.push({ t: a.t, ax: a.x, ay: a.y, az: a.z, gx: g.x, gy: g.y, gz: g.z });
+    }
+
+    // Backend endpoint expects: POST /api/trips/{id}/sensor-data/  body: { data: [...] }
+    const payload = { data: interleaved };
 
     try {
       await database.insertSensorBatch({

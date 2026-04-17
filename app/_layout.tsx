@@ -6,15 +6,22 @@ import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 
 // Configure how notifications are handled when the app is in the foreground.
-// Trip recording notifications are shown; all others are suppressed.
+// Trip-recording local notifications are always shown.
+// Remote push notifications (from the server) are also shown.
+// All other local notifications are suppressed.
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const isTripRecording = notification.request.identifier?.startsWith('trip-recording-');
+    // Remote pushes have a trigger type of 'push'; local ones have 'calendar', 'interval', etc.
+    const isRemotePush =
+      notification.request.trigger != null &&
+      (notification.request.trigger as { type?: string }).type === 'push';
+    const shouldShow = isTripRecording || isRemotePush;
     return {
-      shouldShowAlert: isTripRecording,
-      shouldShowBanner: isTripRecording,
-      shouldShowList: isTripRecording,
-      shouldPlaySound: false,
+      shouldShowAlert: shouldShow,
+      shouldShowBanner: shouldShow,
+      shouldShowList: shouldShow,
+      shouldPlaySound: isRemotePush,
       shouldSetBadge: false,
     };
   },

@@ -25,6 +25,7 @@ import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
 import { trophyAPI, type Trophy, type UserProfile } from '@/lib/api/trophies';
 import { database } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
+import { useHomeMessages } from '@/lib/hooks/useHomeMessages';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 
 export default function HomeScreen() {
@@ -47,6 +48,9 @@ export default function HomeScreen() {
 
   // Fetch completed trips from backend
   const { data: backendTrips, refetch: refetchTrips } = useTrips({ status: 'completed' });
+
+  // Fetch AI-generated home messages (cached 12h client-side, 24h server-side)
+  const { data: homeMessages } = useHomeMessages();
 
   // Calculate unrated trips count (must match unrated-trips.tsx filtering)
   const unratedTripsCount = useMemo(() => {
@@ -379,7 +383,8 @@ export default function HomeScreen() {
                   <ThemedText style={styles.summaryTitle}>{t('home:messages.greatProgress')}</ThemedText>
                 </View>
                 <ThemedText style={[styles.summaryText, { color: colors.textSecondary }]}>
-                  You've walked {formatDistance(userProfile?.stats.total_distance_walk || 0)} and cycled {formatDistance(userProfile?.stats.total_distance_ride || 0)}, saving {formatWeight(userProfile?.stats.co2_saved || 0)} of CO₂. Keep up the amazing work!
+                  {homeMessages?.stats_message ||
+                    `You've walked ${formatDistance(userProfile?.stats.total_distance_walk || 0)} and cycled ${formatDistance(userProfile?.stats.total_distance_ride || 0)}, saving ${formatWeight(userProfile?.stats.co2_saved || 0)} of CO₂. Keep up the amazing work!`}
                 </ThemedText>
               </View>
               </View>
@@ -459,7 +464,7 @@ export default function HomeScreen() {
                     </ThemedText>
                   </View>
                   <ThemedText style={[styles.callToAction, { color: colors.textSecondary }]}>
-                    {t('home:streak.cta')} 🚴
+                    {homeMessages?.streak_message || `${t('home:streak.cta')} 🚴`}
                   </ThemedText>
                 </View>
               </View>
@@ -540,7 +545,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                   <ThemedText style={[styles.trophiesSummaryText, { color: colors.textSecondary }]}>
-                    {trophySummaryMessage}
+                    {homeMessages?.trophy_message || trophySummaryMessage}
                   </ThemedText>
                 </View>
               </View>

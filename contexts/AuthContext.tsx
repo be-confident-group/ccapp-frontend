@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '@/lib/api';
 import { apiClient } from '@/lib/api/client';
+import PushNotificationService from '@/lib/services/PushNotificationService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -16,6 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const signOut = useCallback(async () => {
+    await PushNotificationService.unregister();
     await authApi.logout();
     setIsAuthenticated(false);
   }, []);
@@ -37,6 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const authenticated = await authApi.isAuthenticated();
         setIsAuthenticated(authenticated);
+        if (authenticated) {
+          // Re-register push token if the session is still valid (token may have rotated)
+          PushNotificationService.registerForUser();
+        }
       } catch (e) {
         setIsAuthenticated(false);
       } finally {
@@ -48,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = () => {
     setIsAuthenticated(true);
+    // Register push token after login (best-effort, non-blocking)
+    PushNotificationService.registerForUser();
   };
 
   return (

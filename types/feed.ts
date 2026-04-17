@@ -26,6 +26,7 @@ export interface Club {
   members_count: number;
   share_code: string;
   share_url: string;
+  visibility: 'public' | 'private';
 }
 
 /**
@@ -35,12 +36,33 @@ export interface ClubCreateRequest {
   name: string;
   description?: string;
   photo?: string; // Base64 encoded
+  visibility?: 'public' | 'private';
 }
 
 export interface ClubUpdateRequest {
   name?: string;
   description?: string;
   photo?: string; // Base64 encoded
+  visibility?: 'public' | 'private';
+}
+
+/**
+ * Simple profile that also carries a numeric user id (used in member lists).
+ */
+export interface SimpleProfileWithId extends SimpleProfile {
+  id: number;
+  username?: string;
+}
+
+/**
+ * A join request submitted by a user for a private club.
+ */
+export interface JoinRequest {
+  id: number;
+  user: SimpleProfileWithId;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at: string;
 }
 
 /**

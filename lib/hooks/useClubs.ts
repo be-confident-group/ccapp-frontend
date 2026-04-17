@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clubAPI } from '@/lib/api/clubs';
-import type { Club, ClubCreateRequest, ClubUpdateRequest } from '@/types/feed';
+import type { Club, ClubCreateRequest, ClubUpdateRequest, JoinRequest } from '@/types/feed';
 
 /**
  * Query key factory for clubs
@@ -17,6 +17,7 @@ export const clubKeys = {
   details: () => [...clubKeys.all, 'detail'] as const,
   detail: (id: number) => [...clubKeys.details(), id] as const,
   shareCode: (code: string) => [...clubKeys.all, 'share', code] as const,
+  joinRequests: (clubId: number) => [...clubKeys.all, 'join-requests', clubId] as const,
 };
 
 /**
@@ -159,6 +160,90 @@ export function useLeaveClub() {
 
       // Invalidate the club detail (member count changed)
       queryClient.invalidateQueries({ queryKey: clubKeys.detail(id) });
+    },
+  });
+}
+
+/**
+ * Hook to request to join a private club
+ */
+export function useRequestJoinClub() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => clubAPI.requestJoin(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: clubKeys.detail(id) });
+    },
+  });
+}
+
+/**
+ * Hook to list pending join requests for a club (owner only)
+ */
+export function useJoinRequests(clubId: number, enabled = true) {
+  return useQuery<JoinRequest[]>({
+    queryKey: clubKeys.joinRequests(clubId),
+    queryFn: () => clubAPI.listJoinRequests(clubId),
+    enabled: enabled && !!clubId,
+    staleTime: 1000 * 60, // 1 minute
+  });
+}
+
+/**
+ * Hook to accept a join request (owner only)
+ */
+export function useAcceptJoinRequest(clubId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (requestId: number) => clubAPI.acceptJoinRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clubKeys.joinRequests(clubId) });
+      queryClient.invalidateQueries({ queryKey: clubKeys.detail(clubId) });
+    },
+  });
+}
+
+/**
+ * Hook to reject a join request (owner only)
+ */
+export function useRejectJoinRequest(clubId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (requestId: number) => clubAPI.rejectJoinRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clubKeys.joinRequests(clubId) });
+    },
+  });
+}
+
+/**
+ * Hook to remove a member from a club (owner only)
+ */
+export function useRemoveMember(clubId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: number) => clubAPI.removeMember(clubId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clubKeys.detail(clubId) });
+    },
+  });
+}
+
+/**
+ * Hook to transfer club ownership (owner only)
+ */
+export function useTransferOwnership(clubId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (newOwnerId: number) => clubAPI.transferOwnership(clubId, newOwnerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clubKeys.detail(clubId) });
+      queryClient.invalidateQueries({ queryKey: clubKeys.myClubs() });
     },
   });
 }

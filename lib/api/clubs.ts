@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from './client';
-import type { Club, ClubCreateRequest, ClubUpdateRequest } from '@/types/feed';
+import type { Club, ClubCreateRequest, ClubUpdateRequest, JoinRequest } from '@/types/feed';
 
 /**
  * Club API service
@@ -119,6 +119,78 @@ class ClubAPI {
       return await apiClient.get<Club>(`/api/clubs/share/${shareCode}/`);
     } catch (error) {
       console.warn('[ClubAPI] Share code not found:', shareCode);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit a join request to a private club.
+   */
+  async requestJoin(clubId: number): Promise<JoinRequest> {
+    try {
+      return await apiClient.post<JoinRequest>(`/api/clubs/${clubId}/request-join/`, {});
+    } catch (error) {
+      console.warn('[ClubAPI] requestJoin failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List pending join requests for a club (owner only).
+   */
+  async listJoinRequests(clubId: number): Promise<JoinRequest[]> {
+    try {
+      return await apiClient.get<JoinRequest[]>(`/api/clubs/${clubId}/join-requests/`);
+    } catch (error) {
+      console.error('[ClubAPI] Error fetching join requests:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept a pending join request (owner only).
+   */
+  async acceptJoinRequest(requestId: number): Promise<void> {
+    try {
+      await apiClient.post(`/api/clubs/join-requests/${requestId}/accept/`, {});
+    } catch (error) {
+      console.error('[ClubAPI] Error accepting join request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject a pending join request (owner only).
+   */
+  async rejectJoinRequest(requestId: number): Promise<void> {
+    try {
+      await apiClient.post(`/api/clubs/join-requests/${requestId}/reject/`, {});
+    } catch (error) {
+      console.error('[ClubAPI] Error rejecting join request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a club (owner only).
+   */
+  async removeMember(clubId: number, userId: number): Promise<void> {
+    try {
+      await apiClient.post(`/api/clubs/${clubId}/remove-member/`, { user_id: userId });
+    } catch (error) {
+      console.error('[ClubAPI] Error removing member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transfer club ownership to another member (owner only).
+   */
+  async transferOwnership(clubId: number, newOwnerId: number): Promise<void> {
+    try {
+      await apiClient.post(`/api/clubs/${clubId}/transfer-ownership/`, { new_owner_id: newOwnerId });
+    } catch (error) {
+      console.error('[ClubAPI] Error transferring ownership:', error);
       throw error;
     }
   }

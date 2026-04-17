@@ -447,13 +447,7 @@ export default function YouScreen() {
                   icon={<BellIcon size={22} color={colors.text} />}
                   title={t('profile:privacy.notificationSettings')}
                   subtitle={t('profile:privacy.notificationSettingsSubtitle')}
-                  onPress={() => {
-                    Alert.alert(
-                      'Coming Soon',
-                      'Notifications will come soon!',
-                      [{ text: 'OK', style: 'default' }]
-                    );
-                  }}
+                  onPress={() => router.push('/settings/notifications')}
                   isLast
                 />
               </View>

@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -21,7 +22,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClub, useUpdateClub, useDeleteClub } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
-import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
 import type { ClubUpdateRequest } from '@/types/feed';
 
 export default function EditClubScreen() {
@@ -38,6 +39,7 @@ export default function EditClubScreen() {
   const [description, setDescription] = useState('');
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoChanged, setPhotoChanged] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
 
   // Pre-populate form when club data loads
@@ -45,6 +47,7 @@ export default function EditClubScreen() {
     if (club) {
       setName(club.name);
       setDescription(club.description || '');
+      setIsPrivate(club.visibility === 'private');
       // Don't set photoBase64 from club.photo - it's a URL, not base64
       // We only set photoBase64 when user picks a new photo
     }
@@ -96,6 +99,7 @@ export default function EditClubScreen() {
     const clubData: ClubUpdateRequest = {
       name: name.trim(),
       description: description.trim() || undefined,
+      visibility: isPrivate ? 'private' : 'public',
     };
 
     // Only include photo if it was changed
@@ -277,6 +281,36 @@ export default function EditClubScreen() {
               <ThemedText style={[styles.characterCount, { color: colors.textMuted }]}>
                 {description.length}/500
               </ThemedText>
+            </View>
+
+            {/* Visibility Toggle */}
+            <View style={styles.section}>
+              <ThemedText style={styles.label}>
+                {t('clubs.visibility', 'Visibility')}
+              </ThemedText>
+              <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.toggleLabel}>
+                  {isPrivate
+                    ? <LockClosedIcon size={18} color={colors.textSecondary} />
+                    : <GlobeAltIcon size={18} color={colors.textSecondary} />}
+                  <View>
+                    <ThemedText style={styles.toggleTitle}>
+                      {isPrivate ? t('clubs.private', 'Private') : t('clubs.public', 'Public')}
+                    </ThemedText>
+                    <ThemedText style={[styles.toggleSubtitle, { color: colors.textMuted }]}>
+                      {isPrivate
+                        ? t('clubs.privateHint', 'Members must request to join')
+                        : t('clubs.publicHint', 'Anyone can join directly')}
+                    </ThemedText>
+                  </View>
+                </View>
+                <Switch
+                  value={isPrivate}
+                  onValueChange={setIsPrivate}
+                  trackColor={{ false: colors.border, true: colors.primary + '80' }}
+                  thumbColor={isPrivate ? colors.primary : colors.textMuted}
+                />
+              </View>
             </View>
 
             {/* Danger Zone */}
@@ -461,6 +495,29 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  toggleLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+  },
+  toggleTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  toggleSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   dangerZone: {
     marginTop: Spacing.xl,

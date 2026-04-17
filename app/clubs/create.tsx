@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -20,7 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useCreateClub } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
-import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
 import type { ClubCreateRequest } from '@/types/feed';
 
 export default function CreateClubScreen() {
@@ -30,6 +31,7 @@ export default function CreateClubScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
 
   const createClubMutation = useCreateClub();
@@ -79,6 +81,7 @@ export default function CreateClubScreen() {
       name: name.trim(),
       description: description.trim() || undefined,
       photo: photoBase64 || undefined,
+      visibility: isPrivate ? 'private' : 'public',
     };
 
     try {
@@ -201,6 +204,36 @@ export default function CreateClubScreen() {
               </ThemedText>
             </View>
 
+            {/* Visibility Toggle */}
+            <View style={styles.section}>
+              <ThemedText style={styles.label}>
+                {t('clubs.visibility', 'Visibility')}
+              </ThemedText>
+              <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.toggleLabel}>
+                  {isPrivate
+                    ? <LockClosedIcon size={18} color={colors.textSecondary} />
+                    : <GlobeAltIcon size={18} color={colors.textSecondary} />}
+                  <View>
+                    <ThemedText style={styles.toggleTitle}>
+                      {isPrivate ? t('clubs.private', 'Private') : t('clubs.public', 'Public')}
+                    </ThemedText>
+                    <ThemedText style={[styles.toggleSubtitle, { color: colors.textMuted }]}>
+                      {isPrivate
+                        ? t('clubs.privateHint', 'Members must request to join')
+                        : t('clubs.publicHint', 'Anyone can join directly')}
+                    </ThemedText>
+                  </View>
+                </View>
+                <Switch
+                  value={isPrivate}
+                  onValueChange={setIsPrivate}
+                  trackColor={{ false: colors.border, true: colors.primary + '80' }}
+                  thumbColor={isPrivate ? colors.primary : colors.textMuted}
+                />
+              </View>
+            </View>
+
             {/* Info Box */}
             <View style={[styles.infoBox, { backgroundColor: colors.primary + '15' }]}>
               <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
@@ -317,6 +350,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'right',
     marginTop: -Spacing.xs,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  toggleLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+  },
+  toggleTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  toggleSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   infoBox: {
     padding: Spacing.md,

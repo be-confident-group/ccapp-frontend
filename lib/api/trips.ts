@@ -6,6 +6,16 @@ import { apiClient } from './client';
 import type { TripType, TripStatus } from '@/types/trip';
 
 /**
+ * Per-club result returned by POST /api/trips/{id}/share/.
+ */
+export interface TripShareResult {
+  club_id: number;
+  status: 'shared' | 'already_shared' | 'error';
+  post_id?: number;
+  message?: string;
+}
+
+/**
  * Backend API trip interfaces
  * NOTE: Keep in sync with backend api/trips/serializers.py
  */
@@ -409,23 +419,19 @@ class TripAPI {
   }
 
   /**
-   * Share a trip to a club
+   * Share a trip to one or more clubs.
+   * Returns per-club results so the caller can surface partial failures.
    */
   async shareTrip(
     tripId: number,
-    clubId: number,
-    title?: string,
-    text?: string
-  ): Promise<{ message: string; post_id: number }> {
+    clubIds: number[],
+    caption?: string
+  ): Promise<{ results: TripShareResult[] }> {
     try {
-      console.log(`[TripAPI] Sharing trip ${tripId} to club ${clubId}`);
-      return await apiClient.post<{ message: string; post_id: number }>(
+      console.log(`[TripAPI] Sharing trip ${tripId} to clubs ${clubIds.join(', ')}`);
+      return await apiClient.post<{ results: TripShareResult[] }>(
         `/api/trips/${tripId}/share/`,
-        {
-          club_id: clubId,
-          title,
-          text,
-        }
+        { club_ids: clubIds, caption }
       );
     } catch (error) {
       console.error('[TripAPI] Error sharing trip:', error);
@@ -434,14 +440,13 @@ class TripAPI {
   }
 
   /**
-   * Unshare a trip from a club
+   * Unshare a trip from a club.
+   * Backend now expects club_id as a query parameter (not in body).
    */
   async unshareTrip(tripId: number, clubId: number): Promise<void> {
     try {
       console.log(`[TripAPI] Unsharing trip ${tripId} from club ${clubId}`);
-      await apiClient.delete(`/api/trips/${tripId}/unshare/`, {
-        body: JSON.stringify({ club_id: clubId }),
-      } as any);
+      await apiClient.delete(`/api/trips/${tripId}/unshare/?club_id=${clubId}`);
     } catch (error) {
       console.error('[TripAPI] Error unsharing trip:', error);
       throw error;

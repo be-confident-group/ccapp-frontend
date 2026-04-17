@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -20,7 +20,15 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { useClub, useJoinClub, useLeaveClub } from '@/lib/hooks/useClubs';
+import {
+  useClub,
+  useJoinClub,
+  useLeaveClub,
+  useRequestJoinClub,
+  useJoinRequests,
+  useRemoveMember,
+  useTransferOwnership,
+} from '@/lib/hooks/useClubs';
 import { useClubPosts, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import { FeedPost } from '@/components/feed';
@@ -30,6 +38,9 @@ import {
   ArrowLeftStartOnRectangleIcon,
   PencilSquareIcon,
   ShareIcon,
+  LockClosedIcon,
+  ClockIcon,
+  EllipsisHorizontalIcon,
 } from 'react-native-heroicons/outline';
 import type { Post } from '@/types/feed';
 import type { ActivityPost } from '@/types/feed';
@@ -70,7 +81,21 @@ export default function ClubDetailScreen() {
   const { data: currentUser } = useCurrentUser();
   const joinClubMutation = useJoinClub();
   const leaveClubMutation = useLeaveClub();
+  const requestJoinMutation = useRequestJoinClub();
+  const removeMemberMutation = useRemoveMember(clubId);
+  const transferOwnershipMutation = useTransferOwnership(clubId);
   const { mutate: toggleLike } = useTogglePostLike();
+
+  // Track whether the current user has a pending join request for this private club
+  const [joinRequestPending, setJoinRequestPending] = useState(false);
+
+  // Fetch pending join-requests only when the user is the owner
+  const isOwnerResolved = useMemo(() => {
+    if (!club || !currentUser || !club.owner) return false;
+    return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
+  }, [club, currentUser]);
+
+  const { data: joinRequests } = useJoinRequests(clubId, isOwnerResolved);
 
   // Store sorted backend posts for like handler
   const sortedPosts = useMemo(() => {
@@ -83,12 +108,7 @@ export default function ClubDetailScreen() {
     return sortedPosts.map(transformPostToActivityPost);
   }, [sortedPosts]);
 
-  // Check if current user is the club owner
-  const isOwner = useMemo(() => {
-    if (!club || !currentUser || !club.owner) return false;
-    // Compare by name since SimpleProfile doesn't have email/id
-    return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
-  }, [club, currentUser]);
+  const isOwner = isOwnerResolved;
 
   // Check if current user is a member
   const isMember = useMemo(() => {
@@ -104,14 +124,73 @@ export default function ClubDetailScreen() {
     try {
       if (isMember) {
         await leaveClubMutation.mutateAsync(club.id);
+      } else if (club.visibility === 'private') {
+        await requestJoinMutation.mutateAsync(club.id);
+        setJoinRequestPending(true);
       } else {
         await joinClubMutation.mutateAsync(club.id);
       }
     } catch (error) {
-      console.error('Failed to join/leave club:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update membership');
+      const msg = error instanceof Error ? error.message : '';
+      // 400 means the user already submitted a request
+      if (msg.includes('400') || msg.toLowerCase().includes('already')) {
+        setJoinRequestPending(true);
+        Alert.alert('Request Pending', 'You have already requested to join this group.');
+      } else {
+        console.error('Failed to join/leave club:', error);
+        alert(msg || 'Failed to update membership');
+      }
     }
-  }, [club, isMember, joinClubMutation, leaveClubMutation]);
+  }, [club, isMember, joinClubMutation, leaveClubMutation, requestJoinMutation]);
+
+  const handleRemoveMember = useCallback(
+    (memberName: string, userId: number) => {
+      Alert.alert(
+        'Remove Member',
+        `Remove ${memberName} from this group?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await removeMemberMutation.mutateAsync(userId);
+              } catch {
+                Alert.alert('Error', 'Failed to remove member');
+              }
+            },
+          },
+        ]
+      );
+    },
+    [removeMemberMutation]
+  );
+
+  const handleTransferOwnership = useCallback(() => {
+    if (!club?.members?.length) return;
+    const eligible = club.members.filter(
+      (m) => !(m.name === club.owner.name && m.last_name === club.owner.last_name)
+    );
+    if (!eligible.length) {
+      Alert.alert('No Members', 'You need at least one other member to transfer ownership.');
+      return;
+    }
+    Alert.alert(
+      'Transfer Ownership',
+      'Select a member to transfer ownership to:',
+      [
+        ...eligible.slice(0, 5).map((m) => ({
+          text: `${m.name} ${m.last_name}`,
+          onPress: async () => {
+            // SimpleProfile doesn't expose id — we surface a placeholder until backend returns user ids
+            Alert.alert('Not yet available', 'Transfer requires user IDs. Please use the web interface.');
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [club]);
 
   const handleCreatePost = useCallback(() => {
     if (!club) return;
@@ -207,20 +286,41 @@ export default function ClubDetailScreen() {
                 styles.actionButton,
                 isMember
                   ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
+                  : joinRequestPending
+                  ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
                   : { backgroundColor: colors.primary },
               ]}
-              onPress={handleJoinLeave}
-              disabled={joinClubMutation.isPending || leaveClubMutation.isPending}
-              activeOpacity={0.8}
+              onPress={joinRequestPending ? undefined : handleJoinLeave}
+              disabled={
+                joinClubMutation.isPending ||
+                leaveClubMutation.isPending ||
+                requestJoinMutation.isPending ||
+                joinRequestPending
+              }
+              activeOpacity={joinRequestPending ? 1 : 0.8}
             >
               {isMember && <ArrowLeftStartOnRectangleIcon size={18} color={colors.text} />}
+              {!isMember && joinRequestPending && <ClockIcon size={18} color={colors.textSecondary} />}
+              {!isMember && !joinRequestPending && club?.visibility === 'private' && (
+                <LockClosedIcon size={18} color="#fff" />
+              )}
               <ThemedText
                 style={[
                   styles.actionButtonText,
-                  isMember ? { color: colors.text } : { color: '#fff' },
+                  isMember
+                    ? { color: colors.text }
+                    : joinRequestPending
+                    ? { color: colors.textSecondary }
+                    : { color: '#fff' },
                 ]}
               >
-                {isMember ? t('clubs.leave', 'Leave') : t('clubs.join', 'Join')}
+                {isMember
+                  ? t('clubs.leave', 'Leave')
+                  : joinRequestPending
+                  ? t('clubs.requestPending', 'Request Sent')
+                  : club?.visibility === 'private'
+                  ? t('clubs.requestJoin', 'Request to Join')
+                  : t('clubs.join', 'Join')}
               </ThemedText>
             </TouchableOpacity>
           )}
@@ -262,6 +362,34 @@ export default function ClubDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Owner tools: pending join requests row */}
+        {isOwner && (joinRequests?.length ?? 0) > 0 && (
+          <TouchableOpacity
+            style={[styles.pendingRow, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}
+            onPress={() => router.push(`/clubs/pending-requests?id=${club.id}`)}
+            activeOpacity={0.8}
+          >
+            <ClockIcon size={18} color={colors.primary} />
+            <ThemedText style={[styles.pendingRowText, { color: colors.primary }]}>
+              {joinRequests!.length} pending join {joinRequests!.length === 1 ? 'request' : 'requests'}
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+
+        {/* Owner tools: transfer ownership */}
+        {isOwner && (
+          <TouchableOpacity
+            style={[styles.ownerActionRow, { borderColor: colors.border }]}
+            onPress={handleTransferOwnership}
+            activeOpacity={0.8}
+          >
+            <EllipsisHorizontalIcon size={18} color={colors.textSecondary} />
+            <ThemedText style={[styles.ownerActionText, { color: colors.textSecondary }]}>
+              {t('clubs.transferOwnership', 'Transfer Ownership')}
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+
         {/* Members Preview */}
         {club.members && club.members.length > 0 && (
           <View style={styles.membersSection}>
@@ -278,25 +406,38 @@ export default function ClubDetailScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.membersList}
             >
-              {club.members.slice(0, 10).map((member, index) => (
-                <View key={index} style={styles.memberItem}>
-                  {member.profile_picture ? (
-                    <Image source={{ uri: member.profile_picture }} style={styles.memberAvatar} />
-                  ) : (
-                    <View style={[styles.memberAvatarPlaceholder, { backgroundColor: colors.border }]}>
-                      <ThemedText style={styles.memberInitial}>
-                        {member.name.charAt(0).toUpperCase()}
-                      </ThemedText>
-                    </View>
-                  )}
-                  <ThemedText
-                    style={[styles.memberName, { color: colors.textSecondary }]}
-                    numberOfLines={1}
+              {club.members.slice(0, 10).map((member, index) => {
+                const isClubOwner =
+                  member.name === club.owner.name && member.last_name === club.owner.last_name;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.memberItem}
+                    onLongPress={
+                      isOwner && !isClubOwner
+                        ? () => handleRemoveMember(`${member.name} ${member.last_name}`, index)
+                        : undefined
+                    }
+                    activeOpacity={isOwner && !isClubOwner ? 0.7 : 1}
                   >
-                    {member.name}
-                  </ThemedText>
-                </View>
-              ))}
+                    {member.profile_picture ? (
+                      <Image source={{ uri: member.profile_picture }} style={styles.memberAvatar} />
+                    ) : (
+                      <View style={[styles.memberAvatarPlaceholder, { backgroundColor: colors.border }]}>
+                        <ThemedText style={styles.memberInitial}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </ThemedText>
+                      </View>
+                    )}
+                    <ThemedText
+                      style={[styles.memberName, { color: colors.textSecondary }]}
+                      numberOfLines={1}
+                    >
+                      {member.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -309,7 +450,7 @@ export default function ClubDetailScreen() {
         </View>
       </View>
     );
-  }, [club, colors, isOwner, isMember, handleJoinLeave, handleCreatePost, handleShareClub, joinClubMutation.isPending, leaveClubMutation.isPending, t]);
+  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, handleTransferOwnership, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, t]);
 
 
   const emptyElement = useMemo(() => {
@@ -537,5 +678,28 @@ const styles = StyleSheet.create({
   emptyMessage: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  pendingRowText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ownerActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderBottomWidth: 1,
+  },
+  ownerActionText: {
+    fontSize: 14,
   },
 });

@@ -468,6 +468,8 @@ class SyncService {
         }
 
         try {
+          // payload_json is stored as { data: [{t, ax, ay, az, gx, gy, gz}, ...] }
+          // matching the backend SensorDataBatch schema.
           const payload = safeJsonParse(batch.payload_json);
           await tripAPI.uploadSensorBatch(backendId, payload);
           await database.markSensorBatchSynced(batch.id);

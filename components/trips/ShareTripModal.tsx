@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useMyClubs } from '@/lib/hooks/useClubs';
-import { tripAPI } from '@/lib/api/trips';
+import { tripAPI, type TripShareResult } from '@/lib/api/trips';
 import { XMarkIcon, CheckIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
@@ -24,7 +25,7 @@ interface ShareTripModalProps {
   tripId: number;
   tripDistance?: number; // km
   onClose: () => void;
-  onSuccess?: (postId: number) => void;
+  onSuccess?: (results: TripShareResult[]) => void;
 }
 
 export function ShareTripModal({
@@ -37,37 +38,56 @@ export function ShareTripModal({
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
 
-  const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
-  const [title, setTitle] = useState('');
-  const [text, setText] = useState('');
+  // Multi-select: a Set of selected club ids
+  const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(new Set());
+  const [caption, setCaption] = useState('');
   const [isSharing, setIsSharing] = useState(false);
 
   const { data: myClubs, isLoading } = useMyClubs();
 
+  const toggleClub = useCallback((clubId: number) => {
+    setSelectedClubIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clubId)) {
+        next.delete(clubId);
+      } else {
+        next.add(clubId);
+      }
+      return next;
+    });
+  }, []);
+
   const handleShare = useCallback(async () => {
-    if (!selectedClubId) {
-      alert(t('trips.selectClub', 'Please select a club'));
+    if (selectedClubIds.size === 0) {
+      alert(t('trips.selectClub', 'Please select at least one club'));
       return;
     }
 
     setIsSharing(true);
     try {
-      const response = await tripAPI.shareTrip(
+      const { results } = await tripAPI.shareTrip(
         tripId,
-        selectedClubId,
-        title.trim() || undefined,
-        text.trim() || undefined
+        Array.from(selectedClubIds),
+        caption.trim() || undefined
       );
 
-      // Reset form
-      setSelectedClubId(null);
-      setTitle('');
-      setText('');
+      // Summarise results for the user
+      const shared = results.filter((r) => r.status === 'shared').length;
+      const alreadyShared = results.filter((r) => r.status === 'already_shared').length;
+      const errors = results.filter((r) => r.status === 'error').length;
 
-      // Call success callback
-      onSuccess?.(response.post_id);
+      const parts: string[] = [];
+      if (shared > 0) parts.push(`Shared to ${shared} club${shared > 1 ? 's' : ''}`);
+      if (alreadyShared > 0) parts.push(`Already shared to ${alreadyShared}`);
+      if (errors > 0) parts.push(`Failed for ${errors}`);
 
-      // Close modal
+      if (parts.length > 0) {
+        Alert.alert('Share Result', parts.join(', '));
+      }
+
+      setSelectedClubIds(new Set());
+      setCaption('');
+      onSuccess?.(results);
       onClose();
     } catch (error) {
       console.error('Failed to share trip:', error);
@@ -75,20 +95,19 @@ export function ShareTripModal({
     } finally {
       setIsSharing(false);
     }
-  }, [tripId, selectedClubId, title, text, onSuccess, onClose, t]);
+  }, [tripId, selectedClubIds, caption, onSuccess, onClose, t]);
 
   const handleClose = useCallback(() => {
     if (!isSharing) {
-      setSelectedClubId(null);
-      setTitle('');
-      setText('');
+      setSelectedClubIds(new Set());
+      setCaption('');
       onClose();
     }
   }, [isSharing, onClose]);
 
   const renderClubItem = useCallback(
     (club: Club) => {
-      const isSelected = selectedClubId === club.id;
+      const isSelected = selectedClubIds.has(club.id);
 
       return (
         <TouchableOpacity
@@ -98,7 +117,7 @@ export function ShareTripModal({
             { backgroundColor: colors.card, borderColor: colors.border },
             isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
           ]}
-          onPress={() => setSelectedClubId(club.id)}
+          onPress={() => toggleClub(club.id)}
           activeOpacity={0.7}
           disabled={isSharing}
         >
@@ -116,7 +135,7 @@ export function ShareTripModal({
         </TouchableOpacity>
       );
     },
-    [selectedClubId, colors, isSharing]
+    [selectedClubIds, colors, isSharing, toggleClub]
   );
 
   return (
@@ -149,10 +168,10 @@ export function ShareTripModal({
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Club Selection */}
+          {/* Club Selection — multi-select */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>
-              {t('trips.selectClub', 'Select Club')} *
+              {t('trips.selectClub', 'Select Clubs')} *
             </ThemedText>
             {isLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -167,33 +186,10 @@ export function ShareTripModal({
             )}
           </View>
 
-          {/* Optional Title */}
+          {/* Optional Caption (replaces separate title + text) */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>
-              {t('trips.postTitle', 'Post Title')} {t('trips.optional', '(Optional)')}
-            </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-              ]}
-              placeholder={
-                tripDistance
-                  ? `New Activity: ${tripDistance.toFixed(1)}km`
-                  : t('trips.titlePlaceholder', 'Enter title...')
-              }
-              placeholderTextColor={colors.textMuted}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={255}
-              editable={!isSharing}
-            />
-          </View>
-
-          {/* Optional Text */}
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>
-              {t('trips.postText', 'Post Text')} {t('trips.optional', '(Optional)')}
+              {t('trips.caption', 'Caption')} {t('trips.optional', '(Optional)')}
             </ThemedText>
             <TextInput
               style={[
@@ -201,13 +197,17 @@ export function ShareTripModal({
                 styles.textArea,
                 { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
               ]}
-              placeholder={t('trips.textPlaceholder', 'Share your experience...')}
+              placeholder={
+                tripDistance
+                  ? `Just rode ${tripDistance.toFixed(1)} km!`
+                  : t('trips.captionPlaceholder', 'Share your experience...')
+              }
               placeholderTextColor={colors.textMuted}
-              value={text}
-              onChangeText={setText}
+              value={caption}
+              onChangeText={setCaption}
               maxLength={500}
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
               textAlignVertical="top"
               editable={!isSharing}
             />
@@ -220,17 +220,19 @@ export function ShareTripModal({
             style={[
               styles.shareButton,
               { backgroundColor: colors.primary },
-              (!selectedClubId || isSharing) && styles.shareButtonDisabled,
+              (selectedClubIds.size === 0 || isSharing) && styles.shareButtonDisabled,
             ]}
             onPress={handleShare}
-            disabled={!selectedClubId || isSharing}
+            disabled={selectedClubIds.size === 0 || isSharing}
             activeOpacity={0.8}
           >
             {isSharing ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <ThemedText style={[styles.shareButtonText, { color: '#fff' }]}>
-                {t('trips.share', 'Share')}
+                {selectedClubIds.size > 1
+                  ? `${t('trips.share', 'Share')} (${selectedClubIds.size})`
+                  : t('trips.share', 'Share')}
               </ThemedText>
             )}
           </TouchableOpacity>
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 80,
     paddingTop: Spacing.md,
   },
   footer: {

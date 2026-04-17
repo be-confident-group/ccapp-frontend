@@ -8,6 +8,7 @@ import type {
   ApiTrip,
   ApiTripCreate,
   TripFilters,
+  TripShareResult,
 } from '@/lib/api/trips';
 
 /**
@@ -112,28 +113,21 @@ export function useDeleteTrip() {
 }
 
 /**
- * Hook to share a trip to a club
+ * Hook to share a trip to one or more clubs.
+ * Returns per-club results from the new multi-club API.
  */
 export function useShareTrip() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({
-      tripId,
-      clubId,
-      title,
-      text,
-    }: {
-      tripId: number;
-      clubId: number;
-      title?: string;
-      text?: string;
-    }) => tripAPI.shareTrip(tripId, clubId, title, text),
+  return useMutation<
+    { results: TripShareResult[] },
+    Error,
+    { tripId: number; clubIds: number[]; caption?: string }
+  >({
+    mutationFn: ({ tripId, clubIds, caption }) =>
+      tripAPI.shareTrip(tripId, clubIds, caption),
     onSuccess: (_, { tripId }) => {
-      // Invalidate trip detail
       queryClient.invalidateQueries({ queryKey: tripKeys.detail(tripId) });
-
-      // Invalidate feed to show new post
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
   });
