@@ -18,12 +18,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon, CloudIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon, CloudIcon, ShareIcon } from 'react-native-heroicons/outline';
 import { syncService } from '@/lib/services/SyncService';
 import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
 import { RatedBadge } from '@/components/rating';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
+import { ShareTripModal } from '@/components/trips/ShareTripModal';
 
 // Unified trip display type for both local and backend trips
 interface DisplayTrip {
@@ -53,6 +54,8 @@ export default function TripHistoryScreen() {
   const [localTrips, setLocalTrips] = useState<DBTrip[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
   const { isOnline } = useNetworkStatus();
+  const [shareModalTripId, setShareModalTripId] = useState<number | null>(null);
+  const [shareModalDistance, setShareModalDistance] = useState<number | undefined>(undefined);
 
   const loadLocalData = useCallback(async () => {
     try {
@@ -221,6 +224,12 @@ export default function TripHistoryScreen() {
       }
     };
 
+    const handleShare = () => {
+      if (!item.backendId) return;
+      setShareModalTripId(item.backendId);
+      setShareModalDistance(item.distance / 1000); // metres → km
+    };
+
     return (
       <TouchableOpacity
         style={[styles.tripCard, { backgroundColor: colors.card }]}
@@ -274,6 +283,17 @@ export default function TripHistoryScreen() {
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂</ThemedText>
               <ThemedText style={styles.statValue}>{formatWeight(item.co2Saved)}</ThemedText>
             </View>
+
+            {item.backendId && (
+              <TouchableOpacity
+                onPress={handleShare}
+                style={styles.shareIconButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <ShareIcon size={18} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -398,6 +418,14 @@ export default function TripHistoryScreen() {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.primary} />
           }
+        />
+      )}
+      {shareModalTripId !== null && (
+        <ShareTripModal
+          visible={shareModalTripId !== null}
+          tripId={shareModalTripId}
+          tripDistance={shareModalDistance}
+          onClose={() => setShareModalTripId(null)}
         />
       )}
       </ThemedView>
@@ -611,5 +639,10 @@ const styles = StyleSheet.create({
   reviewCardSub: {
     fontSize: 12,
     marginTop: 2,
+  },
+  shareIconButton: {
+    marginLeft: 'auto' as any,
+    padding: 2,
+    alignSelf: 'flex-end',
   },
 });
