@@ -6,7 +6,7 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
 import {
   ArrowsPointingOutIcon,
@@ -27,6 +27,8 @@ import { database } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
 import { useHomeMessages } from '@/lib/hooks/useHomeMessages';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
+import { useQueryClient } from '@tanstack/react-query';
+import { registerTripSyncCallback } from '@/lib/services/TripManager';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -51,6 +53,15 @@ export default function HomeScreen() {
 
   // Fetch AI-generated home messages (cached 12h client-side, 24h server-side)
   const { data: homeMessages } = useHomeMessages();
+
+  // Invalidate home-messages cache after a trip syncs successfully
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const unregister = registerTripSyncCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['home-messages'] });
+    });
+    return unregister;
+  }, [queryClient]);
 
   // Calculate unrated trips count (must match unrated-trips.tsx filtering)
   const unratedTripsCount = useMemo(() => {

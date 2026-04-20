@@ -16,7 +16,10 @@ Notifications.setNotificationHandler({
     const isRemotePush =
       notification.request.trigger != null &&
       (notification.request.trigger as { type?: string }).type === 'push';
-    const shouldShow = isTripRecording || isRemotePush;
+    const data = notification.request.content.data as any;
+    const isTripCompletion =
+      data?.type === 'trip_completed' || data?.type === 'rate_trip';
+    const shouldShow = isTripRecording || isRemotePush || isTripCompletion;
     return {
       shouldShowAlert: shouldShow,
       shouldShowBanner: shouldShow,
@@ -26,7 +29,8 @@ Notifications.setNotificationHandler({
     };
   },
 });
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -52,6 +56,19 @@ export const unstable_settings = {
 function RootLayoutNav() {
   const { colorScheme } = useTheme();
   useProtectedRoute();
+
+  // Handle taps on trip-completion and rate-trip notifications
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as any;
+      if (data?.type === 'trip_completed' && data?.tripId) {
+        router.push(`/home/trip-detail?id=${data.tripId}`);
+      } else if (data?.type === 'rate_trip' && data?.tripId) {
+        router.push(`/home/rate-route?tripId=${data.tripId}`);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

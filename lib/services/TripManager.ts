@@ -5,6 +5,7 @@
  * Handles both automatic background trips and manual entries.
  */
 
+import * as Notifications from 'expo-notifications';
 import { database, type Trip as DBTrip, type LocationPoint } from '../database';
 import { SegmentDetector } from './SegmentDetector';
 import { MLSegmentDetector } from './MLSegmentDetector';
@@ -30,6 +31,59 @@ import { syncService } from './SyncService';
 import { trophyAPI, type Trophy } from '../api/trophies';
 import { tripAPI } from '../api/trips';
 import { TripValidationService } from './TripValidationService';
+
+// ---------------------------------------------------------------------------
+// Trip sync callback registry
+// ---------------------------------------------------------------------------
+type SyncCallback = () => void;
+const tripSyncCallbacks: SyncCallback[] = [];
+
+export function registerTripSyncCallback(cb: SyncCallback): () => void {
+  tripSyncCallbacks.push(cb);
+  return () => {
+    const i = tripSyncCallbacks.indexOf(cb);
+    if (i !== -1) tripSyncCallbacks.splice(i, 1);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Local notifications on trip completion
+// ---------------------------------------------------------------------------
+async function scheduleTripCompletionNotifications(
+  tripId: number,
+  distanceKm: number,
+  tripType: string,
+): Promise<void> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const typeLabel = tripType === 'cycle' ? 'ride' : tripType === 'walk' ? 'walk' : tripType;
+    const distanceStr = distanceKm >= 1
+      ? `${distanceKm.toFixed(1)} km`
+      : `${Math.round(distanceKm * 1000)} m`;
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Trip saved! 🎉',
+        body: `Great ${typeLabel}! You covered ${distanceStr}.`,
+        data: { type: 'trip_completed', tripId },
+      },
+      trigger: null,
+    });
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'How was your route? ⭐',
+        body: 'Tap to rate your recent trip and help improve recommendations.',
+        data: { type: 'rate_trip', tripId },
+      },
+      trigger: { seconds: 3600, repeats: false } as any,
+    });
+  } catch (err) {
+    console.warn('[TripManager] Failed to schedule trip notifications:', err);
+  }
+}
 
 export class TripManager {
   /**
@@ -285,6 +339,17 @@ export class TripManager {
         if (newTrophies.length > 0) {
           console.log(`[TripManager] Earned ${newTrophies.length} new trophies!`);
         }
+        // Notify React Query subscribers to invalidate home-messages cache
+        tripSyncCallbacks.forEach((cb) => cb());
+        // Schedule local push notifications for trip completion
+        const completedTripData = await database.getTrip(tripId);
+        if (completedTripData?.backend_id) {
+          void scheduleTripCompletionNotifications(
+            completedTripData.backend_id,
+            completedTripData.distance / 1000,
+            completedTripData.type,
+          );
+        }
       }
     } catch (error) {
       console.error('[TripManager] Error during sync or trophy fetch:', error);
@@ -524,6 +589,17 @@ export class TripManager {
         newTrophies = await trophyAPI.getNewTrophies();
         if (newTrophies.length > 0) {
           console.log(`[TripManager] Earned ${newTrophies.length} new trophies!`);
+        }
+        // Notify React Query subscribers to invalidate home-messages cache
+        tripSyncCallbacks.forEach((cb) => cb());
+        // Schedule local push notifications for trip completion
+        const updatedTrip = await database.getTrip(tripId);
+        if (updatedTrip?.backend_id) {
+          void scheduleTripCompletionNotifications(
+            updatedTrip.backend_id,
+            updatedTrip.distance / 1000,
+            updatedTrip.type,
+          );
         }
       }
     } catch (error) {
