@@ -249,7 +249,7 @@ export default function ClubDetailScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actions}>
+        <View style={[styles.actions, { flexWrap: 'wrap' }]}>
           {!isOwner && (
             <TouchableOpacity
               style={[
@@ -330,6 +330,22 @@ export default function ClubDetailScreen() {
               {t('clubs.share', 'Share')}
             </ThemedText>
           </TouchableOpacity>
+
+          {isMember && (
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+              ]}
+              onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+              activeOpacity={0.8}
+            >
+              <ShareIcon size={18} color={colors.text} />
+              <ThemedText style={[styles.actionButtonText, { color: colors.text }]}>
+                {t('clubs.shareTrip', 'Trip')}
+              </ThemedText>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Owner tools: pending join requests row */}

@@ -112,10 +112,10 @@ export default function QuickActionsModal() {
       icon: MegaphoneIcon,
       title: 'Share Update',
       onPress: () => {
-        router.back(); // Close the modal immediately
+        router.back();
         setTimeout(() => {
-          router.push('/posts/create-standalone');
-        }, 100); // Small delay to ensure modal is closed
+          router.push('/posts/share-trip');
+        }, 100);
       },
     },
   ];
