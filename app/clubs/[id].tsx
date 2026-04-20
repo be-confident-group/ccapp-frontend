@@ -92,7 +92,7 @@ export default function ClubDetailScreen() {
   // Fetch pending join-requests only when the user is the owner
   const isOwnerResolved = useMemo(() => {
     if (!club || !currentUser || !club.owner) return false;
-    return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
+    return club.owner.id === Number(currentUser.id);
   }, [club, currentUser]);
 
   const { data: joinRequests } = useJoinRequests(clubId, isOwnerResolved);
@@ -113,9 +113,7 @@ export default function ClubDetailScreen() {
   // Check if current user is a member
   const isMember = useMemo(() => {
     if (!club || !currentUser || !club.members) return false;
-    return club.members.some(
-      (member) => member.name === currentUser.name && member.last_name === currentUser.last_name
-    );
+    return club.members.some((member) => member.id === Number(currentUser.id));
   }, [club, currentUser]);
 
   const handleJoinLeave = useCallback(async () => {
@@ -169,9 +167,7 @@ export default function ClubDetailScreen() {
 
   const handleTransferOwnership = useCallback(() => {
     if (!club?.members?.length) return;
-    const eligible = club.members.filter(
-      (m) => !(m.name === club.owner.name && m.last_name === club.owner.last_name)
-    );
+    const eligible = club.members.filter((m) => m.id !== club.owner.id);
     if (!eligible.length) {
       Alert.alert('No Members', 'You need at least one other member to transfer ownership.');
       return;
@@ -407,15 +403,14 @@ export default function ClubDetailScreen() {
               contentContainerStyle={styles.membersList}
             >
               {club.members.slice(0, 10).map((member, index) => {
-                const isClubOwner =
-                  member.name === club.owner.name && member.last_name === club.owner.last_name;
+                const isClubOwner = member.id === club.owner.id;
                 return (
                   <TouchableOpacity
                     key={index}
                     style={styles.memberItem}
                     onLongPress={
                       isOwner && !isClubOwner
-                        ? () => handleRemoveMember(`${member.name} ${member.last_name}`, index)
+                        ? () => handleRemoveMember(`${member.name} ${member.last_name}`, member.id)
                         : undefined
                     }
                     activeOpacity={isOwner && !isClubOwner ? 0.7 : 1}

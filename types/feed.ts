@@ -8,6 +8,7 @@ import type { TripType } from './trip';
  * Simple user profile (used in clubs, posts, comments)
  */
 export interface SimpleProfile {
+  id: number;
   name: string;
   last_name: string;
   profile_picture: string | null;
