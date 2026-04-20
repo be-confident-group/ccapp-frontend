@@ -20,7 +20,8 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { useClub, useUpdateClub, useDeleteClub } from '@/lib/hooks/useClubs';
+import { useClub, useUpdateClub, useDeleteClub, useTransferOwnership } from '@/lib/hooks/useClubs';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
 import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
 import type { ClubUpdateRequest } from '@/types/feed';
@@ -34,6 +35,8 @@ export default function EditClubScreen() {
   const { data: club, isLoading } = useClub(clubId);
   const updateClubMutation = useUpdateClub();
   const deleteClubMutation = useDeleteClub();
+  const transferOwnershipMutation = useTransferOwnership(clubId);
+  const { data: currentUser } = useCurrentUser();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -115,6 +118,34 @@ export default function EditClubScreen() {
       alert(error instanceof Error ? error.message : 'Failed to update group');
     }
   }, [clubId, name, description, photoBase64, photoChanged, validateForm, updateClubMutation]);
+
+  const handleTransferOwnership = useCallback(() => {
+    if (!club?.members?.length) return;
+    const eligible = club.members.filter((m) => m.id !== club.owner.id);
+    if (!eligible.length) {
+      Alert.alert('No Members', 'You need at least one other member to transfer ownership.');
+      return;
+    }
+    Alert.alert(
+      'Transfer Ownership',
+      'Select a member to transfer ownership to:',
+      [
+        ...eligible.slice(0, 5).map((m) => ({
+          text: `${m.name} ${m.last_name}`,
+          onPress: async () => {
+            try {
+              await transferOwnershipMutation.mutateAsync(m.id);
+              Alert.alert('Done', `Ownership transferred to ${m.name} ${m.last_name}.`);
+              router.back();
+            } catch {
+              Alert.alert('Error', 'Failed to transfer ownership. Please try again.');
+            }
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [club, transferOwnershipMutation]);
 
   const handleDelete = useCallback(() => {
     if (!clubId || !club) return;
@@ -311,6 +342,23 @@ export default function EditClubScreen() {
                   thumbColor={isPrivate ? colors.primary : colors.textMuted}
                 />
               </View>
+            </View>
+
+            {/* Transfer Ownership */}
+            <View style={[styles.dangerSection, { borderColor: '#FF3B30' + '40' }]}>
+              <ThemedText style={[styles.dangerTitle, { color: '#FF3B30' }]}>
+                {t('clubs.dangerZone', 'Danger Zone')}
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.dangerButton, { borderColor: '#FF3B30' + '60' }]}
+                onPress={handleTransferOwnership}
+                activeOpacity={0.8}
+                disabled={transferOwnershipMutation.isPending}
+              >
+                <ThemedText style={{ color: '#FF3B30', fontSize: 15, fontWeight: '600' }}>
+                  {t('clubs.transferOwnership', 'Transfer Ownership')}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
 
             {/* Danger Zone */}
@@ -567,5 +615,25 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  dangerSection: {
+    marginTop: Spacing.xl,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  dangerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dangerButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
   },
 });

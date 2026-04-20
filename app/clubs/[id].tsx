@@ -27,7 +27,6 @@ import {
   useRequestJoinClub,
   useJoinRequests,
   useRemoveMember,
-  useTransferOwnership,
 } from '@/lib/hooks/useClubs';
 import { useClubPosts, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
@@ -40,7 +39,6 @@ import {
   ShareIcon,
   LockClosedIcon,
   ClockIcon,
-  EllipsisHorizontalIcon,
 } from 'react-native-heroicons/outline';
 import type { Post } from '@/types/feed';
 import type { ActivityPost } from '@/types/feed';
@@ -83,7 +81,6 @@ export default function ClubDetailScreen() {
   const leaveClubMutation = useLeaveClub();
   const requestJoinMutation = useRequestJoinClub();
   const removeMemberMutation = useRemoveMember(clubId);
-  const transferOwnershipMutation = useTransferOwnership(clubId);
   const { mutate: toggleLike } = useTogglePostLike();
 
   // Track whether the current user has a pending join request for this private club
@@ -164,29 +161,6 @@ export default function ClubDetailScreen() {
     },
     [removeMemberMutation]
   );
-
-  const handleTransferOwnership = useCallback(() => {
-    if (!club?.members?.length) return;
-    const eligible = club.members.filter((m) => m.id !== club.owner.id);
-    if (!eligible.length) {
-      Alert.alert('No Members', 'You need at least one other member to transfer ownership.');
-      return;
-    }
-    Alert.alert(
-      'Transfer Ownership',
-      'Select a member to transfer ownership to:',
-      [
-        ...eligible.slice(0, 5).map((m) => ({
-          text: `${m.name} ${m.last_name}`,
-          onPress: async () => {
-            // Transfer mutation not yet wired to backend — placeholder until useTransferOwnership is implemented
-            Alert.alert('Coming soon', 'Ownership transfer will be available on the edit page.');
-          },
-        })),
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  }, [club]);
 
   const handleCreatePost = useCallback(() => {
     if (!club) return;
@@ -372,20 +346,6 @@ export default function ClubDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Owner tools: transfer ownership */}
-        {isOwner && (
-          <TouchableOpacity
-            style={[styles.ownerActionRow, { borderColor: colors.border }]}
-            onPress={handleTransferOwnership}
-            activeOpacity={0.8}
-          >
-            <EllipsisHorizontalIcon size={18} color={colors.textSecondary} />
-            <ThemedText style={[styles.ownerActionText, { color: colors.textSecondary }]}>
-              {t('clubs.transferOwnership', 'Transfer Ownership')}
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-
         {/* Members Preview */}
         {club.members && club.members.length > 0 && (
           <View style={styles.membersSection}>
@@ -445,7 +405,7 @@ export default function ClubDetailScreen() {
         </View>
       </View>
     );
-  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, handleTransferOwnership, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, t]);
+  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, t]);
 
 
   const emptyElement = useMemo(() => {
@@ -685,16 +645,5 @@ const styles = StyleSheet.create({
   pendingRowText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  ownerActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    borderBottomWidth: 1,
-  },
-  ownerActionText: {
-    fontSize: 14,
   },
 });
