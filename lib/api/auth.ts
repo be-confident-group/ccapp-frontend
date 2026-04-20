@@ -35,7 +35,7 @@ export interface AuthResponse {
 }
 
 export interface User {
-  id?: string;
+  id?: number;
   email: string;
   name?: string;  // Backend returns 'name' not 'first_name'
   first_name?: string;  // Keep for backward compatibility

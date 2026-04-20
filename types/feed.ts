@@ -51,7 +51,6 @@ export interface ClubUpdateRequest {
  * Simple profile that also carries a numeric user id (used in member lists).
  */
 export interface SimpleProfileWithId extends SimpleProfile {
-  id: number;
   username?: string;
 }
 

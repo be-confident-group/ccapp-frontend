@@ -92,7 +92,7 @@ export default function ClubDetailScreen() {
   // Fetch pending join-requests only when the user is the owner
   const isOwnerResolved = useMemo(() => {
     if (!club || !currentUser || !club.owner) return false;
-    return club.owner.id === Number(currentUser.id);
+    return club.owner.id === currentUser.id;
   }, [club, currentUser]);
 
   const { data: joinRequests } = useJoinRequests(clubId, isOwnerResolved);
@@ -113,7 +113,7 @@ export default function ClubDetailScreen() {
   // Check if current user is a member
   const isMember = useMemo(() => {
     if (!club || !currentUser || !club.members) return false;
-    return club.members.some((member) => member.id === Number(currentUser.id));
+    return club.members.some((member) => member.id === currentUser.id);
   }, [club, currentUser]);
 
   const handleJoinLeave = useCallback(async () => {
@@ -179,8 +179,8 @@ export default function ClubDetailScreen() {
         ...eligible.slice(0, 5).map((m) => ({
           text: `${m.name} ${m.last_name}`,
           onPress: async () => {
-            // SimpleProfile doesn't expose id — we surface a placeholder until backend returns user ids
-            Alert.alert('Not yet available', 'Transfer requires user IDs. Please use the web interface.');
+            // Transfer mutation not yet wired to backend — placeholder until useTransferOwnership is implemented
+            Alert.alert('Coming soon', 'Ownership transfer will be available on the edit page.');
           },
         })),
         { text: 'Cancel', style: 'cancel' },
