@@ -24,6 +24,7 @@ interface ShareTripModalProps {
   visible: boolean;
   tripId: number;
   tripDistance?: number; // km
+  initialClubId?: number; // pre-select a club when opened from a group context
   onClose: () => void;
   onSuccess?: (results: TripShareResult[]) => void;
 }
@@ -32,6 +33,7 @@ export function ShareTripModal({
   visible,
   tripId,
   tripDistance,
+  initialClubId,
   onClose,
   onSuccess,
 }: ShareTripModalProps) {
@@ -39,7 +41,9 @@ export function ShareTripModal({
   const { colors } = useTheme();
 
   // Multi-select: a Set of selected club ids
-  const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(new Set());
+  const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(
+    initialClubId ? new Set([initialClubId]) : new Set()
+  );
   const [caption, setCaption] = useState('');
   const [isSharing, setIsSharing] = useState(false);
 

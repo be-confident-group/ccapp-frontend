@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
@@ -25,6 +25,8 @@ import type { ApiTrip } from '@/lib/api/trips';
 export default function ShareTripScreen() {
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
+  const params = useLocalSearchParams<{ clubId?: string }>();
+  const preselectedClubId = params.clubId ? parseInt(params.clubId, 10) : undefined;
 
   const { data: trips, isLoading } = useTrips({ status: 'completed' });
   const [selectedTrip, setSelectedTrip] = useState<ApiTrip | null>(null);
@@ -101,6 +103,7 @@ export default function ShareTripScreen() {
         visible={selectedTrip !== null}
         tripId={selectedTrip?.id ?? 0}
         tripDistance={selectedTrip?.distance}
+        initialClubId={preselectedClubId}
         onClose={() => setSelectedTrip(null)}
         onSuccess={() => {
           setSelectedTrip(null);
