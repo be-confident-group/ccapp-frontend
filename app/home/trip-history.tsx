@@ -420,14 +420,12 @@ export default function TripHistoryScreen() {
           }
         />
       )}
-      {shareModalTripId !== null && (
-        <ShareTripModal
-          visible={shareModalTripId !== null}
-          tripId={shareModalTripId}
-          tripDistance={shareModalDistance}
-          onClose={() => setShareModalTripId(null)}
-        />
-      )}
+      <ShareTripModal
+        visible={shareModalTripId !== null}
+        tripId={shareModalTripId ?? 0}
+        tripDistance={shareModalDistance}
+        onClose={() => setShareModalTripId(null)}
+      />
       </ThemedView>
     </SafeAreaView>
   );
