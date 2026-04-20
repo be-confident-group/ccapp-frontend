@@ -344,23 +344,6 @@ export default function EditClubScreen() {
               </View>
             </View>
 
-            {/* Transfer Ownership */}
-            <View style={[styles.dangerSection, { borderColor: '#FF3B30' + '40' }]}>
-              <ThemedText style={[styles.dangerTitle, { color: '#FF3B30' }]}>
-                {t('clubs.dangerZone', 'Danger Zone')}
-              </ThemedText>
-              <TouchableOpacity
-                style={[styles.dangerButton, { borderColor: '#FF3B30' + '60' }]}
-                onPress={handleTransferOwnership}
-                activeOpacity={0.8}
-                disabled={transferOwnershipMutation.isPending}
-              >
-                <ThemedText style={{ color: '#FF3B30', fontSize: 15, fontWeight: '600' }}>
-                  {t('clubs.transferOwnership', 'Transfer Ownership')}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
             {/* Danger Zone */}
             <View style={styles.dangerZone}>
               <View style={[styles.dangerZoneHeader, { borderBottomColor: colors.border }]}>
@@ -369,6 +352,31 @@ export default function EditClubScreen() {
                 </ThemedText>
               </View>
               <View style={[styles.dangerZoneContent, { backgroundColor: colors.card }]}>
+                {/* Transfer Ownership row */}
+                <View style={[styles.dangerZoneTextContainer, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: Spacing.md, marginBottom: Spacing.md }]}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={styles.dangerZoneLabel}>
+                      {t('clubs.transferOwnership', 'Transfer Ownership')}
+                    </ThemedText>
+                    <ThemedText style={[styles.dangerZoneDescription, { color: colors.textMuted }]}>
+                      {t('clubs.transferOwnershipDesc', 'Pass ownership of this group to another member.')}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.deleteButton, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.error }]}
+                    onPress={handleTransferOwnership}
+                    disabled={transferOwnershipMutation.isPending}
+                    activeOpacity={0.8}
+                  >
+                    {transferOwnershipMutation.isPending ? (
+                      <ActivityIndicator size="small" color={colors.error} />
+                    ) : (
+                      <ThemedText style={[styles.deleteButtonText, { color: colors.error }]}>
+                        {t('clubs.transfer', 'Transfer')}
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.dangerZoneTextContainer}>
                   <ThemedText style={styles.dangerZoneLabel}>
                     {t('clubs.deleteClub', 'Delete Group')}
@@ -616,24 +624,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  dangerSection: {
-    marginTop: Spacing.xl,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  dangerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dangerButton: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-  },
 });
+
