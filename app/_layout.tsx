@@ -62,9 +62,9 @@ function RootLayoutNav() {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as any;
       if (data?.type === 'trip_completed' && data?.tripId) {
-        router.push(`/home/trip-detail?id=${data.tripId}`);
+        router.replace(`/home/trip-detail?id=${data.tripId}`);
       } else if (data?.type === 'rate_trip' && data?.tripId) {
-        router.push(`/home/rate-route?tripId=${data.tripId}`);
+        router.replace(`/home/rate-route?tripId=${data.tripId}`);
       }
     });
     return () => subscription.remove();

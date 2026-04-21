@@ -89,7 +89,11 @@ export default function ClubDetailScreen() {
   // Fetch pending join-requests only when the user is the owner
   const isOwnerResolved = useMemo(() => {
     if (!club || !currentUser || !club.owner) return false;
-    return club.owner.id === currentUser.id;
+    if (currentUser.id !== undefined) {
+      return Number(club.owner.id) === Number(currentUser.id);
+    }
+    // Fallback when profile API doesn't expose id
+    return club.owner.name === currentUser.name && club.owner.last_name === currentUser.last_name;
   }, [club, currentUser]);
 
   const { data: joinRequests } = useJoinRequests(clubId, isOwnerResolved);
@@ -110,7 +114,12 @@ export default function ClubDetailScreen() {
   // Check if current user is a member
   const isMember = useMemo(() => {
     if (!club || !currentUser || !club.members) return false;
-    return club.members.some((member) => member.id === currentUser.id);
+    if (currentUser.id !== undefined) {
+      return club.members.some((member) => Number(member.id) === Number(currentUser.id));
+    }
+    return club.members.some(
+      (member) => member.name === currentUser.name && member.last_name === currentUser.last_name
+    );
   }, [club, currentUser]);
 
   const handleJoinLeave = useCallback(async () => {
@@ -249,15 +258,16 @@ export default function ClubDetailScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View style={[styles.actions, { flexWrap: 'wrap' }]}>
+        <View style={styles.actionsContainer}>
+          {/* Primary: Join / Request / Leave — visible only for non-owners */}
           {!isOwner && (
             <TouchableOpacity
               style={[
-                styles.actionButton,
+                styles.primaryActionButton,
                 isMember
-                  ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
+                  ? { borderWidth: 1, borderColor: colors.border }
                   : joinRequestPending
-                  ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
+                  ? { backgroundColor: colors.border }
                   : { backgroundColor: colors.primary },
               ]}
               onPress={joinRequestPending ? undefined : handleJoinLeave}
@@ -276,7 +286,7 @@ export default function ClubDetailScreen() {
               )}
               <ThemedText
                 style={[
-                  styles.actionButtonText,
+                  styles.primaryActionText,
                   isMember
                     ? { color: colors.text }
                     : joinRequestPending
@@ -285,67 +295,59 @@ export default function ClubDetailScreen() {
                 ]}
               >
                 {isMember
-                  ? t('clubs.leave', 'Leave')
+                  ? t('clubs.leave', 'Leave Group')
                   : joinRequestPending
-                  ? t('clubs.requestPending', 'Request Sent')
+                  ? t('clubs.requestPending', 'Requested')
                   : club?.visibility === 'private'
                   ? t('clubs.requestJoin', 'Request to Join')
-                  : t('clubs.join', 'Join')}
+                  : t('clubs.join', 'Join Group')}
               </ThemedText>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              isMember
-                ? { backgroundColor: colors.primary }
-                : { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-            ]}
-            onPress={handleCreatePost}
-            disabled={!isMember}
-            activeOpacity={0.8}
-          >
-            <PlusIcon size={18} color={isMember ? '#fff' : colors.textMuted} />
-            <ThemedText
-              style={[
-                styles.actionButtonText,
-                { color: isMember ? '#fff' : colors.textMuted },
-              ]}
-            >
-              {t('clubs.createPost', 'Post')}
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-            ]}
-            onPress={handleShareClub}
-            activeOpacity={0.8}
-          >
-            <ShareIcon size={18} color={colors.text} />
-            <ThemedText style={[styles.actionButtonText, { color: colors.text }]}>
-              {t('clubs.share', 'Share')}
-            </ThemedText>
-          </TouchableOpacity>
-
-          {isMember && (
+          {/* Secondary: compact pill buttons */}
+          <View style={styles.secondaryActions}>
             <TouchableOpacity
               style={[
-                styles.actionButton,
-                { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+                styles.pillButton,
+                isMember
+                  ? { backgroundColor: colors.primary + '15', borderColor: colors.primary }
+                  : { backgroundColor: colors.card, borderColor: colors.border },
               ]}
-              onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+              onPress={handleCreatePost}
+              disabled={!isMember}
               activeOpacity={0.8}
             >
-              <ShareIcon size={18} color={colors.text} />
-              <ThemedText style={[styles.actionButtonText, { color: colors.text }]}>
-                {t('clubs.shareTrip', 'Trip')}
+              <PlusIcon size={15} color={isMember ? colors.primary : colors.textMuted} />
+              <ThemedText style={[styles.pillButtonText, { color: isMember ? colors.primary : colors.textMuted }]}>
+                {t('clubs.createPost', 'Post')}
               </ThemedText>
             </TouchableOpacity>
-          )}
+
+            {isMember && (
+              <TouchableOpacity
+                style={[styles.pillButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+                activeOpacity={0.8}
+              >
+                <ShareIcon size={15} color={colors.text} />
+                <ThemedText style={[styles.pillButtonText, { color: colors.text }]}>
+                  {t('clubs.shareTrip', 'Share Trip')}
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[styles.pillButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={handleShareClub}
+              activeOpacity={0.8}
+            >
+              <ShareIcon size={15} color={colors.text} />
+              <ThemedText style={[styles.pillButtonText, { color: colors.text }]}>
+                {t('clubs.share', 'Invite')}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Owner tools: pending join requests row */}
@@ -421,7 +423,7 @@ export default function ClubDetailScreen() {
         </View>
       </View>
     );
-  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, t]);
+  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, router, t]);
 
 
   const emptyElement = useMemo(() => {
@@ -574,27 +576,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
+  actionsContainer: {
+    gap: Spacing.sm,
   },
-  actionButton: {
-    flex: 1,
+  primaryActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.md + 2,
-    borderRadius: 10,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
     gap: Spacing.xs,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    minHeight: 48,
   },
-  actionButtonText: {
+  primaryActionText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  pillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 5,
+  },
+  pillButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   membersSection: {
     gap: Spacing.sm,

@@ -283,18 +283,20 @@ export default function TripHistoryScreen() {
               <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂</ThemedText>
               <ThemedText style={styles.statValue}>{formatWeight(item.co2Saved)}</ThemedText>
             </View>
-
-            {item.backendId && (
-              <TouchableOpacity
-                onPress={handleShare}
-                style={styles.shareIconButton}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                activeOpacity={0.7}
-              >
-                <ShareIcon size={18} color={colors.primary} />
-              </TouchableOpacity>
-            )}
           </View>
+
+          {item.backendId && (
+            <TouchableOpacity
+              onPress={handleShare}
+              style={[styles.shareFooter, { borderTopColor: colors.border }]}
+              activeOpacity={0.7}
+            >
+              <ShareIcon size={14} color={colors.primary} />
+              <ThemedText style={[styles.shareFooterText, { color: colors.primary }]}>
+                Share to Group
+              </ThemedText>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -638,9 +640,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  shareIconButton: {
-    marginLeft: 'auto' as any,
-    padding: 2,
-    alignSelf: 'flex-end',
+  shareFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  shareFooterText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

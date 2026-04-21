@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -8,6 +9,19 @@ import type { ActivityPost } from '@/types/feed';
 import { UserAvatar } from './UserAvatar';
 import { PhotoGallery } from './PhotoGallery';
 import { PostActions } from './PostActions';
+
+function fmtDuration(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+const ACTIVITY_META: Record<string, { icon: string; color: string; label: string }> = {
+  ride:  { icon: 'bike',  color: '#2196F3', label: 'Ride'  },
+  walk:  { icon: 'walk',  color: '#4CAF50', label: 'Walk'  },
+  run:   { icon: 'run',   color: '#FF9800', label: 'Run'   },
+};
 
 interface FeedPostProps {
   post: ActivityPost;
@@ -42,6 +56,8 @@ export const FeedPost = React.memo(function FeedPost({
   onPhotoPress,
 }: FeedPostProps) {
   const { colors, isDark } = useTheme();
+  const isTripPost = post.distance != null || post.duration != null;
+  const meta = ACTIVITY_META[post.activityType] ?? ACTIVITY_META.walk;
 
   return (
     <View style={styles.cardContainer}>
@@ -84,6 +100,34 @@ export const FeedPost = React.memo(function FeedPost({
             </View>
           </TouchableOpacity>
 
+          {/* Activity stats banner — shown for trip posts */}
+          {isTripPost && (
+            <View style={[styles.activityBanner, { backgroundColor: meta.color + '12', borderLeftColor: meta.color }]}>
+              <MaterialCommunityIcons name={meta.icon as any} size={20} color={meta.color} />
+              <View style={styles.activityStats}>
+                {post.distance != null && (
+                  <View style={styles.activityStat}>
+                    <ThemedText style={[styles.activityValue, { color: colors.text }]}>
+                      {post.distance >= 1
+                        ? `${post.distance.toFixed(1)} km`
+                        : `${Math.round(post.distance * 1000)} m`}
+                    </ThemedText>
+                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>Distance</ThemedText>
+                  </View>
+                )}
+                {post.duration != null && (
+                  <View style={styles.activityStat}>
+                    <ThemedText style={[styles.activityValue, { color: colors.text }]}>{fmtDuration(post.duration)}</ThemedText>
+                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>Duration</ThemedText>
+                  </View>
+                )}
+                <View style={[styles.activityTypePill, { backgroundColor: meta.color + '20' }]}>
+                  <ThemedText style={[styles.activityTypeText, { color: meta.color }]}>{meta.label}</ThemedText>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Photo gallery */}
           {post.photos.length > 0 && (
             <PhotoGallery
@@ -92,8 +136,8 @@ export const FeedPost = React.memo(function FeedPost({
             />
           )}
 
-          {/* Title */}
-          {post.title && (
+          {/* Title — hidden for trip posts (backend auto-generates generic titles) */}
+          {post.title && !isTripPost && (
             <View style={styles.titleSection}>
               <ThemedText style={styles.title}>{post.title}</ThemedText>
             </View>
@@ -175,6 +219,43 @@ const styles = StyleSheet.create({
   },
   location: {
     fontSize: 13,
+  },
+  activityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    padding: Spacing.sm + 2,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+  },
+  activityStats: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  activityStat: {
+    alignItems: 'flex-start',
+  },
+  activityValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  activityStatLabel: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  activityTypePill: {
+    marginLeft: 'auto' as any,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  activityTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   titleSection: {
     paddingHorizontal: Spacing.md,

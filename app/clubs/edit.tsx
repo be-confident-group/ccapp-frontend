@@ -21,7 +21,6 @@ import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useClub, useUpdateClub, useDeleteClub, useTransferOwnership } from '@/lib/hooks/useClubs';
-import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
 import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
 import type { ClubUpdateRequest } from '@/types/feed';
@@ -36,7 +35,6 @@ export default function EditClubScreen() {
   const updateClubMutation = useUpdateClub();
   const deleteClubMutation = useDeleteClub();
   const transferOwnershipMutation = useTransferOwnership(clubId);
-  const { data: currentUser } = useCurrentUser();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

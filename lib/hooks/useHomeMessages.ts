@@ -10,17 +10,27 @@ import { getHomeMessages, type HomeMessages } from '@/lib/api/homeMessages';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
+function isThrottleError(error: Error | null): boolean {
+  if (!error?.message) return false;
+  return error.message.includes('429') || error.message.toLowerCase().includes('throttled');
+}
+
 export function useHomeMessages() {
   return useQuery<HomeMessages, Error>({
     queryKey: ['home-messages'],
-    queryFn: getHomeMessages,
+    queryFn: async () => {
+      const result = await getHomeMessages();
+      if (!result?.stats_message && !result?.streak_message) {
+        console.warn('[homeMessages] API returned empty messages:', result);
+      }
+      return result;
+    },
     staleTime: TWELVE_HOURS_MS,
     gcTime: TWELVE_HOURS_MS * 2,
     retry: (failureCount, error) => {
-      // Never retry 429 — the server is already caching so a 429 means the
-      // per-user daily limit was hit. Back off silently.
-      if (error?.message?.includes('429')) return false;
+      if (isThrottleError(error)) return false;
       return failureCount < 2;
     },
+    throwOnError: false,
   });
 }

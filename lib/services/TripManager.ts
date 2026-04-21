@@ -78,7 +78,7 @@ async function scheduleTripCompletionNotifications(
         body: 'Tap to rate your recent trip and help improve recommendations.',
         data: { type: 'rate_trip', tripId },
       },
-      trigger: { seconds: 3600, repeats: false } as any,
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3600, repeats: false },
     });
   } catch (err) {
     console.warn('[TripManager] Failed to schedule trip notifications:', err);

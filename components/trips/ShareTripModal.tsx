@@ -40,11 +40,16 @@ export function ShareTripModal({
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
 
-  // Multi-select: a Set of selected club ids
-  const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(
-    initialClubId ? new Set([initialClubId]) : new Set()
-  );
+  const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(new Set());
   const [caption, setCaption] = useState('');
+
+  // Re-seed selection and caption whenever the modal opens
+  React.useEffect(() => {
+    if (visible) {
+      setSelectedClubIds(initialClubId ? new Set([initialClubId]) : new Set());
+      setCaption('');
+    }
+  }, [visible, initialClubId]);
   const [isSharing, setIsSharing] = useState(false);
 
   const { data: myClubs, isLoading } = useMyClubs();
@@ -128,7 +133,7 @@ export function ShareTripModal({
           <View style={styles.clubInfo}>
             <ThemedText style={styles.clubName}>{club.name}</ThemedText>
             <ThemedText style={[styles.clubMeta, { color: colors.textMuted }]}>
-              {club.members_count} {club.members_count === 1 ? 'member' : 'members'}
+              · {club.members_count} {club.members_count === 1 ? 'member' : 'members'}
             </ThemedText>
           </View>
           {isSelected && (
@@ -156,7 +161,7 @@ export function ShareTripModal({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <ThemedText style={styles.headerTitle}>
-            {t('trips.shareToClub', 'Share to Club')}
+            {t('trips.shareToGroup', 'Share to Group')}
           </ThemedText>
           <TouchableOpacity
             style={styles.closeButton}
@@ -172,10 +177,10 @@ export function ShareTripModal({
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Club Selection — multi-select */}
+          {/* Group Selection — multi-select */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>
-              {t('trips.selectClub', 'Select Clubs')} *
+              {t('trips.selectGroup', 'Groups')} *
             </ThemedText>
             {isLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -185,7 +190,7 @@ export function ShareTripModal({
               </View>
             ) : (
               <ThemedText style={[styles.emptyText, { color: colors.textMuted }]}>
-                {t('trips.noClubs', 'Join a club first to share your activities')}
+                {t('trips.noGroups', 'Join a group first to share your activities')}
               </ThemedText>
             )}
           </View>
@@ -235,8 +240,8 @@ export function ShareTripModal({
             ) : (
               <ThemedText style={[styles.shareButtonText, { color: '#fff' }]}>
                 {selectedClubIds.size > 1
-                  ? `${t('trips.share', 'Share')} (${selectedClubIds.size})`
-                  : t('trips.share', 'Share')}
+                  ? `${t('trips.share', 'Share')} to ${selectedClubIds.size} Groups`
+                  : t('trips.share', 'Share to Group')}
               </ThemedText>
             )}
           </TouchableOpacity>
@@ -286,25 +291,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 2,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 10,
+    borderWidth: 1.5,
   },
   clubInfo: {
     flex: 1,
-    gap: Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   clubName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   clubMeta: {
     fontSize: 12,
   },
   checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
