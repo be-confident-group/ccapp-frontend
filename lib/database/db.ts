@@ -518,6 +518,14 @@ class Database {
     );
   }
 
+  async getRecentActivityWindows(limit: number): Promise<ActivityWindow[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<ActivityWindow>(
+      'SELECT * FROM activity_windows ORDER BY t_start DESC LIMIT ?',
+      [limit]
+    );
+  }
+
   async deleteActivityWindowsByTrip(tripId: string): Promise<void> {
     const db = await this.getDb();
     await db.runAsync('DELETE FROM activity_windows WHERE trip_id = ?', [tripId]);

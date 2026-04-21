@@ -68,6 +68,16 @@ class StreamingSegmenter {
     return this.current;
   }
 
+  getDebugState() {
+    return {
+      tripId: this.tripId,
+      current: this.current,
+      pendingLabel: this.pendingLabel,
+      pendingCount: this.pendingCount,
+      confirmWindowsNeeded: 2,
+    };
+  }
+
   async writeWindow(input: WriteInput): Promise<void> {
     if (!this.tripId || input.tripId !== this.tripId) {
       // Window arrived for a stale trip (trip ended between predict and write).

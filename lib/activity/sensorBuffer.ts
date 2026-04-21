@@ -64,6 +64,11 @@ class SensorBuffer {
   private appState: AppStateStatus = AppState.currentState;
   private listener: SensorBufferListener = {};
 
+  // Debug-only snapshots — updated on every sample / prediction.
+  private _lastAccel: { x: number; y: number; z: number } | null = null;
+  private _lastGyro: { x: number; y: number; z: number } | null = null;
+  private _lastPrediction: (ActivityPrediction & { windowStart: number; windowEnd: number }) | null = null;
+
   setListener(listener: SensorBufferListener) {
     this.listener = listener;
   }
@@ -199,6 +204,7 @@ class SensorBuffer {
 
   private onAccel(ev: { x: number; y: number; z: number; timestamp?: number }): void {
     const t = nowMs(ev.timestamp);
+    this._lastAccel = { x: ev.x, y: ev.y, z: ev.z };
     this.accQueue.push({ t, x: ev.x, y: ev.y, z: ev.z });
     this.rawBatch.push({ t, x: ev.x, y: ev.y, z: ev.z });
     this.trimQueue(this.accQueue);
@@ -207,6 +213,7 @@ class SensorBuffer {
 
   private onGyro(ev: { x: number; y: number; z: number; timestamp?: number }): void {
     const t = nowMs(ev.timestamp);
+    this._lastGyro = { x: ev.x, y: ev.y, z: ev.z };
     this.gyroQueue.push({ t, x: ev.x, y: ev.y, z: ev.z });
     this.rawBatchGyro.push({ t, x: ev.x, y: ev.y, z: ev.z });
     this.trimQueue(this.gyroQueue);
@@ -238,7 +245,7 @@ class SensorBuffer {
       this.nextGridTime <= this.accQueue[this.accQueue.length - 1].t &&
       this.nextGridTime <= this.gyroQueue[this.gyroQueue.length - 1].t
     ) {
-      const t = this.nextGridTime;
+      const t: number = this.nextGridTime!;
       const a = interpolate(this.accQueue, t);
       const g = interpolate(this.gyroQueue, t);
       if (a && g) {
@@ -288,8 +295,10 @@ class SensorBuffer {
       prediction,
     });
 
+    const payload = { ...prediction, windowStart, windowEnd };
+    this._lastPrediction = payload;
     if (this.listener.onPrediction) {
-      this.listener.onPrediction({ ...prediction, windowStart, windowEnd });
+      this.listener.onPrediction(payload);
     }
   }
 
@@ -366,6 +375,21 @@ class SensorBuffer {
     } catch (err) {
       console.error('[sensorBuffer] Failed to persist raw batch:', err);
     }
+  }
+
+  getDebugState() {
+    return {
+      running: this.running,
+      appState: this.appState as string,
+      tripId: this.tripId,
+      samplesSeen: this.samplesSeen,
+      samplesSinceLastWindow: this.samplesSinceLastWindow,
+      bufferFillPct: this.samplesSeen >= 256 ? 100 : Math.round((this.samplesSeen / 256) * 100),
+      nextWindowInSamples: Math.max(0, 128 - this.samplesSinceLastWindow),
+      lastAccel: this._lastAccel,
+      lastGyro: this._lastGyro,
+      lastPrediction: this._lastPrediction,
+    };
   }
 }
 

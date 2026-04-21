@@ -11,6 +11,7 @@ export type {
   Setting,
   SyncQueueItem,
   TripFilters,
+  ActivityWindow,
 } from './db';
 
 export { initializeDatabase, DB_NAME, DB_VERSION, SCHEMA, INDEXES } from './schema';
