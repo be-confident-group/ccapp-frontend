@@ -17,7 +17,7 @@ import {
 } from '@/lib/services/LocationTrackingService';
 import { database } from '@/lib/database';
 import * as Location from 'expo-location';
-import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
+import { streamingSegmenter, sensorBuffer, type LiveActivityState } from '@/lib/activity';
 
 interface TrackingContextType {
   isTracking: boolean;
@@ -80,6 +80,19 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         perms.foreground === Location.PermissionStatus.GRANTED &&
         perms.background === Location.PermissionStatus.GRANTED;
       setHasPermissions(hasPerms);
+
+      // Make sure the ML sensor buffer is running if we are tracking
+      if (tracking) {
+        try {
+          await sensorBuffer.start();
+          const existing = await database.getActiveTrip();
+          if (existing && sensorBuffer.getActiveTripId() !== existing.id) {
+            sensorBuffer.attachTrip(existing.id);
+          }
+        } catch (err) {
+          console.warn('[TrackingContext] Failed to resume sensor buffer:', err);
+        }
+      }
 
       // Request notification permission if tracking is active and we haven't asked yet.
       // This handles users who upgrade to a version with notifications while already tracking.

@@ -717,6 +717,17 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     // Get active trip
     let activeTrip = await database.getActiveTrip();
 
+    if (activeTrip) {
+      try {
+        await sensorBuffer.start();
+        if (sensorBuffer.getActiveTripId() !== activeTrip.id) {
+          sensorBuffer.attachTrip(activeTrip.id);
+        }
+      } catch (err) {
+        console.warn('[LocationTracking] Failed to auto-start sensorBuffer:', err);
+      }
+    }
+
     // ===== TRIP START LOGIC =====
     if (!activeTrip) {
       // Check if we should start a new trip
@@ -759,6 +770,12 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         activeTrip = await database.getActiveTrip();
         lastStationaryTime = null; // Reset stationary tracking
         consecutiveMovementCount = 0; // Reset counter after trip starts
+        
+        try {
+          await sensorBuffer.start();
+        } catch (err) {
+          console.warn('[LocationTracking] Failed to start sensorBuffer for new trip:', err);
+        }
         sensorBuffer.attachTrip(tripId);
         await showTripRecordingNotification(tripId);
 

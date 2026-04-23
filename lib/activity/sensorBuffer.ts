@@ -7,12 +7,10 @@
  * 60-second rolling chunk that gets flushed into the `sensor_batches` table
  * for later retraining.
  *
- * Background caveat: `expo-sensors` does NOT emit samples while the app is
- * suspended/backgrounded on iOS, and is unreliable on Android inside the
- * existing location foreground service. That is why this driver only runs
- * while `AppState === 'active'` and classifications stop when the app is
- * backgrounded. The app falls back to the legacy speed-based classifier for
- * background-only trips (see `LocationTrackingService` + `classification_method`).
+ * Background caveat: `expo-sensors` may be unreliable on some devices in the
+ * background. However, since the location foreground service keeps the JS thread alive,
+ * we attempt to keep sensors running so the ML model can classify background trips.
+ * If no samples are received, the app falls back to the legacy speed-based classifier.
  */
 
 import { AppState, type AppStateStatus } from 'react-native';
@@ -157,21 +155,12 @@ class SensorBuffer {
   }
 
   private handleAppStateChange = (next: AppStateStatus): void => {
-    const wasActive = this.appState === 'active';
-    const isActive = next === 'active';
     this.appState = next;
-    if (!this.running) return;
-    if (isActive && !wasActive) {
-      void this.startSubscriptions();
-    } else if (!isActive && wasActive) {
-      void this.stopSubscriptions();
-      // Reset resampling state so we don't bridge a multi-second gap linearly.
-      this.resetStreams();
-    }
+    // We used to stop/start subscriptions here, but we now want them
+    // to continue running in the background if possible.
   };
 
   private async startSubscriptions(): Promise<void> {
-    if (this.appState !== 'active') return;
     if (this.accelSub || this.gyroSub) return;
 
     try {
