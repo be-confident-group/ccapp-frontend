@@ -646,17 +646,42 @@ class Database {
     );
   }
 
+  // ===== STAGING LOCATIONS =====
+
+  async insertStagingLocation(loc: StagingLocation): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      `INSERT INTO staging_locations (staging_id, latitude, longitude, accuracy, speed, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [loc.staging_id, loc.latitude, loc.longitude, loc.accuracy, loc.speed, loc.timestamp]
+    );
+  }
+
+  async getStagingLocationsByStagingId(stagingId: string): Promise<StagingLocation[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<StagingLocation>(
+      `SELECT * FROM staging_locations WHERE staging_id = ? ORDER BY timestamp ASC`,
+      [stagingId]
+    );
+  }
+
+  async deleteStagingLocations(stagingId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(`DELETE FROM staging_locations WHERE staging_id = ?`, [stagingId]);
+  }
+
   // ===== CLASSIFIER DISAGREEMENTS =====
 
   async insertClassifierDisagreements(rows: ClassifierDisagreement[]): Promise<void> {
     if (rows.length === 0) return;
     const db = await this.getDb();
-    for (const r of rows) {
-      await db.runAsync(
-        `INSERT INTO classifier_disagreements (trip_id, t, xgb_label, cmma_label, xgb_conf) VALUES (?, ?, ?, ?, ?)`,
-        [r.trip_id, r.t, r.xgb_label, r.cmma_label, r.xgb_conf]
-      );
-    }
+    await db.withTransactionAsync(async () => {
+      for (const r of rows) {
+        await db.runAsync(
+          `INSERT INTO classifier_disagreements (trip_id, t, xgb_label, cmma_label, xgb_conf) VALUES (?, ?, ?, ?, ?)`,
+          [r.trip_id, r.t, r.xgb_label, r.cmma_label, r.xgb_conf]
+        );
+      }
+    });
   }
 
   async getRecentDisagreements(limit: number): Promise<ClassifierDisagreement[]> {
@@ -677,6 +702,9 @@ class Database {
     await db.execAsync('DELETE FROM route_ratings');
     await db.execAsync('DELETE FROM activity_windows');
     await db.execAsync('DELETE FROM sensor_batches');
+    await db.execAsync('DELETE FROM motion_segments');
+    await db.execAsync('DELETE FROM staging_locations');
+    await db.execAsync('DELETE FROM classifier_disagreements');
     console.log('[Database] All data cleared');
   }
 

@@ -110,6 +110,42 @@ export const SCHEMA = {
       created_at INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
     )
   `,
+
+  motion_segments: `
+    CREATE TABLE IF NOT EXISTS motion_segments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      t_start INTEGER NOT NULL,
+      t_end INTEGER NOT NULL,
+      activity TEXT NOT NULL,
+      confidence TEXT NOT NULL,
+      source TEXT NOT NULL,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )
+  `,
+
+  staging_locations: `
+    CREATE TABLE IF NOT EXISTS staging_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      staging_id TEXT NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      accuracy REAL,
+      speed REAL,
+      timestamp INTEGER NOT NULL
+    )
+  `,
+
+  classifier_disagreements: `
+    CREATE TABLE IF NOT EXISTS classifier_disagreements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id TEXT NOT NULL,
+      t INTEGER NOT NULL,
+      xgb_label TEXT NOT NULL,
+      cmma_label TEXT NOT NULL,
+      xgb_conf REAL NOT NULL
+    )
+  `,
 };
 
 export const INDEXES = [
@@ -124,6 +160,9 @@ export const INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_activity_windows_trip ON activity_windows(trip_id, t_start)',
   'CREATE INDEX IF NOT EXISTS idx_sensor_batches_trip ON sensor_batches(trip_id, seq)',
   'CREATE INDEX IF NOT EXISTS idx_sensor_batches_synced ON sensor_batches(synced)',
+  'CREATE INDEX IF NOT EXISTS idx_motion_segments_trip ON motion_segments(trip_id)',
+  'CREATE INDEX IF NOT EXISTS idx_staging_id ON staging_locations(staging_id)',
+  'CREATE INDEX IF NOT EXISTS idx_disagreements_trip ON classifier_disagreements(trip_id)',
 ];
 
 export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
@@ -131,6 +170,7 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
 
   // Enable foreign keys
   await db.execAsync('PRAGMA foreign_keys = ON');
+  await db.execAsync('PRAGMA journal_mode = WAL');
 
   // Check current version
   const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -265,7 +305,7 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
 
     // Idempotent ALTER TABLE statements (wrapped in try/catch for duplicate column errors)
     for (const stmt of [
-      "ALTER TABLE trips ADD COLUMN engine TEXT DEFAULT 'native'",
+      "ALTER TABLE trips ADD COLUMN engine TEXT DEFAULT 'legacy'",
       'ALTER TABLE trips ADD COLUMN backfill_start INTEGER',
       'ALTER TABLE trips ADD COLUMN detection_state TEXT',
       "ALTER TABLE locations ADD COLUMN gps_accuracy_mode TEXT DEFAULT 'best'",
@@ -278,56 +318,23 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     }
 
     // New tables
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS motion_segments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id TEXT NOT NULL,
-        t_start INTEGER NOT NULL,
-        t_end INTEGER NOT NULL,
-        activity TEXT NOT NULL,
-        confidence TEXT NOT NULL,
-        source TEXT NOT NULL,
-        FOREIGN KEY (trip_id) REFERENCES trips(id)
-      )
-    `);
+    await db.execAsync(SCHEMA.motion_segments);
     await db.execAsync(
       'CREATE INDEX IF NOT EXISTS idx_motion_segments_trip ON motion_segments(trip_id)'
     );
 
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS staging_locations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        staging_id TEXT NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        accuracy REAL,
-        speed REAL,
-        timestamp INTEGER NOT NULL
-      )
-    `);
+    await db.execAsync(SCHEMA.staging_locations);
     await db.execAsync(
       'CREATE INDEX IF NOT EXISTS idx_staging_id ON staging_locations(staging_id)'
     );
 
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS classifier_disagreements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id TEXT NOT NULL,
-        t INTEGER NOT NULL,
-        xgb_label TEXT NOT NULL,
-        cmma_label TEXT NOT NULL,
-        xgb_conf REAL NOT NULL
-      )
-    `);
+    await db.execAsync(SCHEMA.classifier_disagreements);
     await db.execAsync(
       'CREATE INDEX IF NOT EXISTS idx_disagreements_trip ON classifier_disagreements(trip_id)'
     );
 
-    // Backfill existing trips as legacy
+    // Backfill existing trips as legacy (no-op since DEFAULT 'legacy' already sets them)
     await db.execAsync("UPDATE trips SET engine = 'legacy' WHERE engine IS NULL OR engine = ''");
-
-    // Enable WAL mode
-    await db.execAsync('PRAGMA journal_mode = WAL');
 
     console.log('[Database] Migration 5->6: Completed');
   }
