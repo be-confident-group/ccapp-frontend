@@ -16,6 +16,7 @@
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		21549090062F4355B7D59F65 /* RadziTracker.m in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */; };
 		BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */; };
+				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		A0A844E99ACA41668035F580 /* RadziTracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RadziTracker.h; sourceTree = "<group>"; };
 		7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RadziTracker.m; sourceTree = "<group>"; };
 		7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadziTracker.swift; sourceTree = "<group>"; };
+				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +146,7 @@
 				A0A844E99ACA41668035F580 /* RadziTracker.h */,
 				7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */,
 				7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */,
+				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */,
 			);
 			path = RadziTracker;
 			sourceTree = "<group>";
@@ -383,6 +386,7 @@
 				547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */,
 							21549090062F4355B7D59F65 /* RadziTracker.m in Sources */,
 				BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */,
+				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
