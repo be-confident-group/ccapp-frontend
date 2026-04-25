@@ -23,6 +23,7 @@
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */; };
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */; };
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
+				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitorTests.swift; sourceTree = "<group>"; };
 				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
 				F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
+				4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachine.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -163,6 +165,7 @@
 				27DD8E3F247841C499C4F874 /* MotionMonitor.swift */,
 				AC2E3CF651B343B29521C295 /* LocationSession.swift */,
 				F111D1C01C4249859FA6F25B /* ImuSampler.swift */,
+				4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */,
 				5D214BA2632C4A5283470AE6 /* Tests */,
 			);
 			path = RadziTracker;
@@ -419,6 +422,7 @@
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */,
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */,
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */,
+				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
