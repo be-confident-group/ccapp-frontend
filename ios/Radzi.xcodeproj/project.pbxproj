@@ -19,6 +19,7 @@
 				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
 				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */; };
 				BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27DD8E3F247841C499C4F874 /* MotionMonitor.swift */; };
+				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
 				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
 				27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
+				AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +155,7 @@
 				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */,
 				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */,
 				27DD8E3F247841C499C4F874 /* MotionMonitor.swift */,
+				AC2E3CF651B343B29521C295 /* LocationSession.swift */,
 			);
 			path = RadziTracker;
 			sourceTree = "<group>";
@@ -395,6 +398,7 @@
 				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */,
 				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */,
 				BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */,
+				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
