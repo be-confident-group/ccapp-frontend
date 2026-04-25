@@ -22,6 +22,7 @@
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */; };
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */; };
+				C3A1B2D4E5F6789012345678 /* TripStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */; };
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
 				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
 		/* End PBXBuildFile section */
@@ -49,6 +50,7 @@
 				AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
 				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitorTests.swift; sourceTree = "<group>"; };
 				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
+				D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachineTests.swift; sourceTree = "<group>"; };
 				F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
 				4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachine.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
@@ -176,6 +178,7 @@
 			children = (
 				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */,
 				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */,
+								D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -421,6 +424,7 @@
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */,
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */,
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */,
+								C3A1B2D4E5F6789012345678 /* TripStateMachineTests.swift in Sources */,
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */,
 				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */,
 );
