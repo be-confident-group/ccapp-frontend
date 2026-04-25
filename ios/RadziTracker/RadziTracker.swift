@@ -238,4 +238,26 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
       imu.pause()
     }
   }
+
+  // MARK: - Recovery
+
+  @objc(recoverStaleTrip:rejecter:)
+  func recoverStaleTrip(_ resolve: @escaping RCTPromiseResolveBlock,
+                        rejecter reject: @escaping RCTPromiseRejectBlock) {
+    do {
+      if let stale = try TrackingDatabase.shared.findStaleRecordingTrip() {
+        try TrackingDatabase.shared.endTrip(tripId: stale.id, endTime: stale.lastUpdate)
+        if hasListeners {
+          sendEvent(withName: "tripEnded", body: [
+            "tripId": stale.id, "endTime": stale.lastUpdate, "recovered": true,
+          ])
+        }
+        resolve(["recovered": stale.id])
+      } else {
+        resolve(["recovered": NSNull()])
+      }
+    } catch {
+      reject("recover_failed", error.localizedDescription, error)
+    }
+  }
 }

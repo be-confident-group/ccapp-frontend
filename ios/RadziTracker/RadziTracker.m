@@ -31,5 +31,8 @@ RCT_EXTERN_METHOD(setConfig:
 RCT_EXTERN_METHOD(getConfig:
                   (RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(recoverStaleTrip:
+                  (RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 
 @end
