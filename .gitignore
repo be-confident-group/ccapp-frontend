@@ -40,6 +40,11 @@ yarn-error.*
 app-example
 
 # generated native folders
-/ios
 /android
 /docs
+
+# iOS — track source, exclude generated artifacts
+/ios/Pods
+/ios/build
+/ios/DerivedData
+/ios/*.xcuserstate
