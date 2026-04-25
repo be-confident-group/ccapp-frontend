@@ -17,6 +17,7 @@
 		21549090062F4355B7D59F65 /* RadziTracker.m in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */; };
 		BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */; };
 				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
+				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RadziTracker.m; sourceTree = "<group>"; };
 		7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadziTracker.swift; sourceTree = "<group>"; };
 				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
+				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,6 +149,7 @@
 				7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */,
 				7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */,
 				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */,
+				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */,
 			);
 			path = RadziTracker;
 			sourceTree = "<group>";
@@ -387,6 +390,7 @@
 							21549090062F4355B7D59F65 /* RadziTracker.m in Sources */,
 				BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */,
 				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */,
+				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
