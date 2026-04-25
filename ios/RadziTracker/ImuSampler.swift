@@ -9,6 +9,7 @@ final class ImuSampler {
   private var bufferAcc: [[String: Any]] = []
   private var bufferGyro: [[String: Any]] = []
   private var flushTimer: Timer?
+  private let bufferQueue = DispatchQueue(label: "com.radzi.imu.buffer")
   private var batchSeq = 0
   private var tripId: String?
   private(set) var isRunning = false
@@ -35,21 +36,27 @@ final class ImuSampler {
     manager.startDeviceMotionUpdates(to: OperationQueue()) { [weak self] motion, _ in
       guard let self = self, let m = motion else { return }
       let t = Int64(Date().timeIntervalSince1970 * 1000)
-      self.bufferAcc.append([
-        "t": t,
-        "x": m.userAcceleration.x,
-        "y": m.userAcceleration.y,
-        "z": m.userAcceleration.z,
-      ])
-      self.bufferGyro.append([
-        "t": t,
-        "x": m.rotationRate.x,
-        "y": m.rotationRate.y,
-        "z": m.rotationRate.z,
-      ])
+      self.bufferQueue.async { [weak self] in
+        guard let self = self else { return }
+        self.bufferAcc.append([
+          "t": t,
+          "x": m.userAcceleration.x,
+          "y": m.userAcceleration.y,
+          "z": m.userAcceleration.z,
+        ])
+        self.bufferGyro.append([
+          "t": t,
+          "x": m.rotationRate.x,
+          "y": m.rotationRate.y,
+          "z": m.rotationRate.z,
+        ])
+      }
     }
-    flushTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-      self?.flush()
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else { return }
+      self.flushTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        self?.flush()
+      }
     }
     TrackingLogger.shared.log(.info, "ImuSampler: started @ \(Self.sampleRateHz) Hz")
   }
@@ -60,6 +67,7 @@ final class ImuSampler {
     flushTimer?.invalidate()
     flushTimer = nil
     isRunning = false
+    flush()
     TrackingLogger.shared.log(.info, "ImuSampler: paused")
   }
 
@@ -69,23 +77,29 @@ final class ImuSampler {
   }
 
   private func flush() {
-    guard let tripId = tripId else {
-      bufferAcc.removeAll(); bufferGyro.removeAll(); return
+    var accSnapshot: [[String: Any]] = []
+    var gyroSnapshot: [[String: Any]] = []
+    bufferQueue.sync {
+      accSnapshot = self.bufferAcc
+      gyroSnapshot = self.bufferGyro
+      self.bufferAcc.removeAll()
+      self.bufferGyro.removeAll()
     }
-    if bufferAcc.isEmpty && bufferGyro.isEmpty { return }
+    guard let tripId = self.tripId else { return }
+    if accSnapshot.isEmpty && gyroSnapshot.isEmpty { return }
 
     // Pair each accel sample with the closest gyro sample
     var interleaved: [[String: Any]] = []
     var gi = 0
-    for a in bufferAcc {
-      while gi + 1 < bufferGyro.count,
+    for a in accSnapshot {
+      while gi + 1 < gyroSnapshot.count,
             let aT = a["t"] as? Int64,
-            let gNext = bufferGyro[gi+1]["t"] as? Int64,
-            let gCur = bufferGyro[gi]["t"] as? Int64,
+            let gNext = gyroSnapshot[gi+1]["t"] as? Int64,
+            let gCur = gyroSnapshot[gi]["t"] as? Int64,
             abs(gNext - aT) <= abs(gCur - aT) {
         gi += 1
       }
-      let g = gi < bufferGyro.count ? bufferGyro[gi] : ["x": 0, "y": 0, "z": 0]
+      let g = gi < gyroSnapshot.count ? gyroSnapshot[gi] : ["x": 0, "y": 0, "z": 0]
       interleaved.append([
         "t": a["t"] ?? 0,
         "ax": a["x"] ?? 0, "ay": a["y"] ?? 0, "az": a["z"] ?? 0,
@@ -99,8 +113,6 @@ final class ImuSampler {
       let str = String(data: json, encoding: .utf8) ?? "{}"
       try TrackingDatabase.shared.insertSensorBatch(tripId: tripId, seq: batchSeq, payloadJson: str)
       batchSeq += 1
-      bufferAcc.removeAll()
-      bufferGyro.removeAll()
     } catch {
       TrackingLogger.shared.log(.error, "ImuSampler: flush failed — \(error)")
     }
