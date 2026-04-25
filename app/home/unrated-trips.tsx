@@ -55,6 +55,9 @@ function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
     updated_at: new Date(apiTrip.updated_at).getTime(),
     synced: 1,
     backend_id: apiTrip.id,
+    ml_activity_type: null,
+    ml_confidence: null,
+    classification_method: 'speed',
   };
 }
 

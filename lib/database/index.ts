@@ -12,6 +12,9 @@ export type {
   SyncQueueItem,
   TripFilters,
   ActivityWindow,
+  MotionSegment,
+  StagingLocation,
+  ClassifierDisagreement,
 } from './db';
 
 export { initializeDatabase, DB_NAME, DB_VERSION, SCHEMA, INDEXES } from './schema';

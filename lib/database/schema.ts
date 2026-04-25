@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;
 
 export const SCHEMA = {
   trips: `
@@ -257,6 +257,79 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     } catch (error) {
       console.log('[Database] Migration 4->5: Error (may already exist)', error);
     }
+  }
+
+  // Migration from version 5 to 6: Add native engine columns, new motion/staging/disagreement tables
+  if (from < 6 && to >= 6) {
+    console.log('[Database] Migration 5->6: Adding native engine columns and new tables');
+
+    // Idempotent ALTER TABLE statements (wrapped in try/catch for duplicate column errors)
+    for (const stmt of [
+      "ALTER TABLE trips ADD COLUMN engine TEXT DEFAULT 'native'",
+      'ALTER TABLE trips ADD COLUMN backfill_start INTEGER',
+      'ALTER TABLE trips ADD COLUMN detection_state TEXT',
+      "ALTER TABLE locations ADD COLUMN gps_accuracy_mode TEXT DEFAULT 'best'",
+    ]) {
+      try {
+        await db.execAsync(stmt);
+      } catch (err) {
+        console.log(`[Database] Migration 5->6: ALTER skipped (likely exists): ${stmt}`);
+      }
+    }
+
+    // New tables
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS motion_segments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id TEXT NOT NULL,
+        t_start INTEGER NOT NULL,
+        t_end INTEGER NOT NULL,
+        activity TEXT NOT NULL,
+        confidence TEXT NOT NULL,
+        source TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips(id)
+      )
+    `);
+    await db.execAsync(
+      'CREATE INDEX IF NOT EXISTS idx_motion_segments_trip ON motion_segments(trip_id)'
+    );
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS staging_locations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        staging_id TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        accuracy REAL,
+        speed REAL,
+        timestamp INTEGER NOT NULL
+      )
+    `);
+    await db.execAsync(
+      'CREATE INDEX IF NOT EXISTS idx_staging_id ON staging_locations(staging_id)'
+    );
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS classifier_disagreements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id TEXT NOT NULL,
+        t INTEGER NOT NULL,
+        xgb_label TEXT NOT NULL,
+        cmma_label TEXT NOT NULL,
+        xgb_conf REAL NOT NULL
+      )
+    `);
+    await db.execAsync(
+      'CREATE INDEX IF NOT EXISTS idx_disagreements_trip ON classifier_disagreements(trip_id)'
+    );
+
+    // Backfill existing trips as legacy
+    await db.execAsync("UPDATE trips SET engine = 'legacy' WHERE engine IS NULL OR engine = ''");
+
+    // Enable WAL mode
+    await db.execAsync('PRAGMA journal_mode = WAL');
+
+    console.log('[Database] Migration 5->6: Completed');
   }
 
   console.log('[Database] Migrations completed');

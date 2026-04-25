@@ -25,6 +25,9 @@ export interface Trip {
   ml_activity_type: 'walk' | 'run' | 'cycle' | 'drive' | null;
   ml_confidence: number | null;
   classification_method: 'ml' | 'speed';
+  engine?: 'native' | 'legacy';
+  backfill_start?: number | null;
+  detection_state?: string | null;
 }
 
 export interface LocationPoint {
@@ -40,6 +43,7 @@ export interface LocationPoint {
   activity_type: string | null;
   activity_confidence: number | null;
   synced: number;
+  gps_accuracy_mode?: string | null;
 }
 
 export interface Setting {
@@ -86,6 +90,35 @@ export interface RouteRating {
   backend_id: number | null;
   created_at: number;
   updated_at: number;
+}
+
+export interface MotionSegment {
+  id?: number;
+  trip_id: string;
+  t_start: number;
+  t_end: number;
+  activity: 'stationary' | 'walking' | 'running' | 'cycling' | 'automotive' | 'unknown';
+  confidence: 'low' | 'medium' | 'high';
+  source: 'cmma' | 'shadow_xgb';
+}
+
+export interface StagingLocation {
+  id?: number;
+  staging_id: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  speed: number | null;
+  timestamp: number;
+}
+
+export interface ClassifierDisagreement {
+  id?: number;
+  trip_id: string;
+  t: number;
+  xgb_label: string;
+  cmma_label: string;
+  xgb_conf: number;
 }
 
 export interface TripFilters {
@@ -581,6 +614,57 @@ class Database {
       'SELECT COUNT(*) as count FROM sensor_batches WHERE synced = 0'
     );
     return result?.count ?? 0;
+  }
+
+  // ===== MOTION SEGMENTS =====
+
+  async getTripById(id: string): Promise<Trip | null> {
+    return this.getTrip(id);
+  }
+
+  async insertMotionSegment(seg: MotionSegment): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      `INSERT INTO motion_segments (trip_id, t_start, t_end, activity, confidence, source) VALUES (?, ?, ?, ?, ?, ?)`,
+      [seg.trip_id, seg.t_start, seg.t_end, seg.activity, seg.confidence, seg.source]
+    );
+  }
+
+  async getMotionSegmentsByTrip(tripId: string): Promise<MotionSegment[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<MotionSegment>(
+      `SELECT * FROM motion_segments WHERE trip_id = ? ORDER BY t_start ASC`,
+      [tripId]
+    );
+  }
+
+  async getRecentMotionSegments(limit: number): Promise<MotionSegment[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<MotionSegment>(
+      `SELECT * FROM motion_segments ORDER BY t_start DESC LIMIT ?`,
+      [limit]
+    );
+  }
+
+  // ===== CLASSIFIER DISAGREEMENTS =====
+
+  async insertClassifierDisagreements(rows: ClassifierDisagreement[]): Promise<void> {
+    if (rows.length === 0) return;
+    const db = await this.getDb();
+    for (const r of rows) {
+      await db.runAsync(
+        `INSERT INTO classifier_disagreements (trip_id, t, xgb_label, cmma_label, xgb_conf) VALUES (?, ?, ?, ?, ?)`,
+        [r.trip_id, r.t, r.xgb_label, r.cmma_label, r.xgb_conf]
+      );
+    }
+  }
+
+  async getRecentDisagreements(limit: number): Promise<ClassifierDisagreement[]> {
+    const db = await this.getDb();
+    return await db.getAllAsync<ClassifierDisagreement>(
+      `SELECT * FROM classifier_disagreements ORDER BY t DESC LIMIT ?`,
+      [limit]
+    );
   }
 
   // ===== UTILITY =====
