@@ -22,6 +22,7 @@
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */; };
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */; };
+				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 				AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
 				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitorTests.swift; sourceTree = "<group>"; };
 				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
+				F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
 		/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +162,7 @@
 				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */,
 				27DD8E3F247841C499C4F874 /* MotionMonitor.swift */,
 				AC2E3CF651B343B29521C295 /* LocationSession.swift */,
+				F111D1C01C4249859FA6F25B /* ImuSampler.swift */,
 				5D214BA2632C4A5283470AE6 /* Tests */,
 			);
 			path = RadziTracker;
@@ -415,6 +418,7 @@
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */,
 				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */,
 				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */,
+				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */,
 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
