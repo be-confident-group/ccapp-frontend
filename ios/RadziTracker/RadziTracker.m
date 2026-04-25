@@ -32,6 +32,4 @@ RCT_EXTERN_METHOD(getConfig:
                   (RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-+ (BOOL)requiresMainQueueSetup { return NO; }
-
 @end

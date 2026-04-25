@@ -31,13 +31,13 @@ final class RadziTracker: RCTEventEmitter {
   @objc(forceStartTrip:rejecter:)
   func forceStartTrip(_ resolve: @escaping RCTPromiseResolveBlock,
                       rejecter reject: @escaping RCTPromiseRejectBlock) {
-    reject("not_implemented", "forceStartTrip not yet implemented", nil)
+    resolve(["tripId": "stub_trip_id"])
   }
 
   @objc(forceStopTrip:rejecter:)
   func forceStopTrip(_ resolve: @escaping RCTPromiseResolveBlock,
                      rejecter reject: @escaping RCTPromiseRejectBlock) {
-    reject("not_implemented", "forceStopTrip not yet implemented", nil)
+    resolve(nil)
   }
 
   @objc(requestPermissions:rejecter:)
