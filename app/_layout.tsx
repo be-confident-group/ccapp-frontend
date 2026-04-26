@@ -1,6 +1,7 @@
 // CRITICAL: Import LocationTrackingService FIRST to register background task
 // This ensures TaskManager.defineTask() executes before any location updates arrive
 import '@/lib/services/LocationTrackingService';
+import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
@@ -56,6 +57,11 @@ export const unstable_settings = {
 function RootLayoutNav() {
   const { colorScheme } = useTheme();
   useProtectedRoute();
+
+  // Initialize TrackingCoordinator early so engine preference and native subscriptions are ready
+  useEffect(() => {
+    TrackingCoordinator.init().catch(err => console.error('[App] TrackingCoordinator init failed:', err));
+  }, []);
 
   // Handle taps on trip-completion and rate-trip notifications
   useEffect(() => {

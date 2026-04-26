@@ -7,7 +7,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { LocationTrackingService } from '@/lib/services';
 import {
   initializeAppStateListener,
   cleanupAppStateListener,
@@ -15,8 +14,8 @@ import {
   setTrackingPreference,
   getTrackingPreference,
 } from '@/lib/services/LocationTrackingService';
+import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { database } from '@/lib/database';
-import * as Location from 'expo-location';
 import { streamingSegmenter, sensorBuffer, type LiveActivityState } from '@/lib/activity';
 
 interface TrackingContextType {
@@ -72,13 +71,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
   async function checkStatus() {
     try {
-      const tracking = await LocationTrackingService.isTracking();
+      const status = await TrackingCoordinator.getStatus();
+      const tracking = 'state' in status ? status.state !== 'idle' : false;
       setIsTracking(tracking);
 
-      const perms = await LocationTrackingService.checkPermissions();
-      const hasPerms =
-        perms.foreground === Location.PermissionStatus.GRANTED &&
-        perms.background === Location.PermissionStatus.GRANTED;
+      const perms = await TrackingCoordinator.checkPermissions();
+      const hasPerms = perms.location === 'granted';
       setHasPermissions(hasPerms);
 
       // Make sure the ML sensor buffer is running if we are tracking
@@ -132,7 +130,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     try {
       if (isTracking) {
         // Stop tracking
-        await LocationTrackingService.stopTracking();
+        await TrackingCoordinator.stop();
         setIsTracking(false);
         await setTrackingPreference(false);
         console.log('[TrackingContext] Tracking stopped');
@@ -147,8 +145,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
               {
                 text: 'Grant Permission',
                 onPress: async () => {
-                  const perms = await LocationTrackingService.requestPermissions();
-                  if (perms.background === Location.PermissionStatus.GRANTED) {
+                  const perms = await TrackingCoordinator.requestPermissions();
+                  if (perms.location === 'granted') {
                     setHasPermissions(true);
                     await startTracking();
                   } else {
@@ -192,9 +190,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       }
 
       // Start tracking
-      await LocationTrackingService.startTracking({
-        showNotification: true,
-      });
+      await TrackingCoordinator.start();
 
       setIsTracking(true);
       await setTrackingPreference(true);

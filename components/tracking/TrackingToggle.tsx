@@ -6,9 +6,8 @@
 
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import { LocationTrackingService } from '@/lib/services';
+import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { database } from '@/lib/database';
-import * as Location from 'expo-location';
 
 export function useTrackingToggle() {
   const [isTracking, setIsTracking] = useState(false);
@@ -22,14 +21,12 @@ export function useTrackingToggle() {
 
   async function checkStatus() {
     try {
-      const tracking = await LocationTrackingService.isTracking();
+      const status = await TrackingCoordinator.getStatus();
+      const tracking = 'state' in status ? status.state !== 'idle' : false;
       setIsTracking(tracking);
 
-      const perms = await LocationTrackingService.checkPermissions();
-      setHasPermissions(
-        perms.foreground === Location.PermissionStatus.GRANTED &&
-        perms.background === Location.PermissionStatus.GRANTED
-      );
+      const perms = await TrackingCoordinator.checkPermissions();
+      setHasPermissions(perms.location === 'granted');
     } catch (error) {
       console.error('[TrackingToggle] Error checking status:', error);
     }
@@ -43,7 +40,7 @@ export function useTrackingToggle() {
     try {
       if (isTracking) {
         // Stop tracking
-        await LocationTrackingService.stopTracking();
+        await TrackingCoordinator.stop();
         setIsTracking(false);
         console.log('[TrackingToggle] Tracking stopped');
       } else {
@@ -57,8 +54,8 @@ export function useTrackingToggle() {
               {
                 text: 'Grant Permission',
                 onPress: async () => {
-                  const perms = await LocationTrackingService.requestPermissions();
-                  if (perms.background === Location.PermissionStatus.GRANTED) {
+                  const perms = await TrackingCoordinator.requestPermissions();
+                  if (perms.location === 'granted') {
                     setHasPermissions(true);
                     await startTracking();
                   } else {
@@ -91,9 +88,7 @@ export function useTrackingToggle() {
       await database.init();
 
       // Start tracking
-      await LocationTrackingService.startTracking({
-        showNotification: true,
-      });
+      await TrackingCoordinator.start();
 
       setIsTracking(true);
       console.log('[TrackingToggle] Tracking started');
