@@ -75,13 +75,28 @@ pod 'GRDB.swift', '~> 6.24'
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-    # GRDB.swift's grdb_config.h calls sqlite3_config/sqlite3_db_config without
-    # including sqlite3.h first. iOS 26 SDK promotes implicit-function-declaration
-    # to an error; suppress it just for GRDB to unblock the build.
-    installer.pods_project.targets.each do |target|
-      next unless target.name == 'GRDB.swift'
-      target.build_configurations.each do |config|
-        config.build_settings['OTHER_CFLAGS'] = '$(inherited) -Wno-implicit-function-declaration'
+    # GRDB.swift's grdb_config.h calls sqlite3_config/sqlite3_db_config.
+    # On Xcode 26 (Clang 17+), those functions become hard errors when the header
+    # is compiled as part of a Clang module: <sqlite3.h> is resolved via the module
+    # system rather than text inclusion, leaving the variadic functions undeclared.
+    # Wrap the affected inline functions with diagnostic pragmas so the error is
+    # suppressed in every target that imports the GRDB module.
+    grdb_header = "#{installer.sandbox.root}/Headers/Public/GRDB.swift/grdb_config.h"
+    if File.exist?(grdb_header)
+      content = File.read(grdb_header)
+      unless content.include?('#pragma clang diagnostic ignored "-Wimplicit-function-declaration"')
+        content = content.gsub(
+          "typedef void(*_errorLogCallback)",
+          "#pragma clang diagnostic push\n" \
+          "#pragma clang diagnostic ignored \"-Wimplicit-function-declaration\"\n" \
+          "typedef void(*_errorLogCallback)"
+        )
+        content = content.gsub(
+          "#endif\n\n// Expose APIs",
+          "#endif\n#pragma clang diagnostic pop\n\n// Expose APIs"
+        )
+        File.chmod(0644, grdb_header)
+        File.write(grdb_header, content)
       end
     end
   end
