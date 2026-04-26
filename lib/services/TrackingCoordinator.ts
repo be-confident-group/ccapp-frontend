@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import {
   RadziTrackerNative,
   RadziTrackerEvents,
@@ -39,6 +39,7 @@ class CoordinatorImpl {
     locationStored: new Set(),
   };
   private initialized = false;
+  private permissionListeners = new Set<(p: PermissionStatus) => void>();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -65,6 +66,19 @@ class CoordinatorImpl {
         console.error(`[TrackingCoordinator] recoverStaleTrip failed: ${String(err)}`);
       }
     }
+
+    const appStateSub = AppState.addEventListener('change', async (state) => {
+      if (state === 'active') {
+        try {
+          const perms = await this.checkPermissions();
+          if (perms.location !== 'granted' || perms.motion !== 'granted') {
+            console.warn(`[TrackingCoordinator] Permissions degraded: ${JSON.stringify(perms)}`);
+            this.permissionListeners.forEach(cb => cb(perms));
+          }
+        } catch {}
+      }
+    });
+    this.subs.push(() => appStateSub.remove());
   }
 
   async getEngine(): Promise<Engine> { return this.engine; }
@@ -163,6 +177,11 @@ class CoordinatorImpl {
   onLocationStored(cb: (e: LocationStoredEvent) => void): () => void {
     this.listeners.locationStored.add(cb);
     return () => this.listeners.locationStored.delete(cb);
+  }
+
+  onPermissionDowngrade(cb: (p: PermissionStatus) => void): () => void {
+    this.permissionListeners.add(cb);
+    return () => this.permissionListeners.delete(cb);
   }
 
   private attachNativeSubscriptions(): void {
