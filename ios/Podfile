@@ -75,5 +75,14 @@ pod 'GRDB.swift', '~> 6.24'
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+    # GRDB.swift's grdb_config.h calls sqlite3_config/sqlite3_db_config without
+    # including sqlite3.h first. iOS 26 SDK promotes implicit-function-declaration
+    # to an error; suppress it just for GRDB to unblock the build.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'GRDB.swift'
+      target.build_configurations.each do |config|
+        config.build_settings['OTHER_CFLAGS'] = '$(inherited) -Wno-implicit-function-declaration'
+      end
+    end
   end
 end
