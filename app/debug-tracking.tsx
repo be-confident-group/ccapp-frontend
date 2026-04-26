@@ -1,9 +1,10 @@
 /**
  * Debug Tracking Screen — tabbed ML debug view
- * Tab 1 Live: sensor buffer + ML classifier state (polls every 1.5 s)
- * Tab 2 Trip: active trip + GPS (polls every 3 s)
- * Tab 3 History: recent activity windows + recent trips (lazy)
- * Tab 4 Logs: live console log viewer
+ * Tab 1 Live:     TrackingCoordinator status + activity events (polls every 1.5 s)
+ * Tab 2 Trip:     active trip + backfill delta + permissions
+ * Tab 3 History:  recent motion segments (last 30)
+ * Tab 4 Disagree: ClassifierDisagreement rows (last 30)
+ * Tab 5 Logs:     live console log viewer
  */
 
 import {
@@ -11,26 +12,21 @@ import {
 } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
-import { LocationTrackingService } from '@/lib/services/LocationTrackingService';
-import { TripDetectionService } from '@/lib/services/TripDetectionService';
-import { ActivityClassifier } from '@/lib/services/ActivityClassifier';
-import { database, type ActivityWindow } from '@/lib/database';
+import { database } from '@/lib/database';
+import type { ClassifierDisagreement, MotionSegment } from '@/lib/database';
+import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
+import type { TrackingStatus, ActivityChangedEvent, StateChangedEvent } from '@/lib/native/RadziTracker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { onTrackingLog, getTrackingLogBuffer, clearTrackingLogBuffer, type LogEntry } from '@/lib/services/TrackingLogger';
-import { sensorBuffer } from '@/lib/activity/sensorBuffer';
-import { streamingSegmenter } from '@/lib/activity/streamingSegmenter';
 import type { ActivityClass } from '@/lib/activity/classifier';
-import * as TaskManager from 'expo-task-manager';
-import * as Location from 'expo-location';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = 'live' | 'trip' | 'history' | 'logs';
+type Tab = 'live' | 'trip' | 'history' | 'disagree' | 'logs';
 
-interface TripData {
-  isTracking: boolean;
-  taskRegistered: boolean;
-  permissions: { foreground: string; background: string };
+interface TripTabData {
+  stateLabel: string;
+  activeTripId: string | null;
   activeTrip: {
     id: string;
     startTime: string;
@@ -38,38 +34,33 @@ interface TripData {
     distance: number;
     type: string;
     classMethod: string;
-    locationsCount: number;
-    windowsCount: number;
+    backfillDelta: number | null;
   } | null;
-  lastDbLoc: {
-    lat: number; lng: number; accuracy: number | null; speed: number | null;
-    time: string; actType: string | null; actConf: number | null;
-  } | null;
-  currentGps: {
-    lat: number; lng: number; accuracy: number | null;
-    speedKmh: number; rawSpeed: number | null; wouldStart: boolean;
-  } | null;
-}
-
-interface HistoryData {
-  windows: ActivityWindow[];
-  trips: Array<{
-    id: string; type: string; status: string; distance: number;
-    duration: number; classMethod: string; startTime: string;
-  }>;
+  permissions: { location: string; motion: string };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const LABEL_COLORS: Record<ActivityClass, string> = {
+const LABEL_COLORS: Record<string, string> = {
   walking: '#22C55E',
   cycling: '#3B82F6',
   running: '#F97316',
   vehicle: '#EF4444',
+  automotive: '#EF4444',
+  stationary: '#9CA3AF',
+  unknown: '#6B7280',
 };
 
 function pct(v: number) { return `${(v * 100).toFixed(0)}%`; }
-function fix3(v: number) { return v.toFixed(3); }
+
+function fmtMs(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -95,110 +86,79 @@ function StatusDot({ on, warn }: { on: boolean; warn?: boolean }) {
   return <View style={[s.dot, { backgroundColor: warn ? '#F59E0B' : on ? '#22C55E' : '#EF4444' }]} />;
 }
 
-function ConfBar({ label, prob, colors }: { label: ActivityClass; prob: number; colors: any }) {
-  return (
-    <View style={s.confRow}>
-      <Text style={[s.confLabel, { color: LABEL_COLORS[label] }]}>{label.slice(0, 4)}</Text>
-      <View style={[s.confTrack, { backgroundColor: colors.border }]}>
-        <View style={[s.confFill, { width: `${Math.round(prob * 100)}%` as any, backgroundColor: LABEL_COLORS[label] }]} />
-      </View>
-      <Text style={[s.confPct, { color: colors.textSecondary }]}>{pct(prob)}</Text>
-    </View>
-  );
-}
-
 // ─── Tab 1: Live ─────────────────────────────────────────────────────────────
 
-function LiveTab({ liveState, colors }: {
-  liveState: {
-    sensor: ReturnType<typeof sensorBuffer.getDebugState> | null;
-    segmenter: ReturnType<typeof streamingSegmenter.getDebugState> | null;
-  };
+function LiveTab({ status, lastActivity, stateHistory, colors }: {
+  status: TrackingStatus | null;
+  lastActivity: ActivityChangedEvent | null;
+  stateHistory: StateChangedEvent[];
   colors: any;
 }) {
-  const { sensor, segmenter } = liveState;
+  const isRecording = status?.state === 'recording';
+  const isDetecting = status?.state === 'detecting';
 
   return (
     <ScrollView style={s.tabScroll} contentContainerStyle={s.tabContent}>
 
-      <Card title="SENSOR BUFFER" colors={colors}>
+      <Card title="TRACKING STATUS" colors={colors}>
         <View style={s.statusRow}>
-          <StatusDot on={sensor?.running ?? false} />
+          <StatusDot on={isRecording} warn={isDetecting} />
           <Text style={[s.statusText, { color: colors.text }]}>
-            {sensor?.running ? 'Running' : 'Stopped'} · app={sensor?.appState ?? '?'}
+            {status ? status.state.toUpperCase() : 'Loading…'}
           </Text>
         </View>
-        <Row label="Samples seen" value={String(sensor?.samplesSeen ?? 0)} colors={colors} />
-        <Row label="Buffer fill" value={`${sensor?.bufferFillPct ?? 0}%`} colors={colors} />
-        <Row label="Next window in" value={`${sensor?.nextWindowInSamples ?? 128} samples`} colors={colors} />
-        <Row label="Attached trip" value={sensor?.tripId ? sensor.tripId.slice(0, 20) + '…' : 'none'} colors={colors} />
-        {sensor?.lastAccel && (
-          <Row
-            label="Accel (x/y/z)"
-            value={`${fix3(sensor.lastAccel.x)} / ${fix3(sensor.lastAccel.y)} / ${fix3(sensor.lastAccel.z)}`}
-            colors={colors}
-          />
+        {status && (
+          <>
+            <Row label="Engine" value="native" valueColor="#3B82F6" colors={colors} />
+            <Row label="Activity" value={status.activity} valueColor={LABEL_COLORS[status.activity]} colors={colors} />
+            {status.tripId ? (
+              <Row label="Trip ID" value={status.tripId.slice(0, 22) + '…'} colors={colors} />
+            ) : null}
+            {status.gpsAccuracyMode && (
+              <Row label="GPS mode" value={status.gpsAccuracyMode} colors={colors} />
+            )}
+          </>
         )}
-        {sensor?.lastGyro && (
-          <Row
-            label="Gyro  (x/y/z)"
-            value={`${fix3(sensor.lastGyro.x)} / ${fix3(sensor.lastGyro.y)} / ${fix3(sensor.lastGyro.z)}`}
-            colors={colors}
-          />
+        {!status && (
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No native status (legacy engine or not init)</Text>
         )}
       </Card>
 
-      <Card title="LAST ML PREDICTION" colors={colors}>
-        {sensor?.lastPrediction ? (
+      <Card title="LAST ACTIVITY EVENT" colors={colors}>
+        {lastActivity ? (
           <>
-            <View style={[s.bigLabelRow, { borderColor: LABEL_COLORS[sensor.lastPrediction.label] }]}>
-              <Text style={[s.bigLabel, { color: LABEL_COLORS[sensor.lastPrediction.label] }]}>
-                {sensor.lastPrediction.label.toUpperCase()}
+            <View style={[s.bigLabelRow, { borderColor: LABEL_COLORS[lastActivity.activity] ?? colors.border }]}>
+              <Text style={[s.bigLabel, { color: LABEL_COLORS[lastActivity.activity] ?? colors.text }]}>
+                {lastActivity.activity.toUpperCase()}
               </Text>
-              <Text style={[s.bigConf, { color: colors.textSecondary }]}>
-                {pct(sensor.lastPrediction.confidence)}
-              </Text>
+              {lastActivity.confidence != null && (
+                <Text style={[s.bigConf, { color: colors.textSecondary }]}>
+                  {lastActivity.confidence}
+                </Text>
+              )}
             </View>
-            {(['walking', 'cycling', 'running', 'vehicle'] as ActivityClass[]).map((lbl, i) => (
-              <ConfBar key={lbl} label={lbl} prob={sensor.lastPrediction!.probs[i]} colors={colors} />
-            ))}
             <Row
-              label="Window"
-              value={`${new Date(sensor.lastPrediction.windowStart).toLocaleTimeString()} → ${new Date(sensor.lastPrediction.windowEnd).toLocaleTimeString()}`}
+              label="Time"
+              value={new Date(lastActivity.timestamp).toLocaleTimeString()}
               colors={colors}
             />
           </>
         ) : (
-          <Text style={[s.empty, { color: colors.textSecondary }]}>No prediction yet — sensor buffer needs 256 samples</Text>
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No activity event yet</Text>
         )}
       </Card>
 
-      <Card title="STREAMING SEGMENTER" colors={colors}>
-        <Row
-          label="Confirmed label"
-          value={segmenter?.current?.label ?? 'none'}
-          valueColor={segmenter?.current ? LABEL_COLORS[segmenter.current.label] : undefined}
-          colors={colors}
-        />
-        {segmenter?.current && (
-          <Row label="Confirmed conf." value={pct(segmenter.current.confidence)} colors={colors} />
+      <Card title="STATE HISTORY (last 20)" colors={colors}>
+        {stateHistory.length ? stateHistory.slice().reverse().map((e, i) => (
+          <View key={i} style={[s.windowRow, { borderBottomColor: colors.border }]}>
+            <Text style={[s.windowLabel, { color: colors.text }]}>{e.state}</Text>
+            <Text style={[s.windowTime, { color: colors.textSecondary }]}>
+              {new Date(e.timestamp).toLocaleTimeString()}
+            </Text>
+          </View>
+        )) : (
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No state changes yet</Text>
         )}
-        <Row
-          label="Pending label"
-          value={segmenter?.pendingLabel ?? 'none'}
-          valueColor={segmenter?.pendingLabel ? LABEL_COLORS[segmenter.pendingLabel] : undefined}
-          colors={colors}
-        />
-        <Row
-          label="Pending count"
-          value={`${segmenter?.pendingCount ?? 0} / ${segmenter?.confirmWindowsNeeded ?? 2}`}
-          colors={colors}
-        />
-        <Row
-          label="Segmenter trip"
-          value={segmenter?.tripId ? segmenter.tripId.slice(0, 20) + '…' : 'none'}
-          colors={colors}
-        />
       </Card>
 
     </ScrollView>
@@ -208,12 +168,11 @@ function LiveTab({ liveState, colors }: {
 // ─── Tab 2: Trip ─────────────────────────────────────────────────────────────
 
 function TripTab({
-  tripData, colors, gpsTestResult, testingGps,
-  onForceStart, onForceStop, onGpsTest, refreshing, onRefresh,
+  tripTabData, colors, refreshing, onRefresh, onForceStart, onForceStop,
 }: {
-  tripData: TripData | null; colors: any; gpsTestResult: string | null; testingGps: boolean;
-  onForceStart: () => void; onForceStop: () => void; onGpsTest: () => void;
+  tripTabData: TripTabData | null; colors: any;
   refreshing: boolean; onRefresh: () => void;
+  onForceStart: () => void; onForceStop: () => void;
 }) {
   return (
     <ScrollView
@@ -221,107 +180,54 @@ function TripTab({
       contentContainerStyle={s.tabContent}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Card title="TRACKING STATUS" colors={colors}>
-        <View style={s.statusRow}>
-          <StatusDot on={tripData?.isTracking ?? false} />
-          <Text style={[s.statusText, { color: colors.text }]}>
-            {tripData?.isTracking ? 'Tracking active' : 'Not tracking'}
-          </Text>
-        </View>
+      <Card title="COORDINATOR STATE" colors={colors}>
+        <Row label="State" value={tripTabData?.stateLabel ?? '…'} colors={colors} />
         <Row
-          label="BG task registered"
-          value={tripData?.taskRegistered ? 'YES' : 'NO'}
-          valueColor={tripData?.taskRegistered ? '#22C55E' : '#EF4444'}
+          label="Active trip"
+          value={tripTabData?.activeTripId
+            ? tripTabData.activeTripId.slice(0, 22) + '…'
+            : 'none'}
           colors={colors}
         />
-        <Row label="Foreground perm." value={tripData?.permissions.foreground ?? '?'} colors={colors} />
-        <Row label="Background perm." value={tripData?.permissions.background ?? '?'} colors={colors} />
+        <Row
+          label="Location perm."
+          value={tripTabData?.permissions.location ?? '?'}
+          valueColor={tripTabData?.permissions.location === 'granted' ? '#22C55E' : '#F59E0B'}
+          colors={colors}
+        />
+        <Row
+          label="Motion perm."
+          value={tripTabData?.permissions.motion ?? '?'}
+          valueColor={tripTabData?.permissions.motion === 'granted' ? '#22C55E' : '#F59E0B'}
+          colors={colors}
+        />
       </Card>
 
-      {tripData?.activeTrip ? (
+      {tripTabData?.activeTrip ? (
         <Card title="ACTIVE TRIP" colors={colors}>
-          <Row label="ID" value={tripData.activeTrip.id} colors={colors} />
-          <Row label="Type" value={tripData.activeTrip.type} colors={colors} />
+          <Row label="ID" value={tripTabData.activeTrip.id} colors={colors} />
+          <Row label="Type" value={tripTabData.activeTrip.type} colors={colors} />
           <Row
             label="Method"
-            value={tripData.activeTrip.classMethod}
-            valueColor={tripData.activeTrip.classMethod === 'ml' ? '#22C55E' : '#F59E0B'}
+            value={tripTabData.activeTrip.classMethod}
+            valueColor={tripTabData.activeTrip.classMethod === 'ml' ? '#22C55E' : '#F59E0B'}
             colors={colors}
           />
-          <Row label="Started" value={tripData.activeTrip.startTime} colors={colors} />
-          <Row label="Duration" value={tripData.activeTrip.duration} colors={colors} />
-          <Row label="Distance" value={`${(tripData.activeTrip.distance / 1000).toFixed(2)} km`} colors={colors} />
-          <Row label="GPS points" value={String(tripData.activeTrip.locationsCount)} colors={colors} />
-          <Row label="ML windows" value={String(tripData.activeTrip.windowsCount)} colors={colors} />
-        </Card>
-      ) : (
-        <Card title="ACTIVE TRIP" colors={colors}>
-          <Text style={[s.empty, { color: colors.textSecondary }]}>No active trip</Text>
-        </Card>
-      )}
-
-      {tripData?.lastDbLoc && (
-        <Card title="LAST DB LOCATION" colors={colors}>
-          <Row
-            label="Lat / Lng"
-            value={`${tripData.lastDbLoc.lat.toFixed(6)}, ${tripData.lastDbLoc.lng.toFixed(6)}`}
-            colors={colors}
-          />
-          <Row
-            label="Accuracy"
-            value={`${tripData.lastDbLoc.accuracy?.toFixed(0) ?? '?'} m`}
-            colors={colors}
-          />
-          <Row
-            label="Speed"
-            value={tripData.lastDbLoc.speed != null
-              ? `${(tripData.lastDbLoc.speed * 3.6).toFixed(1)} km/h`
-              : 'unavail.'}
-            colors={colors}
-          />
-          <Row label="Time" value={tripData.lastDbLoc.time} colors={colors} />
-          {tripData.lastDbLoc.actType && (
+          <Row label="Started" value={tripTabData.activeTrip.startTime} colors={colors} />
+          <Row label="Duration" value={tripTabData.activeTrip.duration} colors={colors} />
+          <Row label="Distance" value={`${(tripTabData.activeTrip.distance / 1000).toFixed(2)} km`} colors={colors} />
+          {tripTabData.activeTrip.backfillDelta != null && (
             <Row
-              label="Activity"
-              value={`${tripData.lastDbLoc.actType} (${pct(tripData.lastDbLoc.actConf ?? 0)})`}
-              valueColor={LABEL_COLORS[tripData.lastDbLoc.actType as ActivityClass] ?? colors.text}
+              label="Backfill Δ"
+              value={fmtMs(tripTabData.activeTrip.backfillDelta)}
+              valueColor="#F59E0B"
               colors={colors}
             />
           )}
         </Card>
-      )}
-
-      {tripData?.currentGps && (
-        <Card title="CURRENT GPS" colors={colors}>
-          <Row
-            label="Lat / Lng"
-            value={`${tripData.currentGps.lat.toFixed(6)}, ${tripData.currentGps.lng.toFixed(6)}`}
-            colors={colors}
-          />
-          <Row
-            label="Accuracy"
-            value={`${tripData.currentGps.accuracy?.toFixed(0) ?? '?'} m`}
-            colors={colors}
-          />
-          <Row
-            label="Speed"
-            value={tripData.currentGps.rawSpeed != null && tripData.currentGps.rawSpeed < 0
-              ? 'unavail. (iOS)'
-              : `${tripData.currentGps.speedKmh.toFixed(1)} km/h`}
-            colors={colors}
-          />
-          <Row
-            label="Would start trip"
-            value={tripData.currentGps.wouldStart ? 'YES ✓' : 'NO ✗'}
-            valueColor={tripData.currentGps.wouldStart ? '#22C55E' : '#EF4444'}
-            colors={colors}
-          />
-        </Card>
-      )}
-
-      {gpsTestResult && (
-        <Card title="GPS TEST RESULT" colors={colors}>
-          <Text style={[s.mono, { color: colors.text }]}>{gpsTestResult}</Text>
+      ) : (
+        <Card title="ACTIVE TRIP" colors={colors}>
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No active trip</Text>
         </Card>
       )}
 
@@ -332,9 +238,6 @@ function TripTab({
         <Pressable style={[s.btn, { backgroundColor: '#EF4444' }]} onPress={onForceStop}>
           <Text style={s.btnText}>Force Stop Trip</Text>
         </Pressable>
-        <Pressable style={[s.btn, { backgroundColor: colors.primary }]} onPress={onGpsTest} disabled={testingGps}>
-          <Text style={s.btnText}>{testingGps ? 'Testing…' : 'GPS Test'}</Text>
-        </Pressable>
       </View>
     </ScrollView>
   );
@@ -342,8 +245,8 @@ function TripTab({
 
 // ─── Tab 3: History ───────────────────────────────────────────────────────────
 
-function HistoryTab({ historyData, colors, onRefresh }: {
-  historyData: HistoryData | null; colors: any; onRefresh: () => void;
+function HistoryTab({ segments, colors, onRefresh }: {
+  segments: MotionSegment[]; colors: any; onRefresh: () => void;
 }) {
   return (
     <ScrollView style={s.tabScroll} contentContainerStyle={s.tabContent}>
@@ -351,45 +254,64 @@ function HistoryTab({ historyData, colors, onRefresh }: {
         <Text style={s.btnText}>Refresh</Text>
       </Pressable>
 
-      <Card title="RECENT ACTIVITY WINDOWS (last 30)" colors={colors}>
-        {historyData?.windows.length ? historyData.windows.map((w, i) => (
-          <View key={w.id ?? i} style={[s.windowRow, { borderBottomColor: colors.border }]}>
-            <Text style={[s.windowLabel, { color: LABEL_COLORS[w.label as ActivityClass] ?? colors.text }]}>
-              {w.label}
+      <Card title="RECENT MOTION SEGMENTS (last 30)" colors={colors}>
+        {segments.length ? segments.map((seg, i) => (
+          <View key={seg.id ?? i} style={[s.windowRow, { borderBottomColor: colors.border }]}>
+            <Text style={[s.windowLabel, { color: LABEL_COLORS[seg.activity] ?? colors.text }]}>
+              {seg.activity}
             </Text>
-            <Text style={[s.windowConf, { color: colors.textSecondary }]}>{pct(w.confidence)}</Text>
+            <Text style={[s.windowConf, { color: colors.textSecondary }]}>{seg.confidence}</Text>
             <Text style={[s.windowTime, { color: colors.textSecondary }]}>
-              {new Date(w.t_start).toLocaleTimeString()}
+              {new Date(seg.t_start).toLocaleTimeString()} · {seg.source}
             </Text>
           </View>
         )) : (
-          <Text style={[s.empty, { color: colors.textSecondary }]}>No windows recorded yet</Text>
-        )}
-      </Card>
-
-      <Card title="RECENT TRIPS (last 5)" colors={colors}>
-        {historyData?.trips.length ? historyData.trips.map((t, i) => (
-          <View key={i} style={[s.tripRow, { borderBottomColor: colors.border }]}>
-            <View style={s.tripRowLeft}>
-              <Text style={[s.tripType, { color: colors.text }]}>{t.type} · {t.status}</Text>
-              <Text style={[s.tripMeta, { color: colors.textSecondary }]}>{t.startTime}</Text>
-            </View>
-            <View style={s.tripRowRight}>
-              <Text style={[s.tripDist, { color: colors.text }]}>{(t.distance / 1000).toFixed(2)} km</Text>
-              <Text style={[s.tripMethod, { color: t.classMethod === 'ml' ? '#22C55E' : '#F59E0B' }]}>
-                {t.classMethod}
-              </Text>
-            </View>
-          </View>
-        )) : (
-          <Text style={[s.empty, { color: colors.textSecondary }]}>No trips yet</Text>
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No motion segments yet</Text>
         )}
       </Card>
     </ScrollView>
   );
 }
 
-// ─── Tab 4: Logs ─────────────────────────────────────────────────────────────
+// ─── Tab 4: Disagreements ────────────────────────────────────────────────────
+
+function DisagreementsTab({ rows, colors, onRefresh }: {
+  rows: ClassifierDisagreement[]; colors: any; onRefresh: () => void;
+}) {
+  return (
+    <ScrollView style={s.tabScroll} contentContainerStyle={s.tabContent}>
+      <Pressable style={[s.btn, { backgroundColor: colors.primary, marginBottom: 4 }]} onPress={onRefresh}>
+        <Text style={s.btnText}>Refresh</Text>
+      </Pressable>
+
+      <Card title="CLASSIFIER DISAGREEMENTS (last 30)" colors={colors}>
+        {rows.length ? rows.map((r, i) => (
+          <View key={r.id ?? i} style={[s.disagRow, { borderBottomColor: colors.border }]}>
+            <View style={s.disagLabels}>
+              <Text style={[s.disagCmma, { color: LABEL_COLORS[r.cmma_label] ?? colors.text }]}>
+                {r.cmma_label}
+              </Text>
+              <Text style={[s.disagArrow, { color: colors.textSecondary }]}>→</Text>
+              <Text style={[s.disagXgb, { color: LABEL_COLORS[r.xgb_label] ?? colors.text }]}>
+                {r.xgb_label}
+              </Text>
+              <Text style={[s.disagConf, { color: colors.textSecondary }]}>
+                {pct(r.xgb_conf)}
+              </Text>
+            </View>
+            <Text style={[s.disagTime, { color: colors.textSecondary }]}>
+              {new Date(r.t).toLocaleTimeString()}
+            </Text>
+          </View>
+        )) : (
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No disagreements recorded yet</Text>
+        )}
+      </Card>
+    </ScrollView>
+  );
+}
+
+// ─── Tab 5: Logs ─────────────────────────────────────────────────────────────
 
 function LogsTab({ logs, filter, onFilterChange, scrollRef, colors }: {
   logs: LogEntry[];
@@ -451,94 +373,68 @@ export default function DebugTrackingScreen() {
   const { colors } = useTheme();
   const [tab, setTab] = useState<Tab>('live');
 
-  // ── Tab 1: Live — polls every 1.5 s regardless of active tab ──
-  const [liveState, setLiveState] = useState<{
-    sensor: ReturnType<typeof sensorBuffer.getDebugState> | null;
-    segmenter: ReturnType<typeof streamingSegmenter.getDebugState> | null;
-  }>({ sensor: null, segmenter: null });
+  // ── Tab 1: Live — polls every 1.5 s, subscribes to events ──
+  const [status, setStatus] = useState<TrackingStatus | null>(null);
+  const [lastActivity, setLastActivity] = useState<ActivityChangedEvent | null>(null);
+  const [stateHistory, setStateHistory] = useState<StateChangedEvent[]>([]);
 
   useEffect(() => {
-    const poll = () => setLiveState({
-      sensor: sensorBuffer.getDebugState(),
-      segmenter: streamingSegmenter.getDebugState(),
-    });
+    const poll = async () => {
+      try {
+        const s = await TrackingCoordinator.getStatus();
+        if ('state' in s) setStatus(s as TrackingStatus);
+      } catch {}
+    };
     poll();
     const id = setInterval(poll, 1500);
-    return () => clearInterval(id);
+    const unsubAct = TrackingCoordinator.onActivityChange(setLastActivity);
+    const unsubState = TrackingCoordinator.onStateChange(e =>
+      setStateHistory(prev => [...prev.slice(-19), e])
+    );
+    return () => { clearInterval(id); unsubAct(); unsubState(); };
   }, []);
 
-  // ── Tab 2: Trip — polls every 3 s when tab is active ──
-  const [tripData, setTripData] = useState<TripData | null>(null);
+  // ── Tab 2: Trip ──
+  const [tripTabData, setTripTabData] = useState<TripTabData | null>(null);
   const [tripRefreshing, setTripRefreshing] = useState(false);
-  const [gpsTestResult, setGpsTestResult] = useState<string | null>(null);
-  const [testingGps, setTestingGps] = useState(false);
 
   const loadTripData = async () => {
     try {
-      const [isTracking, taskRegistered, permissions, activeTrip] = await Promise.all([
-        LocationTrackingService.isTracking(),
-        TaskManager.isTaskRegisteredAsync('background-location-task'),
-        LocationTrackingService.checkPermissions(),
-        database.getActiveTrip(),
-      ]);
+      const s = await TrackingCoordinator.getStatus();
+      const stateLabel = 'state' in s ? (s as TrackingStatus).state : 'legacy';
+      const activeTripId = ('tripId' in s ? (s as any).tripId : null) as string | null;
 
-      let activeTripInfo: TripData['activeTrip'] = null;
-      let lastDbLoc: TripData['lastDbLoc'] = null;
-
-      if (activeTrip) {
-        const [locs, windows] = await Promise.all([
-          database.getLocationsByTrip(activeTrip.id),
-          database.getActivityWindowsByTrip(activeTrip.id),
-        ]);
-        const elapsed = Date.now() - activeTrip.start_time;
-        activeTripInfo = {
-          id: activeTrip.id.slice(0, 20) + '…',
-          startTime: new Date(activeTrip.start_time).toLocaleTimeString(),
-          duration: `${Math.floor(elapsed / 60000)}m ${Math.floor((elapsed % 60000) / 1000)}s`,
-          distance: activeTrip.distance || 0,
-          type: activeTrip.type || '?',
-          classMethod: activeTrip.classification_method || 'speed',
-          locationsCount: locs.length,
-          windowsCount: windows.length,
-        };
-        if (locs.length > 0) {
-          const last = locs[locs.length - 1];
-          lastDbLoc = {
-            lat: last.latitude, lng: last.longitude, accuracy: last.accuracy,
-            speed: last.speed, time: new Date(last.timestamp).toLocaleTimeString(),
-            actType: last.activity_type ?? null, actConf: last.activity_confidence ?? null,
-          };
-        }
-      } else {
-        // Fall back to last saved location from any recent trip
-        const all = await database.getAllTrips();
-        for (const t of all.slice(-3).reverse()) {
-          const locs = await database.getLocationsByTrip(t.id);
-          if (locs.length > 0) {
-            const last = locs[locs.length - 1];
-            lastDbLoc = {
-              lat: last.latitude, lng: last.longitude, accuracy: last.accuracy,
-              speed: last.speed, time: new Date(last.timestamp).toLocaleTimeString(),
-              actType: last.activity_type ?? null, actConf: last.activity_confidence ?? null,
-            };
-            break;
+      let activeTrip: TripTabData['activeTrip'] = null;
+      if (activeTripId) {
+        const trip = await database.getTripById(activeTripId);
+        if (trip) {
+          const elapsed = Date.now() - trip.start_time;
+          let backfillDelta: number | null = null;
+          if ((trip as any).backfill_start && trip.start_time) {
+            backfillDelta = trip.start_time - (trip as any).backfill_start;
           }
+          activeTrip = {
+            id: trip.id.slice(0, 22) + '…',
+            startTime: new Date(trip.start_time).toLocaleTimeString(),
+            duration: fmtMs(elapsed),
+            distance: trip.distance || 0,
+            type: trip.type || '?',
+            classMethod: trip.classification_method || 'speed',
+            backfillDelta,
+          };
         }
       }
 
-      let currentGps: TripData['currentGps'] = null;
-      try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        const raw = loc.coords.speed;
-        const speed = raw != null && raw >= 0 ? raw : 0;
-        currentGps = {
-          lat: loc.coords.latitude, lng: loc.coords.longitude, accuracy: loc.coords.accuracy,
-          speedKmh: speed * 3.6, rawSpeed: raw,
-          wouldStart: TripDetectionService.shouldStartTrip(speed),
-        };
-      } catch { /* GPS unavailable */ }
-
-      setTripData({ isTracking, taskRegistered, permissions, activeTrip: activeTripInfo, lastDbLoc, currentGps });
+      const permissions = await TrackingCoordinator.checkPermissions();
+      setTripTabData({
+        stateLabel,
+        activeTripId,
+        activeTrip,
+        permissions: {
+          location: permissions.location,
+          motion: permissions.motion,
+        },
+      });
     } catch (err) {
       console.error('[DebugTracking] Trip tab error:', err);
     }
@@ -557,27 +453,13 @@ export default function DebugTrackingScreen() {
     setTripRefreshing(false);
   };
 
-  // ── Tab 3: History — lazy loads on tab switch ──
-  const [historyData, setHistoryData] = useState<HistoryData | null>(null);
+  // ── Tab 3: History ──
+  const [motionSegments, setMotionSegments] = useState<MotionSegment[]>([]);
 
   const loadHistory = async () => {
     try {
-      const [windows, allTrips] = await Promise.all([
-        database.getRecentActivityWindows(30),
-        database.getAllTrips(),
-      ]);
-      setHistoryData({
-        windows,
-        trips: allTrips.slice(-5).reverse().map(t => ({
-          id: t.id.slice(0, 16) + '…',
-          type: t.type || '?',
-          status: t.status,
-          distance: t.distance || 0,
-          duration: t.duration || 0,
-          classMethod: t.classification_method || 'speed',
-          startTime: new Date(t.start_time).toLocaleTimeString(),
-        })),
-      });
+      const segs = await database.getRecentMotionSegments(30);
+      setMotionSegments(segs);
     } catch (err) {
       console.error('[DebugTracking] History tab error:', err);
     }
@@ -587,7 +469,22 @@ export default function DebugTrackingScreen() {
     if (tab === 'history') loadHistory();
   }, [tab]);
 
-  // ── Tab 4: Logs — live subscription ──
+  // ── Tab 4: Disagreements ──
+  const [disagRows, setDisagRows] = useState<ClassifierDisagreement[]>([]);
+
+  const loadDisag = async () => {
+    try {
+      setDisagRows(await database.getRecentDisagreements(30));
+    } catch (err) {
+      console.error('[DebugTracking] Disagreements tab error:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'disagree') loadDisag();
+  }, [tab]);
+
+  // ── Tab 5: Logs ──
   const [consoleLogs, setConsoleLogs] = useState<LogEntry[]>([]);
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
   const logScrollRef = useRef<ScrollView>(null);
@@ -601,26 +498,8 @@ export default function DebugTrackingScreen() {
 
   const forceStartTrip = async () => {
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const raw = loc.coords.speed;
-      const speed = raw != null && raw >= 0 ? raw : 0;
-      const classification = ActivityClassifier.classifyBySpeed(speed);
-      const typeMap: Record<string, 'walk' | 'run' | 'cycle' | 'drive'> = {
-        walking: 'walk', running: 'run', cycling: 'cycle', driving: 'drive', stationary: 'walk',
-      };
-      const tripId = `debug_trip_${Date.now()}`;
-      await database.createTrip({
-        id: tripId, user_id: 'debug_user', status: 'active',
-        type: typeMap[classification.type] ?? 'walk',
-        start_time: Date.now(), created_at: Date.now(), updated_at: Date.now(),
-      });
-      await database.addLocation({
-        trip_id: tripId, latitude: loc.coords.latitude, longitude: loc.coords.longitude,
-        altitude: loc.coords.altitude, accuracy: loc.coords.accuracy, speed,
-        heading: loc.coords.heading, timestamp: loc.timestamp,
-        activity_type: classification.type, activity_confidence: classification.confidence, synced: 0,
-      });
-      Alert.alert('Trip Started', `ID: ${tripId.slice(0, 25)}…\nType: ${typeMap[classification.type] ?? 'walk'}`);
+      const result = await TrackingCoordinator.forceStartTrip();
+      Alert.alert('Trip Started', `ID: ${result.tripId.slice(0, 25)}…`);
       loadTripData();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Unknown');
@@ -629,40 +508,11 @@ export default function DebugTrackingScreen() {
 
   const forceStopTrip = async () => {
     try {
-      const active = await database.getActiveTrip();
-      if (!active) { Alert.alert('No active trip'); return; }
-      await database.updateTrip(active.id, { status: 'completed', end_time: Date.now(), updated_at: Date.now() });
-      Alert.alert('Trip Stopped', active.id.slice(0, 25) + '…');
+      await TrackingCoordinator.forceStopTrip();
+      Alert.alert('Trip Stopped');
       loadTripData();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Unknown');
-    }
-  };
-
-  const testGps = async () => {
-    setTestingGps(true);
-    setGpsTestResult(null);
-    try {
-      const t0 = Date.now();
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const elapsed = Date.now() - t0;
-      const raw = loc.coords.speed;
-      const speed = raw != null && raw >= 0 ? raw : 0;
-      const config = TripDetectionService.getConfig();
-      const wouldStart = TripDetectionService.shouldStartTrip(speed);
-      setGpsTestResult([
-        `Responded in ${elapsed} ms`,
-        `Coords: ${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`,
-        `Accuracy: ${loc.coords.accuracy?.toFixed(0) ?? '?'} m`,
-        raw != null && raw < 0
-          ? `Speed: unavailable (iOS returned ${raw})`
-          : `Speed: ${(speed * 3.6).toFixed(1)} km/h (need >${(config.movementSpeedThreshold * 3.6).toFixed(1)})`,
-        `Would start trip: ${wouldStart ? 'YES ✓' : 'NO ✗'}`,
-      ].join('\n'));
-    } catch (err) {
-      setGpsTestResult(`GPS Error: ${err instanceof Error ? err.message : 'Unknown'}`);
-    } finally {
-      setTestingGps(false);
     }
   };
 
@@ -672,6 +522,7 @@ export default function DebugTrackingScreen() {
     { key: 'live', label: 'Live' },
     { key: 'trip', label: 'Trip' },
     { key: 'history', label: 'History' },
+    { key: 'disagree', label: 'Disagree' },
     { key: 'logs', label: 'Logs' },
   ];
 
@@ -699,16 +550,30 @@ export default function DebugTrackingScreen() {
       </View>
 
       {/* Tab content */}
-      {tab === 'live' && <LiveTab liveState={liveState} colors={colors} />}
-      {tab === 'trip' && (
-        <TripTab
-          tripData={tripData} colors={colors}
-          gpsTestResult={gpsTestResult} testingGps={testingGps}
-          onForceStart={forceStartTrip} onForceStop={forceStopTrip} onGpsTest={testGps}
-          refreshing={tripRefreshing} onRefresh={handleTripRefresh}
+      {tab === 'live' && (
+        <LiveTab
+          status={status}
+          lastActivity={lastActivity}
+          stateHistory={stateHistory}
+          colors={colors}
         />
       )}
-      {tab === 'history' && <HistoryTab historyData={historyData} colors={colors} onRefresh={loadHistory} />}
+      {tab === 'trip' && (
+        <TripTab
+          tripTabData={tripTabData}
+          colors={colors}
+          refreshing={tripRefreshing}
+          onRefresh={handleTripRefresh}
+          onForceStart={forceStartTrip}
+          onForceStop={forceStopTrip}
+        />
+      )}
+      {tab === 'history' && (
+        <HistoryTab segments={motionSegments} colors={colors} onRefresh={loadHistory} />
+      )}
+      {tab === 'disagree' && (
+        <DisagreementsTab rows={disagRows} colors={colors} onRefresh={loadDisag} />
+      )}
       {tab === 'logs' && (
         <LogsTab
           logs={consoleLogs} filter={logFilter} onFilterChange={setLogFilter}
@@ -732,8 +597,8 @@ const s = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '600' },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 10, position: 'relative' },
-  tabLabel: { fontSize: 13, fontWeight: '500' },
-  tabUnderline: { position: 'absolute', bottom: 0, left: 8, right: 8, height: 2, borderRadius: 1 },
+  tabLabel: { fontSize: 12, fontWeight: '500' },
+  tabUnderline: { position: 'absolute', bottom: 0, left: 4, right: 4, height: 2, borderRadius: 1 },
   tabScroll: { flex: 1 },
   tabContent: { padding: 12, gap: 12 },
   card: { borderRadius: 10, borderWidth: 1, padding: 12, gap: 6 },
@@ -750,13 +615,7 @@ const s = StyleSheet.create({
   },
   bigLabel: { fontSize: 20, fontWeight: '700', letterSpacing: 1 },
   bigConf: { fontSize: 16, fontWeight: '600' },
-  confRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 2 },
-  confLabel: { width: 36, fontSize: 11, fontWeight: '600' },
-  confTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
-  confFill: { height: 8 },
-  confPct: { width: 36, fontSize: 11, textAlign: 'right' },
   empty: { fontSize: 13, fontStyle: 'italic', paddingVertical: 4 },
-  mono: { fontSize: 11, fontFamily: 'monospace', lineHeight: 18 },
   actions: { gap: 8, marginTop: 4 },
   btn: { borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
@@ -769,17 +628,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 5, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  windowLabel: { fontSize: 13, fontWeight: '600', width: 70 },
-  windowConf: { fontSize: 12, width: 40, textAlign: 'right' },
+  windowLabel: { fontSize: 13, fontWeight: '600', width: 80 },
+  windowConf: { fontSize: 12, width: 44, textAlign: 'center' },
   windowTime: { fontSize: 11, flex: 1, textAlign: 'right' },
-  tripRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
+  disagRow: {
     paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  tripRowLeft: { flex: 1 },
-  tripRowRight: { alignItems: 'flex-end' },
-  tripType: { fontSize: 13, fontWeight: '500' },
-  tripMeta: { fontSize: 11 },
-  tripDist: { fontSize: 13, fontWeight: '500' },
-  tripMethod: { fontSize: 11, fontWeight: '600' },
+  disagLabels: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  disagCmma: { fontSize: 13, fontWeight: '600' },
+  disagArrow: { fontSize: 12 },
+  disagXgb: { fontSize: 13, fontWeight: '600', flex: 1 },
+  disagConf: { fontSize: 12 },
+  disagTime: { fontSize: 11 },
 });
