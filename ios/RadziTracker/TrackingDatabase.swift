@@ -145,6 +145,19 @@ final class TrackingDatabase {
 
   // MARK: - Motion segments
 
+  func updateLastMotionSegmentEnd(tripId: String, tEnd: Int64) throws {
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: """
+          UPDATE motion_segments SET t_end = ?
+          WHERE trip_id = ? AND id = (
+            SELECT MAX(id) FROM motion_segments WHERE trip_id = ?
+          )
+        """, arguments: [tEnd, tripId, tripId])
+      }
+    }
+  }
+
   func insertMotionSegment(tripId: String, tStart: Int64, tEnd: Int64,
                             activity: String, confidence: String, source: String) throws {
     try writeQueue.sync {

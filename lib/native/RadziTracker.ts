@@ -72,6 +72,7 @@ interface RadziTrackerNativeModule {
   setConfig(config: Partial<TrackerConfig>): Promise<void>;
   getConfig(): Promise<TrackerConfig>;
   recoverStaleTrip(): Promise<{ recovered: string | null }>;
+  notifyFinalizationComplete(): Promise<void>;
 }
 
 const Native = NativeModules.RadziTracker as RadziTrackerNativeModule | undefined;
@@ -93,6 +94,7 @@ export const RadziTrackerNative: RadziTrackerNativeModule = Native ?? {
   setConfig: unavailable,
   getConfig: unavailable,
   recoverStaleTrip: unavailable,
+  notifyFinalizationComplete: () => Promise.resolve(),
 };
 
 const emitter = Native ? new NativeEventEmitter(NativeModules.RadziTracker) : null;

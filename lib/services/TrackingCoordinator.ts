@@ -38,13 +38,16 @@ class CoordinatorImpl {
     tripEnded: new Set(),
     locationStored: new Set(),
   };
-  private initialized = false;
+  private initPromise: Promise<void> | null = null;
   private permissionListeners = new Set<(p: PermissionStatus) => void>();
 
   async init(): Promise<void> {
-    if (this.initialized) return;
-    this.initialized = true;
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this._doInit();
+    return this.initPromise;
+  }
 
+  private async _doInit(): Promise<void> {
     const storedEngine = await AsyncStorage.getItem(ENGINE_KEY);
     this.engine = storedEngine === 'legacy' ? 'legacy' : 'native';
     const storedManual = await AsyncStorage.getItem(MANUAL_ONLY_KEY);
@@ -84,6 +87,7 @@ class CoordinatorImpl {
   async getEngine(): Promise<Engine> { return this.engine; }
 
   async setEngine(engine: Engine): Promise<void> {
+    this.engine = engine;
     await AsyncStorage.setItem(ENGINE_KEY, engine);
   }
 

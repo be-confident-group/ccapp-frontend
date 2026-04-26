@@ -27,6 +27,14 @@ export class TripFinalizationPipeline {
       console.error(`[TripFinalizationPipeline] sync failed: ${String(err)}`);
     }
 
+    // Signal native state machine to return to idle
+    try {
+      const { RadziTrackerNative } = await import('../native/RadziTracker');
+      await RadziTrackerNative.notifyFinalizationComplete();
+    } catch (err) {
+      console.warn(`[TripFinalizationPipeline] notifyFinalizationComplete failed: ${String(err)}`);
+    }
+
     console.log('[TripFinalizationPipeline] complete for', tripId);
   }
 }

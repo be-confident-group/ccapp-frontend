@@ -152,10 +152,12 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
     }
 
     if let tripId = stateMachine.currentTripId {
+      let ts = Int64(timestamp.timeIntervalSince1970 * 1000)
+      try? TrackingDatabase.shared.updateLastMotionSegmentEnd(tripId: tripId, tEnd: ts)
       try? TrackingDatabase.shared.insertMotionSegment(
         tripId: tripId,
-        tStart: Int64(timestamp.timeIntervalSince1970 * 1000),
-        tEnd: Int64(timestamp.timeIntervalSince1970 * 1000),
+        tStart: ts,
+        tEnd: ts,
         activity: activity.rawValue,
         confidence: confidence.rawValue,
         source: "cmma"
@@ -240,6 +242,13 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
   }
 
   // MARK: - Recovery
+
+  @objc(notifyFinalizationComplete:rejecter:)
+  func notifyFinalizationComplete(_ resolve: @escaping RCTPromiseResolveBlock,
+                                   rejecter reject: @escaping RCTPromiseRejectBlock) {
+    stateMachine.onFinalizationComplete()
+    resolve(nil)
+  }
 
   @objc(recoverStaleTrip:rejecter:)
   func recoverStaleTrip(_ resolve: @escaping RCTPromiseResolveBlock,

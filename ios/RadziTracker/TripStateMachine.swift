@@ -31,6 +31,7 @@ final class TripStateMachine {
 
   private var detectingStartTime: Date?
   private var stationaryStartTime: Date?
+  private var cooldownEnteredAt: Date?
   private var lastMotionActivity: MotionMonitor.Activity = .unknown
   private weak var motionMonitorRef: MotionMonitor?
 
@@ -60,7 +61,7 @@ final class TripStateMachine {
       if Self.isMoving(activity) {
         transitionCooldownToRecording()
       } else if activity == .stationary {
-        if let s = stationaryStartTime, Date().timeIntervalSince(s) >= config.cooldownEndSeconds {
+        if let s = cooldownEnteredAt, Date().timeIntervalSince(s) >= config.cooldownEndSeconds {
           transitionCooldownToEnding()
         }
       }
@@ -196,12 +197,14 @@ final class TripStateMachine {
 
   private func transitionRecordingToCooldown() {
     transition(to: .cooldown)
+    cooldownEnteredAt = Date()
     delegate?.stateMachine(self, requestAccuracyMode: .hundred)
     delegate?.stateMachine(self, requestImuRunning: false, tripId: currentTripId)
   }
 
   private func transitionCooldownToRecording() {
     stationaryStartTime = nil
+    cooldownEnteredAt = nil
     transition(to: .recording)
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: currentTripId)
@@ -209,6 +212,7 @@ final class TripStateMachine {
 
   private func transitionCooldownToEnding() {
     guard let tripId = currentTripId else { return }
+    cooldownEnteredAt = nil
     let now = Int64(Date().timeIntervalSince1970 * 1000)
     try? TrackingDatabase.shared.endTrip(tripId: tripId, endTime: now)
     transition(to: .ending)
@@ -220,6 +224,7 @@ final class TripStateMachine {
   func onFinalizationComplete() {
     currentTripId = nil
     stationaryStartTime = nil
+    cooldownEnteredAt = nil
     transition(to: .idle)
   }
 
