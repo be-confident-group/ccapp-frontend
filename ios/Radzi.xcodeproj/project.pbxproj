@@ -9,23 +9,23 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		16837911C3560D4CED48AD70 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 17488A59446924C55365F449 /* PrivacyInfo.xcprivacy */; };
-		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */; };
-		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D8728C16C5E9BFB8D85C8DFB /* libPods-Radzi.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CBCB87C40AC8AC53A1A8B53D /* libPods-Radzi.a */; };
-		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		21549090062F4355B7D59F65 /* RadziTracker.m in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */; };
+		2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */; };
+		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */; };
+		540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
+		547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */; };
+		78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
+		81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
+		A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
+		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27DD8E3F247841C499C4F874 /* MotionMonitor.swift */; };
 		BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */; };
-				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
-				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */; };
-				BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27DD8E3F247841C499C4F874 /* MotionMonitor.swift */; };
-				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
-				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */; };
-				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */; };
-				C3A1B2D4E5F6789012345678 /* TripStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */; };
-				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
-				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
-		/* End PBXBuildFile section */
+		C3A1B2D4E5F6789012345678 /* TripStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */; };
+		D8728C16C5E9BFB8D85C8DFB /* libPods-Radzi.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CBCB87C40AC8AC53A1A8B53D /* libPods-Radzi.a */; };
+		E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */; };
+		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Radzi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Radzi.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -33,27 +33,27 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Radzi/Info.plist; sourceTree = "<group>"; };
 		17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Radzi/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		17488A59446924C55365F449 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Radzi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
+		22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
+		27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
+		4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
+		4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachine.swift; sourceTree = "<group>"; };
+		7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadziTracker.swift; sourceTree = "<group>"; };
+		7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RadziTracker.m; sourceTree = "<group>"; };
 		8085527C8F19CD6C59AF88B6 /* Pods-Radzi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Radzi.release.xcconfig"; path = "Target Support Files/Pods-Radzi/Pods-Radzi.release.xcconfig"; sourceTree = "<group>"; };
 		9C28B1DDC81EF41288A40348 /* Pods-Radzi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Radzi.debug.xcconfig"; path = "Target Support Files/Pods-Radzi/Pods-Radzi.debug.xcconfig"; sourceTree = "<group>"; };
+		A0A844E99ACA41668035F580 /* RadziTracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RadziTracker.h; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Radzi/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		CBCB87C40AC8AC53A1A8B53D /* libPods-Radzi.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Radzi.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachineTests.swift; sourceTree = "<group>"; };
+		DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitorTests.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Radzi/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Radzi-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Radzi-Bridging-Header.h"; path = "Radzi/Radzi-Bridging-Header.h"; sourceTree = "<group>"; };
-		A0A844E99ACA41668035F580 /* RadziTracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RadziTracker.h; sourceTree = "<group>"; };
-		7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RadziTracker.m; sourceTree = "<group>"; };
-		7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadziTracker.swift; sourceTree = "<group>"; };
-				21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
-				4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
-				27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
-				AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
-				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitorTests.swift; sourceTree = "<group>"; };
-				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
-				D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachineTests.swift; sourceTree = "<group>"; };
-				F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
-				4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStateMachine.swift; sourceTree = "<group>"; };
-		/* End PBXFileReference section */
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
@@ -101,6 +101,16 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		5D214BA2632C4A5283470AE6 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */,
+				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */,
+				D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
@@ -139,23 +149,6 @@
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
-		A75BBFF2B6E834728A0803D3 /* Radzi */ = {
-			isa = PBXGroup;
-			children = (
-				17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */,
-			);
-			name = Radzi;
-			sourceTree = "<group>";
-		};
-		BB2F792B24A3F905000567C9 /* Supporting */ = {
-			isa = PBXGroup;
-			children = (
-				BB2F792C24A3F905000567C9 /* Expo.plist */,
-			);
-			name = Supporting;
-			path = Radzi/Supporting;
-			sourceTree = "<group>";
-		};
 		A17E017E0F08435FAFAD157B /* RadziTracker */ = {
 			isa = PBXGroup;
 			children = (
@@ -173,17 +166,24 @@
 			path = RadziTracker;
 			sourceTree = "<group>";
 		};
-				5D214BA2632C4A5283470AE6 /* Tests */ = {
+		A75BBFF2B6E834728A0803D3 /* Radzi */ = {
 			isa = PBXGroup;
 			children = (
-				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */,
-				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */,
-								D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */,
+				17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */,
 			);
-			path = Tests;
+			name = Radzi;
 			sourceTree = "<group>";
 		};
-		/* End PBXGroup section */
+		BB2F792B24A3F905000567C9 /* Supporting */ = {
+			isa = PBXGroup;
+			children = (
+				BB2F792C24A3F905000567C9 /* Expo.plist */,
+			);
+			name = Supporting;
+			path = Radzi/Supporting;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
 		13B07F861A680F5B00A75B9A /* Radzi */ = {
@@ -416,18 +416,15 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */,
-							21549090062F4355B7D59F65 /* RadziTracker.m in Sources */,
+				21549090062F4355B7D59F65 /* RadziTracker.m in Sources */,
 				BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */,
 				A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */,
 				E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */,
 				BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */,
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */,
-				47308FBEF6B6439FACFCC714 /* MotionMonitorTests.swift in Sources */,
-				2A48C5A805C74731BFFE9178 /* LocationSessionTests.swift in Sources */,
-								C3A1B2D4E5F6789012345678 /* TripStateMachineTests.swift in Sources */,
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */,
 				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */,
-);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
