@@ -59,6 +59,10 @@ class CoordinatorImpl {
     }
 
     if (this.engine === 'native') {
+      try {
+        const { LocationTrackingService } = await import('./LocationTrackingService');
+        await LocationTrackingService.stopTracking();
+      } catch { /* ignore */ }
       this.attachNativeSubscriptions();
       try {
         const result = await RadziTrackerNative.recoverStaleTrip();

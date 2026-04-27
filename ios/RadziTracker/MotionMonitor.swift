@@ -28,6 +28,11 @@ final class MotionMonitor {
   private var currentSince: Date?
   private var sustainTimer: Timer?
   private var sustainTargets: [(activity: Activity, seconds: TimeInterval)] = []
+  // Gap-tolerant sustain tracking: brief CMMA transitions (unknown/stationary
+  // between walking events) must not reset the sustain countdown.
+  private var activityFirstSeen: [String: Date] = [:]
+  private var activityLastSeen:  [String: Date] = [:]
+  private let gapToleranceSec: TimeInterval = 15
 
   init() {
     opQueue.maxConcurrentOperationCount = 1
@@ -53,6 +58,8 @@ final class MotionMonitor {
     manager.stopActivityUpdates()
     sustainTimer?.invalidate()
     sustainTimer = nil
+    activityFirstSeen.removeAll()
+    activityLastSeen.removeAll()
     TrackingLogger.shared.log(.info, "MotionMonitor: stopped")
   }
 
@@ -88,9 +95,24 @@ final class MotionMonitor {
     }
     let prev = currentActivity
     if new != prev {
+      let now = Date()
+      activityLastSeen[prev.rawValue] = now
+
       currentActivity = new
       currentConfidence = conf
-      currentSince = Date()
+
+      // If we're returning to an activity we left within the gap tolerance window,
+      // restore its original first-seen time so brief unknown/stationary blips
+      // from CMMA don't reset the sustain countdown back to zero.
+      if let firstSeen = activityFirstSeen[new.rawValue],
+         let lastSeen  = activityLastSeen[new.rawValue],
+         now.timeIntervalSince(lastSeen) < gapToleranceSec {
+        currentSince = firstSeen
+      } else {
+        activityFirstSeen[new.rawValue] = now
+        currentSince = now
+      }
+
       DispatchQueue.main.async {
         self.delegate?.motionMonitor(self, didChangeActivity: new, confidence: conf, timestamp: Date())
       }
@@ -109,6 +131,10 @@ final class MotionMonitor {
       let elapsed = now.timeIntervalSince(since)
       let remaining = target.seconds - elapsed
       if remaining <= 0 {
+        // Clear gap-tracking state so the same activity doesn't re-trigger
+        // for the rest of this session without a fresh start.
+        activityFirstSeen.removeValue(forKey: target.activity.rawValue)
+        activityLastSeen.removeValue(forKey: target.activity.rawValue)
         DispatchQueue.main.async {
           self.delegate?.motionMonitor(self, didSustainActivity: target.activity,
                                        forSeconds: target.seconds)
@@ -154,9 +180,18 @@ extension MotionMonitor {
     }
     let prev = currentActivity
     if activity != prev {
+      let now = Date()
+      activityLastSeen[prev.rawValue] = now
       currentActivity = activity
       currentConfidence = confidence
-      currentSince = Date()
+      if let firstSeen = activityFirstSeen[activity.rawValue],
+         let lastSeen  = activityLastSeen[activity.rawValue],
+         now.timeIntervalSince(lastSeen) < gapToleranceSec {
+        currentSince = firstSeen
+      } else {
+        activityFirstSeen[activity.rawValue] = now
+        currentSince = now
+      }
       delegate?.motionMonitor(self, didChangeActivity: activity, confidence: confidence, timestamp: Date())
       rescheduleSustainTimer()
     } else {

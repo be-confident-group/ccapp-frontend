@@ -1,4 +1,5 @@
 import { database } from '../database';
+import { calculateDistance } from '../utils/geoCalculations';
 
 export class TripFinalizationPipeline {
   static async finalize(tripId: string): Promise<void> {
@@ -11,7 +12,40 @@ export class TripFinalizationPipeline {
       return;
     }
 
-    // Run shadow classifier (best-effort, import lazily to avoid circular deps)
+    // Calculate distance and duration from stored GPS location points
+    try {
+      const locations = await database.getLocationsByTrip(tripId);
+      if (locations.length >= 2) {
+        let distanceMeters = 0;
+        for (let i = 1; i < locations.length; i++) {
+          distanceMeters += calculateDistance(
+            locations[i - 1].latitude, locations[i - 1].longitude,
+            locations[i].latitude,     locations[i].longitude
+          );
+        }
+        const durationSec = Math.round(
+          (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000
+        );
+        await database.updateTrip(tripId, {
+          distance: Math.round(distanceMeters) / 1000,
+          duration: durationSec,
+        });
+        console.log(`[TripFinalizationPipeline] stats: ${(distanceMeters / 1000).toFixed(3)} km, ${durationSec}s`);
+      }
+    } catch (err) {
+      console.warn(`[TripFinalizationPipeline] stats calculation failed: ${String(err)}`);
+    }
+
+    // Update classification method from CMMA segmenter
+    try {
+      const { MotionActivitySegmenter } = await import('./MotionActivitySegmenter');
+      const seg = await MotionActivitySegmenter.segmentTrip(tripId);
+      await database.updateTrip(tripId, { classification_method: seg.classificationMethod });
+    } catch (err) {
+      console.warn(`[TripFinalizationPipeline] segmentation failed: ${String(err)}`);
+    }
+
+    // Run shadow classifier (best-effort)
     try {
       const { ShadowClassifierLogger } = await import('./ShadowClassifierLogger');
       await ShadowClassifierLogger.run(tripId);
