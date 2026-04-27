@@ -79,8 +79,9 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       const hasPerms = perms.location === 'granted';
       setHasPermissions(hasPerms);
 
-      // Make sure the ML sensor buffer is running if we are tracking
-      if (tracking) {
+      // Make sure the ML sensor buffer is running if tracking on legacy engine.
+      // Native engine uses CMMA for activity detection — no sensor buffer needed.
+      if (tracking && !('state' in status && (await TrackingCoordinator.getEngine()) === 'native')) {
         try {
           await sensorBuffer.start();
           const existing = await database.getActiveTrip();

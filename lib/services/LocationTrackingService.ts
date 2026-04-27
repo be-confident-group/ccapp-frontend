@@ -369,11 +369,18 @@ async function handleForegroundResume(): Promise<void> {
     // Initialize database in case it's not ready
     await database.init();
 
-    // Clean up any invalid trips in local DB (GPS drift, too short, etc.)
-    await syncService.cleanupInvalidTrips();
+    // Trip lifecycle management (zombie detection, cleanup) is only relevant
+    // when the legacy engine is actively tracking. The native engine manages
+    // its own trip lifecycle and shares the same DB — running zombie detection
+    // here while a native trip is active could prematurely finalize it.
+    const legacyTracking = await LocationTrackingService.isTracking();
+    if (legacyTracking) {
+      // Clean up any invalid trips in local DB (GPS drift, too short, etc.)
+      await syncService.cleanupInvalidTrips();
 
-    // Check for zombie trips
-    await detectAndHandleZombieTrips();
+      // Check for zombie trips
+      await detectAndHandleZombieTrips();
+    }
 
     // Re-check permissions
     await checkPermissionRevocation();
