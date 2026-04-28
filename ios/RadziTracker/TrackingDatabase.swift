@@ -2,7 +2,9 @@ import Foundation
 import GRDB
 
 /// Writes to the same SQLite file that expo-sqlite reads from.
-/// Path: <Documents>/SQLite/radzi.db (must match expo-sqlite's path).
+/// expo-sqlite stores its databases at <Documents>/SQLite/<name>.db
+/// (confirmed from expo-sqlite iOS source: appContext.config.documentDirectory + "SQLite").
+/// GRDB must open the same path so JS reads and native writes see the same file.
 final class TrackingDatabase {
   static let shared = TrackingDatabase()
 
@@ -20,8 +22,9 @@ final class TrackingDatabase {
         try db.execute(sql: "PRAGMA journal_mode=WAL")
       }
       self.queue = try DatabaseQueue(path: dbPath, configuration: config)
+      TrackingLogger.shared.log(.info, "TrackingDatabase: opened at \(dbPath)")
     } catch {
-      fatalError("[TrackingDatabase] Failed to open SQLite: \(error)")
+      fatalError("[TrackingDatabase] Failed to open SQLite at \(dbPath): \(error)")
     }
   }
 
@@ -57,13 +60,54 @@ final class TrackingDatabase {
   }
 
   func endTrip(tripId: String, endTime: Int64) throws {
+    // Compute distance and duration from stored location points while we still
+    // have full WAL visibility.  The JS finalization pipeline reads from
+    // expo-sqlite which uses a different WAL reader and cannot see GRDB writes,
+    // so we must persist stats into the trips row before handing off.
+    let stats = computeTripStats(tripId: tripId)
+
     try writeQueue.sync {
       try queue.write { db in
         try db.execute(sql: """
-          UPDATE trips SET status = 'completed', end_time = ?, updated_at = ?, detection_state = 'ending'
+          UPDATE trips
+          SET status = 'completed',
+              end_time = ?,
+              updated_at = ?,
+              detection_state = 'ending',
+              distance = ?,
+              duration = ?
           WHERE id = ?
-        """, arguments: [endTime, endTime, tripId])
+        """, arguments: [endTime, endTime, stats.distanceKm, stats.durationSec, tripId])
       }
+    }
+    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.3f", stats.distanceKm)) km, \(stats.durationSec)s")
+  }
+
+  /// Reads all location rows for the trip and returns total haversine distance (km)
+  /// and duration (seconds).  Called from endTrip() so stats are committed
+  /// atomically and visible to the JS layer via the trips row.
+  private func computeTripStats(tripId: String) -> (distanceKm: Double, durationSec: Int64) {
+    struct LocRow {
+      let lat: Double; let lng: Double; let ts: Int64
+    }
+    do {
+      let rows = try queue.read { db -> [LocRow] in
+        let rawRows = try Row.fetchAll(db,
+          sql: "SELECT latitude, longitude, timestamp FROM locations WHERE trip_id = ? ORDER BY timestamp ASC",
+          arguments: [tripId])
+        return rawRows.map { LocRow(lat: $0["latitude"], lng: $0["longitude"], ts: $0["timestamp"]) }
+      }
+      guard rows.count >= 2 else { return (0, 0) }
+      var totalMeters = 0.0
+      for i in 1 ..< rows.count {
+        totalMeters += haversineMeters(lat1: rows[i-1].lat, lng1: rows[i-1].lng,
+                                       lat2: rows[i].lat,   lng2: rows[i].lng)
+      }
+      let durationSec = (rows.last!.ts - rows.first!.ts) / 1000
+      return (totalMeters / 1000.0, durationSec)
+    } catch {
+      TrackingLogger.shared.log(.error, "TrackingDatabase: computeTripStats failed — \(error)")
+      return (0, 0)
     }
   }
 

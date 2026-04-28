@@ -12,27 +12,44 @@ export class TripFinalizationPipeline {
       return;
     }
 
-    // Calculate distance and duration from stored GPS location points
+    // Read pre-computed distance/duration that native GRDB wrote into the trips row
+    // during endTrip().  We cannot re-read the raw locations table here because
+    // expo-sqlite uses a separate WAL reader that cannot see GRDB's written frames —
+    // the stats must come from the committed trips row instead.
     try {
-      const locations = await database.getLocationsByTrip(tripId);
-      if (locations.length >= 2) {
-        let distanceMeters = 0;
-        for (let i = 1; i < locations.length; i++) {
-          const from: Coordinate = { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude };
-          const to: Coordinate   = { latitude: locations[i].latitude,     longitude: locations[i].longitude };
-          distanceMeters += calculateDistance(from, to);
+      // Small delay so the WAL checkpoint from the native endTrip() write has time
+      // to propagate to expo-sqlite's reader before we query.
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const freshTrip = await database.getTripById(tripId);
+      if (freshTrip && (freshTrip.distance ?? 0) > 0) {
+        // Stats already written by GRDB — nothing to recalculate.
+        console.log(`[TripFinalizationPipeline] using native stats: ${freshTrip.distance} km, ${freshTrip.duration}s`);
+      } else {
+        // Fallback: try to compute from locations (works if expo-sqlite connection
+        // was refreshed or if trip was force-stopped and native didn't pre-compute).
+        const locations = await database.getLocationsByTrip(tripId);
+        if (locations.length >= 2) {
+          let distanceMeters = 0;
+          for (let i = 1; i < locations.length; i++) {
+            const from: Coordinate = { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude };
+            const to: Coordinate   = { latitude: locations[i].latitude,     longitude: locations[i].longitude };
+            distanceMeters += calculateDistance(from, to);
+          }
+          const durationSec = Math.round(
+            (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000
+          );
+          await database.updateTrip(tripId, {
+            distance: Math.round(distanceMeters) / 1000,
+            duration: durationSec,
+          });
+          console.log(`[TripFinalizationPipeline] fallback stats: ${(distanceMeters / 1000).toFixed(3)} km, ${durationSec}s`);
+        } else {
+          console.warn(`[TripFinalizationPipeline] 0 locations found for ${tripId} — stats will be 0`);
         }
-        const durationSec = Math.round(
-          (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000
-        );
-        await database.updateTrip(tripId, {
-          distance: Math.round(distanceMeters) / 1000,
-          duration: durationSec,
-        });
-        console.log(`[TripFinalizationPipeline] stats: ${(distanceMeters / 1000).toFixed(3)} km, ${durationSec}s`);
       }
     } catch (err) {
-      console.warn(`[TripFinalizationPipeline] stats calculation failed: ${String(err)}`);
+      console.warn(`[TripFinalizationPipeline] stats step failed: ${String(err)}`);
     }
 
     // Classify trip type and method from CMMA motion segments
