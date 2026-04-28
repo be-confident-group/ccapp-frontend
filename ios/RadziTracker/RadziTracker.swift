@@ -241,6 +241,15 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
     }
   }
 
+  @objc(getLogs:rejecter:)
+  func getLogs(_ resolve: @escaping RCTPromiseResolveBlock,
+               rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let entries = TrackingLogger.shared.snapshot().map { e -> [String: Any] in
+      ["timestamp": e.timestamp, "level": e.level, "message": e.message]
+    }
+    resolve(entries)
+  }
+
   // MARK: - Recovery
 
   @objc(notifyFinalizationComplete:rejecter:)

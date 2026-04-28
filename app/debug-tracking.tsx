@@ -15,7 +15,8 @@ import { router } from 'expo-router';
 import { database } from '@/lib/database';
 import type { ClassifierDisagreement, MotionSegment } from '@/lib/database';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
-import type { TrackingStatus, ActivityChangedEvent, StateChangedEvent } from '@/lib/native/RadziTracker';
+import type { TrackingStatus, ActivityChangedEvent, StateChangedEvent, NativeLogEntry } from '@/lib/native/RadziTracker';
+import { RadziTrackerNative } from '@/lib/native/RadziTracker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { onTrackingLog, getTrackingLogBuffer, clearTrackingLogBuffer, type LogEntry } from '@/lib/services/TrackingLogger';
 import type { ActivityClass } from '@/lib/activity/classifier';
@@ -313,16 +314,24 @@ function DisagreementsTab({ rows, colors, onRefresh }: {
 
 // ─── Tab 5: Logs ─────────────────────────────────────────────────────────────
 
-function LogsTab({ logs, filter, onFilterChange, scrollRef, colors }: {
+function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRef, colors }: {
   logs: LogEntry[];
+  nativeLogs: NativeLogEntry[];
   filter: 'all' | 'info' | 'warn' | 'error';
   onFilterChange: (f: 'all' | 'info' | 'warn' | 'error') => void;
+  onRefresh: () => void;
   scrollRef: React.RefObject<ScrollView | null>;
   colors: any;
 }) {
-  const filtered = filter === 'all' ? logs : logs.filter(l => l.level === filter);
+  type CombinedEntry = { timestamp: number; level: string; message: string; src: 'js' | 'native' };
+  const combined: CombinedEntry[] = [
+    ...logs.map(l => ({ ...l, src: 'js' as const })),
+    ...nativeLogs.map(l => ({ ...l, src: 'native' as const })),
+  ].sort((a, b) => a.timestamp - b.timestamp);
 
-  function logColor(level: LogEntry['level']): string {
+  const filtered = filter === 'all' ? combined : combined.filter(l => l.level === filter);
+
+  function logColor(level: string): string {
     if (level === 'error') return '#EF4444';
     if (level === 'warn') return '#F59E0B';
     return colors.text;
@@ -345,6 +354,9 @@ function LogsTab({ logs, filter, onFilterChange, scrollRef, colors }: {
             <Text style={[s.filterText, { color: filter === f ? '#fff' : colors.textSecondary }]}>{f}</Text>
           </Pressable>
         ))}
+        <Pressable style={[s.filterBtn, { backgroundColor: colors.primary }]} onPress={onRefresh}>
+          <Text style={[s.filterText, { color: '#fff' }]}>↻</Text>
+        </Pressable>
         <Pressable style={[s.filterBtn, { backgroundColor: '#6B7280' }]} onPress={() => clearTrackingLogBuffer()}>
           <Text style={[s.filterText, { color: '#fff' }]}>clear</Text>
         </Pressable>
@@ -356,7 +368,7 @@ function LogsTab({ logs, filter, onFilterChange, scrollRef, colors }: {
       >
         {filtered.map((entry, i) => (
           <Text key={i} style={[s.logLine, { color: logColor(entry.level) }]}>
-            {fmtTime(entry.timestamp)} {entry.message}
+            {fmtTime(entry.timestamp)} [{entry.src === 'native' ? 'SW' : 'JS'}] {entry.message}
           </Text>
         ))}
         {filtered.length === 0 && (
@@ -486,12 +498,23 @@ export default function DebugTrackingScreen() {
 
   // ── Tab 5: Logs ──
   const [consoleLogs, setConsoleLogs] = useState<LogEntry[]>([]);
+  const [nativeLogs, setNativeLogs] = useState<NativeLogEntry[]>([]);
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
   const logScrollRef = useRef<ScrollView>(null);
 
+  const refreshNativeLogs = async () => {
+    try {
+      const entries = await RadziTrackerNative.getLogs();
+      setNativeLogs(entries);
+    } catch {}
+  };
+
   useEffect(() => {
     setConsoleLogs(getTrackingLogBuffer());
-    return onTrackingLog(entry => setConsoleLogs(prev => [...prev.slice(-199), entry]));
+    const unsub = onTrackingLog(entry => setConsoleLogs(prev => [...prev.slice(-199), entry]));
+    refreshNativeLogs();
+    const id = setInterval(refreshNativeLogs, 2000);
+    return () => { unsub(); clearInterval(id); };
   }, []);
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -534,7 +557,9 @@ export default function DebugTrackingScreen() {
           <Text style={[s.backText, { color: colors.primary }]}>← Back</Text>
         </Pressable>
         <Text style={[s.title, { color: colors.text }]}>Debug</Text>
-        <View style={{ width: 60 }} />
+        <Pressable onPress={() => { refreshNativeLogs(); loadTripData(); }} style={s.back}>
+          <Text style={[s.backText, { color: colors.primary }]}>↻</Text>
+        </Pressable>
       </View>
 
       {/* Tab bar */}
@@ -576,7 +601,9 @@ export default function DebugTrackingScreen() {
       )}
       {tab === 'logs' && (
         <LogsTab
-          logs={consoleLogs} filter={logFilter} onFilterChange={setLogFilter}
+          logs={consoleLogs} nativeLogs={nativeLogs}
+          filter={logFilter} onFilterChange={setLogFilter}
+          onRefresh={refreshNativeLogs}
           scrollRef={logScrollRef} colors={colors}
         />
       )}

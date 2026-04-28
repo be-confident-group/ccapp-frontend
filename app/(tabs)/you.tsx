@@ -108,7 +108,12 @@ export default function YouScreen() {
       });
     } catch (error) {
       console.error('[YouScreen] Failed to fetch profile:', error);
-      // Keep default values if fetch fails
+      setUserProfile(prev => ({
+        ...prev,
+        firstName: 'Profile load failed',
+        lastName: '',
+        email: String(error),
+      }));
     } finally {
       setFetchingProfile(false);
     }

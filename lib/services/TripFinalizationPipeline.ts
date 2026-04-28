@@ -1,5 +1,5 @@
 import { database } from '../database';
-import { calculateDistance } from '../utils/geoCalculations';
+import { calculateDistance, type Coordinate } from '../utils/geoCalculations';
 
 export class TripFinalizationPipeline {
   static async finalize(tripId: string): Promise<void> {
@@ -18,10 +18,9 @@ export class TripFinalizationPipeline {
       if (locations.length >= 2) {
         let distanceMeters = 0;
         for (let i = 1; i < locations.length; i++) {
-          distanceMeters += calculateDistance(
-            locations[i - 1].latitude, locations[i - 1].longitude,
-            locations[i].latitude,     locations[i].longitude
-          );
+          const from: Coordinate = { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude };
+          const to: Coordinate   = { latitude: locations[i].latitude,     longitude: locations[i].longitude };
+          distanceMeters += calculateDistance(from, to);
         }
         const durationSec = Math.round(
           (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000
@@ -39,8 +38,9 @@ export class TripFinalizationPipeline {
     // Update classification method from CMMA segmenter
     try {
       const { MotionActivitySegmenter } = await import('./MotionActivitySegmenter');
-      const seg = await MotionActivitySegmenter.segmentTrip(tripId);
-      await database.updateTrip(tripId, { classification_method: seg.classificationMethod });
+      const seg = await MotionActivitySegmenter.analyze(tripId);
+      const method = seg.classificationMethod === 'ml' ? 'ml' : 'speed';
+      await database.updateTrip(tripId, { classification_method: method });
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] segmentation failed: ${String(err)}`);
     }

@@ -61,6 +61,12 @@ export interface LocationStoredEvent {
   timestamp: number;
 }
 
+export interface NativeLogEntry {
+  timestamp: number;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+}
+
 interface RadziTrackerNativeModule {
   start(): Promise<void>;
   stop(): Promise<void>;
@@ -73,6 +79,7 @@ interface RadziTrackerNativeModule {
   getConfig(): Promise<TrackerConfig>;
   recoverStaleTrip(): Promise<{ recovered: string | null }>;
   notifyFinalizationComplete(): Promise<void>;
+  getLogs(): Promise<NativeLogEntry[]>;
 }
 
 const Native = NativeModules.RadziTracker as RadziTrackerNativeModule | undefined;
@@ -95,6 +102,7 @@ export const RadziTrackerNative: RadziTrackerNativeModule = Native ?? {
   getConfig: unavailable,
   recoverStaleTrip: unavailable,
   notifyFinalizationComplete: () => Promise.resolve(),
+  getLogs: () => Promise.resolve([]),
 };
 
 const emitter = Native ? new NativeEventEmitter(NativeModules.RadziTracker) : null;

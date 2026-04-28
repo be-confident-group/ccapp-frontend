@@ -123,6 +123,13 @@ final class MotionMonitor {
   }
 
   private func rescheduleSustainTimer() {
+    // Timer.scheduledTimer must be called on a thread with an active RunLoop.
+    // handle() runs on opQueue (a GCD thread pool) which has no persistent RunLoop,
+    // so the timer would be scheduled but never fire. Bounce to the main RunLoop.
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in self?.rescheduleSustainTimer() }
+      return
+    }
     sustainTimer?.invalidate()
     let now = Date()
     let since = currentSince ?? now
