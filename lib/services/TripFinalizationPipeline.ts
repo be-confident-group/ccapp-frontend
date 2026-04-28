@@ -31,15 +31,15 @@ export class TripFinalizationPipeline {
             distanceMeters += calculateDistance(from, to);
           }
           const durationSec = Math.round((locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000);
-          fallbackDistance = Math.round(distanceMeters) / 1000;
+          fallbackDistance = Math.round(distanceMeters);
           await database.updateTrip(tripId, { distance: fallbackDistance, duration: durationSec });
-          console.log(`[TripFinalizationPipeline] fallback stats: ${fallbackDistance} km, ${durationSec}s`);
+          console.log(`[TripFinalizationPipeline] fallback stats: ${fallbackDistance}m, ${durationSec}s`);
         }
       } catch (err) {
         console.warn(`[TripFinalizationPipeline] stats fallback failed: ${String(err)}`);
       }
     } else {
-      console.log(`[TripFinalizationPipeline] using native stats: ${freshTrip.distance} km, ${freshTrip.duration}s`);
+      console.log(`[TripFinalizationPipeline] using native stats: ${freshTrip.distance}m, ${freshTrip.duration}s`);
     }
 
     const { TripValidationService } = await import('./TripValidationService');
@@ -98,7 +98,10 @@ export class TripFinalizationPipeline {
             created_at: Date.now(),
             updated_at: Date.now(),
             synced: 0,
-            classification_method: method as any,
+          });
+          // Set ML classification fields (not in createTrip's INSERT)
+          await database.updateTrip(subTripId, {
+            classification_method: method,
             ml_activity_type: method === 'ml' ? segment.type : null,
             ml_confidence: method === 'ml' ? segment.confidence / 100 : null,
           });

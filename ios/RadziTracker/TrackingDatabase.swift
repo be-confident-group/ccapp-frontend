@@ -65,6 +65,10 @@ final class TrackingDatabase {
     // expo-sqlite which uses a different WAL reader and cannot see GRDB writes,
     // so we must persist stats into the trips row before handing off.
     let stats = computeTripStats(tripId: tripId)
+    // avg_speed in km/h = (meters / 1000) / (seconds / 3600)
+    let avgSpeedKmh = stats.durationSec > 0
+      ? (stats.distanceMeters / 1000.0) / (Double(stats.durationSec) / 3600.0)
+      : 0.0
 
     try writeQueue.sync {
       try queue.write { db in
@@ -76,22 +80,24 @@ final class TrackingDatabase {
               detection_state = 'ending',
               distance = ?,
               duration = ?,
+              avg_speed = ?,
               max_speed = ?,
               route_data = ?
           WHERE id = ?
         """, arguments: [
-          endTime, endTime, stats.distanceKm, stats.durationSec,
-          stats.maxSpeedKmh, stats.routeDataJson, tripId
+          endTime, endTime, stats.distanceMeters, stats.durationSec,
+          avgSpeedKmh, stats.maxSpeedKmh, stats.routeDataJson, tripId
         ])
       }
     }
-    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.3f", stats.distanceKm)) km, \(stats.durationSec)s, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
+    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.0f", stats.distanceMeters))m, \(stats.durationSec)s, avg: \(String(format: "%.1f", avgSpeedKmh)) km/h, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
   }
 
-  /// Reads all location rows for the trip and returns total haversine distance (km),
+  /// Reads all location rows for the trip and returns total haversine distance
+  /// in **meters** (matching the DB convention used by the legacy JS engine),
   /// duration (seconds), max speed (km/h), and JSON serialized route_data.
   /// Called from endTrip() so stats are committed atomically.
-  private func computeTripStats(tripId: String) -> (distanceKm: Double, durationSec: Int64, maxSpeedKmh: Double, routeDataJson: String?) {
+  private func computeTripStats(tripId: String) -> (distanceMeters: Double, durationSec: Int64, maxSpeedKmh: Double, routeDataJson: String?) {
     struct LocRow {
       let lat: Double; let lng: Double; let ts: Int64; let speed: Double?
     }
@@ -136,7 +142,8 @@ final class TrackingDatabase {
       let routeDataData = try? JSONSerialization.data(withJSONObject: routeDicts, options: [])
       let routeDataJson = routeDataData.flatMap { String(data: $0, encoding: .utf8) }
       
-      return (totalMeters / 1000.0, durationSec, maxSpeedKmh, routeDataJson)
+      // Return distance in METERS (not km) — the DB convention used everywhere else.
+      return (totalMeters, durationSec, maxSpeedKmh, routeDataJson)
     } catch {
       TrackingLogger.shared.log(.error, "TrackingDatabase: computeTripStats failed — \(error)")
       return (0, 0, 0, nil)

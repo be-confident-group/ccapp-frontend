@@ -134,10 +134,42 @@ export class MotionActivitySegmenter {
    * Analyze a trip and return a SegmentAnalysis built from motion_segments data.
    */
   static async analyze(tripId: string): Promise<SegmentAnalysis & { classificationMethod: string }> {
-    const [motionSegments, locations] = await Promise.all([
+    const [motionSegments, rawLocations] = await Promise.all([
       database.getMotionSegmentsByTrip(tripId),
       database.getLocationsByTrip(tripId),
     ]);
+
+    // WAL isolation fix: expo-sqlite may not see GRDB-written location rows.
+    // Fall back to parsing the pre-computed route_data from the trips row.
+    let locations = rawLocations;
+    if (locations.length === 0) {
+      console.log('[MotionActivitySegmenter] 0 locations from expo-sqlite, trying route_data fallback');
+      try {
+        const trip = await database.getTripById(tripId);
+        if (trip?.route_data) {
+          const parsed = JSON.parse(trip.route_data);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            locations = parsed.map((p: any, idx: number) => ({
+              id: idx,
+              trip_id: tripId,
+              latitude: p.lat ?? p.latitude ?? 0,
+              longitude: p.lng ?? p.longitude ?? 0,
+              altitude: null,
+              accuracy: null,
+              speed: null,
+              heading: null,
+              timestamp: typeof p.timestamp === 'string' ? new Date(p.timestamp).getTime() : p.timestamp,
+              activity_type: null,
+              activity_confidence: null,
+              synced: 0,
+            }));
+            console.log(`[MotionActivitySegmenter] recovered ${locations.length} points from route_data`);
+          }
+        }
+      } catch (err) {
+        console.warn('[MotionActivitySegmenter] route_data fallback failed:', err);
+      }
+    }
 
     // Sort locations by timestamp for accurate distance calc
     const sortedLocations = [...locations].sort((a, b) => a.timestamp - b.timestamp);
