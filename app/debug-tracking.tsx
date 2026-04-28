@@ -14,6 +14,7 @@ import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { database } from '@/lib/database';
 import type { ClassifierDisagreement, MotionSegment } from '@/lib/database';
+import { calculateDistance, type Coordinate } from '@/lib/utils/geoCalculations';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import type { TrackingStatus, ActivityChangedEvent, StateChangedEvent, NativeLogEntry } from '@/lib/native/RadziTracker';
 import { RadziTrackerNative } from '@/lib/native/RadziTracker';
@@ -32,7 +33,8 @@ interface TripTabData {
     id: string;
     startTime: string;
     duration: string;
-    distance: number;
+    distanceMeters: number;
+    gpsPointCount: number;
     type: string;
     classMethod: string;
     backfillDelta: number | null;
@@ -211,12 +213,26 @@ function TripTab({
           <Row
             label="Method"
             value={tripTabData.activeTrip.classMethod}
-            valueColor={tripTabData.activeTrip.classMethod === 'ml' ? '#22C55E' : '#F59E0B'}
+            valueColor={
+              tripTabData.activeTrip.classMethod === 'ml' ? '#22C55E' :
+              tripTabData.activeTrip.classMethod === 'live' ? '#3B82F6' :
+              '#F59E0B'
+            }
             colors={colors}
           />
           <Row label="Started" value={tripTabData.activeTrip.startTime} colors={colors} />
           <Row label="Duration" value={tripTabData.activeTrip.duration} colors={colors} />
-          <Row label="Distance" value={`${(tripTabData.activeTrip.distance / 1000).toFixed(2)} km`} colors={colors} />
+          <Row
+            label="Distance"
+            value={`${(tripTabData.activeTrip.distanceMeters / 1000).toFixed(3)} km`}
+            colors={colors}
+          />
+          <Row
+            label="GPS pts"
+            value={String(tripTabData.activeTrip.gpsPointCount)}
+            valueColor={tripTabData.activeTrip.gpsPointCount > 0 ? '#22C55E' : '#F59E0B'}
+            colors={colors}
+          />
           {tripTabData.activeTrip.backfillDelta != null && (
             <Row
               label="Backfill Δ"
@@ -425,13 +441,29 @@ export default function DebugTrackingScreen() {
           if ((trip as any).backfill_start && trip.start_time) {
             backfillDelta = trip.start_time - (trip as any).backfill_start;
           }
+
+          // Compute live distance from stored GPS points
+          let distanceMeters = 0;
+          let gpsPointCount = 0;
+          try {
+            const locations = await database.getLocationsByTrip(activeTripId);
+            gpsPointCount = locations.length;
+            for (let i = 1; i < locations.length; i++) {
+              const from: Coordinate = { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude };
+              const to: Coordinate   = { latitude: locations[i].latitude,     longitude: locations[i].longitude };
+              distanceMeters += calculateDistance(from, to);
+            }
+          } catch { /* non-fatal */ }
+
+          const isNativeActive = (trip as any).engine === 'native' && trip.status === 'active';
           activeTrip = {
             id: trip.id.slice(0, 22) + '…',
             startTime: new Date(trip.start_time).toLocaleTimeString(),
             duration: fmtMs(elapsed),
-            distance: trip.distance || 0,
+            distanceMeters,
+            gpsPointCount,
             type: trip.type || '?',
-            classMethod: trip.classification_method || 'speed',
+            classMethod: isNativeActive ? 'live' : (trip.classification_method || 'speed'),
             backfillDelta,
           };
         }

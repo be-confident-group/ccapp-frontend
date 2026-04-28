@@ -35,12 +35,17 @@ export class TripFinalizationPipeline {
       console.warn(`[TripFinalizationPipeline] stats calculation failed: ${String(err)}`);
     }
 
-    // Update classification method from CMMA segmenter
+    // Classify trip type and method from CMMA motion segments
     try {
       const { MotionActivitySegmenter } = await import('./MotionActivitySegmenter');
       const seg = await MotionActivitySegmenter.analyze(tripId);
-      const method = seg.classificationMethod === 'ml' ? 'ml' : 'speed';
-      await database.updateTrip(tripId, { classification_method: method });
+      const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
+      await database.updateTrip(tripId, {
+        classification_method: method,
+        type: seg.dominantType as any,
+        ...(seg.confidence > 0 ? { ml_activity_type: seg.dominantType, ml_confidence: seg.confidence / 100 } : {}),
+      });
+      console.log(`[TripFinalizationPipeline] classified as ${seg.dominantType} (${method}), ${seg.segments.length} segments`);
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] segmentation failed: ${String(err)}`);
     }

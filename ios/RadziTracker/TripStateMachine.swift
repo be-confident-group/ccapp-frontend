@@ -15,10 +15,10 @@ final class TripStateMachine {
   enum State: String { case idle, detecting, recording, cooldown, ending }
 
   struct Config {
-    var detectionSustainSeconds: TimeInterval = 30
-    var detectingMinDurationSeconds: TimeInterval = 60
-    var detectingMinDisplacementMeters: Double = 150
-    var falseStartGpsDisplacementMeters: Double = 50
+    var detectionSustainSeconds: TimeInterval = 15    // 15s sustained walking before entering detecting
+    var detectingMinDurationSeconds: TimeInterval = 30 // 30s minimum in detecting before promoting
+    var detectingMinDisplacementMeters: Double = 20   // 20m GPS displacement to confirm real movement
+    var falseStartGpsDisplacementMeters: Double = 8   // abort detecting if <8m after minDuration (not actually moving)
     var cooldownEnterSeconds: TimeInterval = 30
     var cooldownEndSeconds: TimeInterval = 180
   }
@@ -136,7 +136,7 @@ final class TripStateMachine {
     currentStagingId = stagingId
     detectingStartTime = Date()
     transition(to: .detecting)
-    delegate?.stateMachine(self, requestAccuracyMode: .hundred)
+    delegate?.stateMachine(self, requestAccuracyMode: .best)  // best accuracy for reliable displacement measurement
   }
 
   private func transitionDetectingToIdle(reason: String) {
