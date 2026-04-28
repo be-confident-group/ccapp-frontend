@@ -35,6 +35,12 @@ final class TripStateMachine {
   private var lastMotionActivity: MotionMonitor.Activity = .unknown
   private weak var motionMonitorRef: MotionMonitor?
 
+  /// Fires every 10 s when in recording/cooldown so we can check elapsed-time
+  /// thresholds even when CMMA stops delivering new events (which it does once
+  /// the device is fully stationary).
+  private var stationaryCheckTimer: Timer?
+  private let stationaryCheckInterval: TimeInterval = 10
+
   func bind(motion: MotionMonitor) {
     self.motionMonitorRef = motion
   }
@@ -51,20 +57,20 @@ final class TripStateMachine {
              // if 60s pass with <50m displacement — that's the right false-start gate.
     case .recording:
       if activity == .stationary {
-        if stationaryStartTime == nil { stationaryStartTime = Date() }
-        if let s = stationaryStartTime, Date().timeIntervalSince(s) >= config.cooldownEnterSeconds {
-          transitionRecordingToCooldown()
+        if stationaryStartTime == nil {
+          stationaryStartTime = Date()
+          scheduleStationaryCheckTimer()  // Start polling in case CMMA goes silent
         }
+        checkRecordingStationaryThreshold()
       } else {
         stationaryStartTime = nil
+        cancelStationaryCheckTimer()
       }
     case .cooldown:
       if Self.isMoving(activity) {
         transitionCooldownToRecording()
       } else if activity == .stationary {
-        if let s = cooldownEnteredAt, Date().timeIntervalSince(s) >= config.cooldownEndSeconds {
-          transitionCooldownToEnding()
-        }
+        checkCooldownEndingThreshold()
       }
     case .ending:
       break
@@ -197,15 +203,18 @@ final class TripStateMachine {
   }
 
   private func transitionRecordingToCooldown() {
+    cancelStationaryCheckTimer()
     transition(to: .cooldown)
     cooldownEnteredAt = Date()
     delegate?.stateMachine(self, requestAccuracyMode: .hundred)
     delegate?.stateMachine(self, requestImuRunning: false, tripId: currentTripId)
+    scheduleStationaryCheckTimer()  // Keep polling during cooldown too
   }
 
   private func transitionCooldownToRecording() {
     stationaryStartTime = nil
     cooldownEnteredAt = nil
+    cancelStationaryCheckTimer()
     transition(to: .recording)
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: currentTripId)
@@ -213,6 +222,7 @@ final class TripStateMachine {
 
   private func transitionCooldownToEnding() {
     guard let tripId = currentTripId else { return }
+    cancelStationaryCheckTimer()
     cooldownEnteredAt = nil
     let now = Int64(Date().timeIntervalSince1970 * 1000)
     try? TrackingDatabase.shared.endTrip(tripId: tripId, endTime: now)
@@ -223,10 +233,65 @@ final class TripStateMachine {
   }
 
   func onFinalizationComplete() {
+    cancelStationaryCheckTimer()
     currentTripId = nil
     stationaryStartTime = nil
     cooldownEnteredAt = nil
     transition(to: .idle)
+  }
+
+  // MARK: - Stationary check timer
+  //
+  // CMMA stops delivering activity updates once the device is fully still.
+  // Without this timer the cooldown/ending thresholds would never fire after
+  // the last stationary event.  The timer re-evaluates the same elapsed-time
+  // conditions that onMotionActivity() would check on each incoming event.
+
+  private func scheduleStationaryCheckTimer() {
+    cancelStationaryCheckTimer()
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in self?.scheduleStationaryCheckTimer() }
+      return
+    }
+    stationaryCheckTimer = Timer.scheduledTimer(
+      withTimeInterval: stationaryCheckInterval,
+      repeats: true
+    ) { [weak self] _ in
+      self?.onStationaryCheckTick()
+    }
+  }
+
+  private func cancelStationaryCheckTimer() {
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in self?.cancelStationaryCheckTimer() }
+      return
+    }
+    stationaryCheckTimer?.invalidate()
+    stationaryCheckTimer = nil
+  }
+
+  /// Called every `stationaryCheckInterval` seconds while in recording/cooldown.
+  private func onStationaryCheckTick() {
+    switch state {
+    case .recording:
+      checkRecordingStationaryThreshold()
+    case .cooldown:
+      checkCooldownEndingThreshold()
+    default:
+      cancelStationaryCheckTimer()
+    }
+  }
+
+  private func checkRecordingStationaryThreshold() {
+    guard let s = stationaryStartTime,
+          Date().timeIntervalSince(s) >= config.cooldownEnterSeconds else { return }
+    transitionRecordingToCooldown()
+  }
+
+  private func checkCooldownEndingThreshold() {
+    guard let s = cooldownEnteredAt,
+          Date().timeIntervalSince(s) >= config.cooldownEndSeconds else { return }
+    transitionCooldownToEnding()
   }
 
   // MARK: - Helpers

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import {
   RadziTrackerNative,
   RadziTrackerEvents,
@@ -13,7 +14,6 @@ import {
 } from '../native/RadziTracker';
 import { LocationTrackingService } from './LocationTrackingService';
 import { TripFinalizationPipeline } from './TripFinalizationPipeline';
-import { database, type MotionSegment } from '../database';
 
 const ENGINE_KEY = '@tracking_engine';
 const MANUAL_ONLY_KEY = '@tracking_manual_only';
@@ -42,7 +42,8 @@ class CoordinatorImpl {
   private initPromise: Promise<void> | null = null;
   private permissionListeners = new Set<(p: PermissionStatus) => void>();
   private activeTripId: string | null = null;
-  private pendingSegment: { tripId: string; activity: string; confidence: string; tStart: number } | null = null;
+  private activeTripNotificationId: string | null = null;
+
 
   async init(): Promise<void> {
     if (this.initPromise) return this.initPromise;
@@ -199,96 +200,54 @@ class CoordinatorImpl {
     this.detachAll();
     this.subs.push(RadziTrackerEvents.onStateChanged(e => this.listeners.state.forEach(cb => cb(e))));
     this.subs.push(RadziTrackerEvents.onActivityChanged(async e => {
-      if (this.activeTripId) {
-        if (this.pendingSegment) {
-          try {
-            await database.insertMotionSegment({
-              trip_id: this.pendingSegment.tripId,
-              t_start: this.pendingSegment.tStart,
-              t_end: e.timestamp,
-              activity: this.pendingSegment.activity as MotionSegment['activity'],
-              confidence: this.pendingSegment.confidence as MotionSegment['confidence'],
-              source: 'cmma',
-            });
-          } catch { /* non-fatal */ }
-        }
-        this.pendingSegment = { tripId: this.activeTripId, activity: e.activity, confidence: e.confidence, tStart: e.timestamp };
-      }
+      // Forward to listeners only — native GRDB already writes motion segments.
       this.listeners.activity.forEach(cb => cb(e));
     }));
 
     this.subs.push(RadziTrackerEvents.onTripStarted(async e => {
       this.activeTripId = e.tripId;
-      this.pendingSegment = null;
-      const now = Date.now();
+      // Show persistent notification so user knows a trip is being recorded.
+      // Native GRDB already created the trip row — no JS DB write needed.
       try {
-        await database.createTrip({
-          id: e.tripId,
-          user_id: '',
-          type: 'walk',
-          status: 'active',
-          is_manual: 0,
-          start_time: e.startTime,
-          created_at: now,
-          updated_at: now,
-        });
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status === 'granted') {
+          this.activeTripNotificationId = `trip-recording-${e.tripId}`;
+          await Notifications.scheduleNotificationAsync({
+            identifier: this.activeTripNotificationId,
+            content: {
+              title: 'Trip recording in progress',
+              body: 'Your activity is being tracked',
+            },
+            trigger: null,
+          });
+        }
       } catch {
-        // Trip may already exist (e.g. app restarted mid-trip) — not fatal
-      }
-      try {
-        await database.updateTrip(e.tripId, { engine: 'native', backfill_start: e.backfillStart });
-      } catch {
-        // Non-fatal
+        // Never let notification errors interrupt tracking
       }
       this.listeners.tripStarted.forEach(cb => cb(e));
     }));
 
+    // locationStored: native GRDB already wrote the location — forwarding the
+    // event to listeners is enough.  DO NOT also insert via database.addLocation()
+    // because that creates duplicate rows in the same SQLite file and corrupts
+    // the distance calculation during finalization.
     this.subs.push(RadziTrackerEvents.onLocationStored(async e => {
-      try {
-        await database.addLocation({
-          trip_id: e.tripId,
-          latitude: e.lat,
-          longitude: e.lng,
-          altitude: null,
-          accuracy: e.accuracy,
-          speed: e.speed,
-          heading: null,
-          timestamp: e.timestamp,
-          activity_type: null,
-          activity_confidence: null,
-          synced: 0,
-        });
-      } catch {
-        // Non-fatal — finalization falls back to 0 distance
-      }
       this.listeners.locationStored.forEach(cb => cb(e));
     }));
 
     this.subs.push(RadziTrackerEvents.onTripEnded(async e => {
-      // Close any open activity segment
-      if (this.pendingSegment) {
-        try {
-          await database.insertMotionSegment({
-            trip_id: this.pendingSegment.tripId,
-            t_start: this.pendingSegment.tStart,
-            t_end: e.endTime,
-            activity: this.pendingSegment.activity as MotionSegment['activity'],
-            confidence: this.pendingSegment.confidence as MotionSegment['confidence'],
-            source: 'cmma',
-          });
-        } catch { /* non-fatal */ }
-        this.pendingSegment = null;
-      }
       this.activeTripId = null;
+      // Dismiss trip-recording notification
       try {
-        await database.updateTrip(e.tripId, {
-          status: 'completed',
-          end_time: e.endTime,
-          updated_at: Date.now(),
-        });
+        if (this.activeTripNotificationId) {
+          await Notifications.dismissNotificationAsync(this.activeTripNotificationId);
+          this.activeTripNotificationId = null;
+        }
       } catch {
-        // Non-fatal — trip may not exist in JS DB if tripStarted was missed
+        // Non-fatal
       }
+      // Native GRDB already marked the trip completed.  Run the JS finalization
+      // pipeline (XGBoost classify, validate, sync) which reads the native-written data.
       try {
         await TripFinalizationPipeline.finalize(e.tripId);
       } catch (err) {
@@ -302,7 +261,7 @@ class CoordinatorImpl {
     this.subs.forEach(unsub => unsub());
     this.subs = [];
     this.activeTripId = null;
-    this.pendingSegment = null;
+    this.activeTripNotificationId = null;
   }
 }
 
