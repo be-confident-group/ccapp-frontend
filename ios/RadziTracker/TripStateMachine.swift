@@ -56,20 +56,20 @@ final class TripStateMachine {
       break  // Stationary/unknown blips are tolerated. checkDetectingPromotion() aborts
              // if 60s pass with <50m displacement — that's the right false-start gate.
     case .recording:
-      if activity == .stationary {
+      if Self.isMoving(activity) {
+        stationaryStartTime = nil
+        cancelStationaryCheckTimer()
+      } else {
         if stationaryStartTime == nil {
           stationaryStartTime = Date()
           scheduleStationaryCheckTimer()  // Start polling in case CMMA goes silent
         }
         checkRecordingStationaryThreshold()
-      } else {
-        stationaryStartTime = nil
-        cancelStationaryCheckTimer()
       }
     case .cooldown:
       if Self.isMoving(activity) {
         transitionCooldownToRecording()
-      } else if activity == .stationary {
+      } else {
         checkCooldownEndingThreshold()
       }
     case .ending:
