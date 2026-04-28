@@ -75,39 +75,71 @@ final class TrackingDatabase {
               updated_at = ?,
               detection_state = 'ending',
               distance = ?,
-              duration = ?
+              duration = ?,
+              max_speed = ?,
+              route_data = ?
           WHERE id = ?
-        """, arguments: [endTime, endTime, stats.distanceKm, stats.durationSec, tripId])
+        """, arguments: [
+          endTime, endTime, stats.distanceKm, stats.durationSec,
+          stats.maxSpeedKmh, stats.routeDataJson, tripId
+        ])
       }
     }
-    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.3f", stats.distanceKm)) km, \(stats.durationSec)s")
+    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.3f", stats.distanceKm)) km, \(stats.durationSec)s, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
   }
 
-  /// Reads all location rows for the trip and returns total haversine distance (km)
-  /// and duration (seconds).  Called from endTrip() so stats are committed
-  /// atomically and visible to the JS layer via the trips row.
-  private func computeTripStats(tripId: String) -> (distanceKm: Double, durationSec: Int64) {
+  /// Reads all location rows for the trip and returns total haversine distance (km),
+  /// duration (seconds), max speed (km/h), and JSON serialized route_data.
+  /// Called from endTrip() so stats are committed atomically.
+  private func computeTripStats(tripId: String) -> (distanceKm: Double, durationSec: Int64, maxSpeedKmh: Double, routeDataJson: String?) {
     struct LocRow {
-      let lat: Double; let lng: Double; let ts: Int64
+      let lat: Double; let lng: Double; let ts: Int64; let speed: Double?
     }
     do {
       let rows = try queue.read { db -> [LocRow] in
         let rawRows = try Row.fetchAll(db,
-          sql: "SELECT latitude, longitude, timestamp FROM locations WHERE trip_id = ? ORDER BY timestamp ASC",
+          sql: "SELECT latitude, longitude, timestamp, speed FROM locations WHERE trip_id = ? ORDER BY timestamp ASC",
           arguments: [tripId])
-        return rawRows.map { LocRow(lat: $0["latitude"], lng: $0["longitude"], ts: $0["timestamp"]) }
+        return rawRows.map { LocRow(lat: $0["latitude"], lng: $0["longitude"], ts: $0["timestamp"], speed: $0["speed"]) }
       }
-      guard rows.count >= 2 else { return (0, 0) }
+      guard rows.count >= 2 else { return (0, 0, 0, nil) }
+      
       var totalMeters = 0.0
-      for i in 1 ..< rows.count {
-        totalMeters += haversineMeters(lat1: rows[i-1].lat, lng1: rows[i-1].lng,
-                                       lat2: rows[i].lat,   lng2: rows[i].lng)
+      var maxSpeedMps = 0.0
+      var routeDicts: [[String: Any]] = []
+
+      let isoFormatter = ISO8601DateFormatter()
+      isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+      for i in 0 ..< rows.count {
+        let r = rows[i]
+        if i > 0 {
+          let prev = rows[i-1]
+          totalMeters += haversineMeters(lat1: prev.lat, lng1: prev.lng, lat2: r.lat, lng2: r.lng)
+        }
+        if let s = r.speed, s > maxSpeedMps {
+          maxSpeedMps = s
+        }
+
+        let date = Date(timeIntervalSince1970: TimeInterval(r.ts) / 1000.0)
+        let latRound = (r.lat * 1_000_000).rounded() / 1_000_000
+        let lngRound = (r.lng * 1_000_000).rounded() / 1_000_000
+        routeDicts.append([
+          "lat": latRound,
+          "lng": lngRound,
+          "timestamp": isoFormatter.string(from: date)
+        ])
       }
+      
       let durationSec = (rows.last!.ts - rows.first!.ts) / 1000
-      return (totalMeters / 1000.0, durationSec)
+      let maxSpeedKmh = maxSpeedMps * 3.6
+      let routeDataData = try? JSONSerialization.data(withJSONObject: routeDicts, options: [])
+      let routeDataJson = routeDataData.flatMap { String(data: $0, encoding: .utf8) }
+      
+      return (totalMeters / 1000.0, durationSec, maxSpeedKmh, routeDataJson)
     } catch {
       TrackingLogger.shared.log(.error, "TrackingDatabase: computeTripStats failed — \(error)")
-      return (0, 0)
+      return (0, 0, 0, nil)
     }
   }
 

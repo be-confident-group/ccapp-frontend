@@ -233,7 +233,38 @@ export class TripValidationService {
       return { isValid: false, reason: 'Trip not found' };
     }
 
-    const locations = await database.getLocationsByTrip(tripId);
+    let coords: Coordinate[] = [];
+    let routeForSync: any[] = [];
+
+    // Prioritize pre-computed route_data from the Native Swift engine or sub-trip splitter
+    if (trip.route_data) {
+      try {
+        routeForSync = JSON.parse(trip.route_data);
+        coords = routeForSync.map((p: any) => ({
+          latitude: p.lat ?? p.latitude,
+          longitude: p.lng ?? p.longitude,
+        }));
+      } catch (err) {
+        console.error(`[TripValidation] Failed to parse existing route_data for ${tripId}`, err);
+      }
+    }
+
+    // Fallback: If no route_data exists (e.g., legacy engine), query raw locations
+    if (coords.length === 0) {
+      const locations = await database.getLocationsByTrip(tripId);
+      coords = locations.map(loc => ({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      }));
+      
+      // Build route_data from location points
+      routeForSync = locations.map(loc => ({
+        lat: Number(loc.latitude.toFixed(6)),
+        lng: Number(loc.longitude.toFixed(6)),
+        timestamp: new Date(loc.timestamp).toISOString(),
+      }));
+    }
+
     const tripType = trip.type;
     const totalDistance = trip.distance;
     const maxSpeedKmh = trip.max_speed;
@@ -259,11 +290,7 @@ export class TripValidationService {
     }
 
     // Check 4: GPS drift detection
-    if (!reason && locations.length >= 2) {
-      const coords = locations.map(loc => ({
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-      }));
+    if (!reason && coords.length >= 2) {
       const driftResult = this.validateTrip(coords, totalDistance);
       if (!driftResult.isValid) {
         reason = driftResult.reasons.join('; ');
@@ -281,15 +308,10 @@ export class TripValidationService {
       return { isValid: false, reason };
     }
 
-    // Build route_data from location points
-    const routeForSync = locations.map(loc => ({
-      lat: Number(loc.latitude.toFixed(6)),
-      lng: Number(loc.longitude.toFixed(6)),
-      timestamp: new Date(loc.timestamp).toISOString(),
-    }));
-
     console.log(`[TripValidation] Trip ${tripId} valid — building route with ${routeForSync.length} points`);
 
+    // We only want to set route_data if it's missing or if we fell back to locations
+    // But overwriting with the identical string is safe and ensures `additionalFields` merges correctly.
     await database.updateTrip(tripId, {
       status: 'completed',
       end_time: endTime,

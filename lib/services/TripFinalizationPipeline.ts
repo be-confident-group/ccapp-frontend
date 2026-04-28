@@ -12,22 +12,16 @@ export class TripFinalizationPipeline {
       return;
     }
 
-    // Read pre-computed distance/duration that native GRDB wrote into the trips row
-    // during endTrip().  We cannot re-read the raw locations table here because
-    // expo-sqlite uses a separate WAL reader that cannot see GRDB's written frames —
-    // the stats must come from the committed trips row instead.
-    try {
-      // Small delay so the WAL checkpoint from the native endTrip() write has time
-      // to propagate to expo-sqlite's reader before we query.
-      await new Promise(resolve => setTimeout(resolve, 300));
+    // Small delay so the WAL checkpoint from the native endTrip() write has time
+    // to propagate to expo-sqlite's reader before we query.
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-      const freshTrip = await database.getTripById(tripId);
-      if (freshTrip && (freshTrip.distance ?? 0) > 0) {
-        // Stats already written by GRDB — nothing to recalculate.
-        console.log(`[TripFinalizationPipeline] using native stats: ${freshTrip.distance} km, ${freshTrip.duration}s`);
-      } else {
-        // Fallback: try to compute from locations (works if expo-sqlite connection
-        // was refreshed or if trip was force-stopped and native didn't pre-compute).
+    const freshTrip = await database.getTripById(tripId) || trip;
+    let fallbackDistance = freshTrip.distance ?? 0;
+
+    if (fallbackDistance <= 0) {
+      // Fallback: try to compute from locations (legacy engine or missing native stats)
+      try {
         const locations = await database.getLocationsByTrip(tripId);
         if (locations.length >= 2) {
           let distanceMeters = 0;
@@ -36,35 +30,110 @@ export class TripFinalizationPipeline {
             const to: Coordinate   = { latitude: locations[i].latitude,     longitude: locations[i].longitude };
             distanceMeters += calculateDistance(from, to);
           }
-          const durationSec = Math.round(
-            (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000
-          );
-          await database.updateTrip(tripId, {
-            distance: Math.round(distanceMeters) / 1000,
-            duration: durationSec,
-          });
-          console.log(`[TripFinalizationPipeline] fallback stats: ${(distanceMeters / 1000).toFixed(3)} km, ${durationSec}s`);
-        } else {
-          console.warn(`[TripFinalizationPipeline] 0 locations found for ${tripId} — stats will be 0`);
+          const durationSec = Math.round((locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000);
+          fallbackDistance = Math.round(distanceMeters) / 1000;
+          await database.updateTrip(tripId, { distance: fallbackDistance, duration: durationSec });
+          console.log(`[TripFinalizationPipeline] fallback stats: ${fallbackDistance} km, ${durationSec}s`);
         }
+      } catch (err) {
+        console.warn(`[TripFinalizationPipeline] stats fallback failed: ${String(err)}`);
       }
-    } catch (err) {
-      console.warn(`[TripFinalizationPipeline] stats step failed: ${String(err)}`);
+    } else {
+      console.log(`[TripFinalizationPipeline] using native stats: ${freshTrip.distance} km, ${freshTrip.duration}s`);
     }
 
-    // Classify trip type and method from CMMA motion segments
+    const { TripValidationService } = await import('./TripValidationService');
+    const { syncService } = await import('./SyncService');
+    const { RadziTrackerNative } = await import('../native/RadziTracker');
+
+    // Classify trip and check for multi-modal segments
     try {
       const { MotionActivitySegmenter } = await import('./MotionActivitySegmenter');
       const seg = await MotionActivitySegmenter.analyze(tripId);
-      const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
-      await database.updateTrip(tripId, {
-        classification_method: method,
-        type: seg.dominantType as any,
-        ...(seg.confidence > 0 ? { ml_activity_type: seg.dominantType, ml_confidence: seg.confidence / 100 } : {}),
-      });
-      console.log(`[TripFinalizationPipeline] classified as ${seg.dominantType} (${method}), ${seg.segments.length} segments`);
+      
+      if (seg.isMultiModal && seg.segments.length > 1) {
+        console.log(`[TripFinalizationPipeline] Multi-modal trip detected! Splitting into ${seg.segments.length} segments.`);
+        
+        const MIN_SEGMENT_DIST: Record<string, number> = {
+           walk: 400, cycle: 1000, run: 500, drive: 2000
+        };
+        
+        for (let i = 0; i < seg.segments.length; i++) {
+          const segment = seg.segments[i];
+          const subTripId = `${tripId}_segment${i}`;
+          const minDist = MIN_SEGMENT_DIST[segment.type] ?? 400;
+          
+          if (segment.distance < minDist) {
+            console.log(`[TripFinalizationPipeline] Skipping segment ${i} (${segment.type}): ${segment.distance.toFixed(0)}m < ${minDist}m`);
+            continue;
+          }
+          
+          const segmentRouteForSync = segment.locations.map(loc => ({
+            lat: Number(loc.latitude.toFixed(6)),
+            lng: Number(loc.longitude.toFixed(6)),
+            timestamp: new Date(loc.timestamp).toISOString(),
+          }));
+          
+          const segmentStartTime = segment.locations[0].timestamp;
+          const segmentEndTime = segment.locations[segment.locations.length - 1].timestamp;
+          const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
+          
+          await database.createTrip({
+            id: subTripId,
+            user_id: freshTrip.user_id || 'current_user',
+            type: segment.type,
+            status: 'completed',
+            is_manual: 0,
+            start_time: segmentStartTime,
+            end_time: segmentEndTime,
+            distance: segment.distance,
+            duration: segment.duration,
+            avg_speed: segment.avgSpeed,
+            max_speed: segment.maxSpeed,
+            elevation_gain: 0,
+            calories: 0,
+            co2_saved: 0,
+            notes: `Segment ${i + 1} of ${seg.segments.length} (multi-modal trip)`,
+            route_data: JSON.stringify(segmentRouteForSync),
+            created_at: Date.now(),
+            updated_at: Date.now(),
+            synced: 0,
+            classification_method: method as any,
+            ml_activity_type: method === 'ml' ? segment.type : null,
+            ml_confidence: method === 'ml' ? segment.confidence / 100 : null,
+          });
+          
+          console.log(`[TripFinalizationPipeline] Validating sub-trip ${subTripId}...`);
+          const val = await TripValidationService.validateAndFinalizeTrip(subTripId, segmentEndTime);
+          if (val.isValid) {
+            await syncService.syncSingleTrip(subTripId);
+          }
+        }
+        
+        // Cancel the original parent trip
+        await database.updateTrip(tripId, {
+          status: 'cancelled',
+          notes: `Multi-modal trip split into segments`
+        });
+        
+      } else {
+        // Single-mode trip
+        const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
+        await database.updateTrip(tripId, {
+          classification_method: method,
+          type: seg.dominantType as any,
+          ...(seg.confidence > 0 ? { ml_activity_type: seg.dominantType, ml_confidence: seg.confidence / 100 } : {}),
+        });
+        console.log(`[TripFinalizationPipeline] classified as ${seg.dominantType} (${method})`);
+        
+        console.log(`[TripFinalizationPipeline] Validating single-mode trip ${tripId}...`);
+        const val = await TripValidationService.validateAndFinalizeTrip(tripId, freshTrip.end_time || Date.now());
+        if (val.isValid) {
+          await syncService.syncSingleTrip(tripId);
+        }
+      }
     } catch (err) {
-      console.warn(`[TripFinalizationPipeline] segmentation failed: ${String(err)}`);
+      console.warn(`[TripFinalizationPipeline] segmentation/validation failed: ${String(err)}`);
     }
 
     // Run shadow classifier (best-effort)
@@ -75,17 +144,8 @@ export class TripFinalizationPipeline {
       console.warn(`[TripFinalizationPipeline] shadow classifier failed: ${String(err)}`);
     }
 
-    // Sync (best-effort)
-    try {
-      const { syncService } = await import('./SyncService');
-      await syncService.syncSingleTrip(tripId);
-    } catch (err) {
-      console.error(`[TripFinalizationPipeline] sync failed: ${String(err)}`);
-    }
-
     // Signal native state machine to return to idle
     try {
-      const { RadziTrackerNative } = await import('../native/RadziTracker');
       await RadziTrackerNative.notifyFinalizationComplete();
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] notifyFinalizationComplete failed: ${String(err)}`);
