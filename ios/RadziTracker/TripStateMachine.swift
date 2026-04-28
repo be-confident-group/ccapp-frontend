@@ -47,7 +47,8 @@ final class TripStateMachine {
     case .idle:
       if Self.isMoving(activity) { /* sustain handled by MotionMonitor.watchSustain */ }
     case .detecting:
-      if activity == .stationary { transitionDetectingToIdle(reason: "motion regressed") }
+      break  // Stationary/unknown blips are tolerated. checkDetectingPromotion() aborts
+             // if 60s pass with <50m displacement — that's the right false-start gate.
     case .recording:
       if activity == .stationary {
         if stationaryStartTime == nil { stationaryStartTime = Date() }
