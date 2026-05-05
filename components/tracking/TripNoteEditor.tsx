@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -18,6 +18,12 @@ export function TripNoteEditor({ tripId, initialValue, onSaved }: Props) {
   const { t } = useTranslation('maps');
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(initialValue ?? '');
+
+  useEffect(() => {
+    if (!isEditing) {
+      setValue(initialValue ?? '');
+    }
+  }, [initialValue, isEditing]);
 
   async function handleSave() {
     await database.updateTrip(tripId, { user_note: value || null, user_note_dirty: 1 });

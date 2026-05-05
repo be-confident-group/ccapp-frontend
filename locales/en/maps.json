@@ -106,6 +106,7 @@
     "entry_automatic": "Automatic",
     "entry_manual": "Manual",
     "status": "Status",
-    "avg_speed_backend": "Avg Speed (backend)"
+    "avg_speed_backend": "Avg Speed (backend)",
+    "notes_title": "Notes"
   }
 }

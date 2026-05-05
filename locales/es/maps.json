@@ -106,6 +106,7 @@
     "entry_automatic": "Automático",
     "entry_manual": "Manual",
     "status": "Estado",
-    "avg_speed_backend": "Velocidad media (servidor)"
+    "avg_speed_backend": "Velocidad media (servidor)",
+    "notes_title": "Notas"
   }
 }

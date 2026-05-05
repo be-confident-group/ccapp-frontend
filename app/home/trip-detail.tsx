@@ -323,10 +323,11 @@ export default function TripDetailScreen() {
 
   // Create GeoJSON for route
   const routeGeoJSON = route.length > 0 ? {
-    type: 'Feature',
+    type: 'Feature' as const,
+    properties: null,
     geometry: {
-      type: 'LineString',
-      coordinates: route.map((coord: any) => [coord.longitude, coord.latitude]),
+      type: 'LineString' as const,
+      coordinates: route.map((coord: { longitude: number; latitude: number }) => [coord.longitude, coord.latitude]),
     },
   } : null;
 
@@ -393,7 +394,7 @@ export default function TripDetailScreen() {
                   />
 
                   {routeGeoJSON && (
-                    <ShapeSource id="routeSource" shape={routeGeoJSON as any}>
+                    <ShapeSource id="routeSource" shape={routeGeoJSON ?? undefined}>
                       <LineLayer
                         id="routeLine"
                         style={{
@@ -552,7 +553,7 @@ export default function TripDetailScreen() {
             {/* 7. Notes section */}
             <View style={[styles.sectionCard, { backgroundColor: colors.backgroundSecondary }]}>
               <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                Notes
+                {t('trip_detail.notes_title')}
               </ThemedText>
               <TripNoteEditor
                 tripId={trip.id}
