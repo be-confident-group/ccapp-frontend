@@ -14,8 +14,12 @@ final class TripStateMachine {
 
   enum State: String { case idle, detecting, recording, cooldown, ending }
 
+  /// Seconds of sustained GPS+motion activity required before promoting to .detecting.
+  /// Also used as the GPS stabilization window for the immediate-start path.
+  static let gpsStabilizationTimeoutSeconds: TimeInterval = 8
+
   struct Config {
-    var detectionSustainSeconds: TimeInterval = 15    // 15s sustained walking before entering detecting
+    var detectionSustainSeconds: TimeInterval = TripStateMachine.gpsStabilizationTimeoutSeconds
     var detectingMinDurationSeconds: TimeInterval = 30 // 30s minimum in detecting before promoting
     var detectingMinDisplacementMeters: Double = 20   // 20m GPS displacement to confirm real movement
     var falseStartGpsDisplacementMeters: Double = 8   // abort detecting if <8m after minDuration (not actually moving)
@@ -26,6 +30,7 @@ final class TripStateMachine {
   weak var delegate: TripStateMachineDelegate?
   private(set) var state: State = .idle
   private(set) var currentTripId: String?
+  private(set) var currentTripType: String?
   private(set) var currentStagingId: String?
   var config = Config()
 
@@ -48,7 +53,26 @@ final class TripStateMachine {
 
   // MARK: - Inputs
 
+  /// Called by MotionMonitor when CMMotionActivityManager reports a new activity.
+  /// If we're idle and confidence is medium or high, skip the detecting phase and
+  /// start the trip immediately ("immediate-start path").
+  func handleMotionUpdate(activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
+    guard state == .idle else { return }
+    guard confidence != .low else { return }
+    let type: String
+    switch activity {
+    case .walking:  type = "walk"
+    case .running:  type = "run"
+    case .cycling:  type = "cycle"
+    default: return
+    }
+    immediateStartTrip(type: type, classificationSource: "apple_motion")
+  }
+
   func onMotionActivity(_ activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
+    // Immediate-start path for high/medium confidence classifications
+    handleMotionUpdate(activity: activity, confidence: confidence)
+
     self.lastMotionActivity = activity
     switch state {
     case .idle:
@@ -110,6 +134,28 @@ final class TripStateMachine {
         heading: nil, altitude: nil, timestamp: timestamp, accuracyMode: "hundred"
       )
       try? TrackingDatabase.shared.updateTripUpdatedAt(tripId: tripId, updatedAt: timestamp)
+    }
+  }
+
+  // MARK: - Immediate-start (Apple Motion classification)
+
+  /// Bypasses the detecting phase and transitions directly to .recording when
+  /// CMMotionActivityManager reports a walk/run/cycle with medium+ confidence.
+  private func immediateStartTrip(type: String, classificationSource: String) {
+    let now = Int64(Date().timeIntervalSince1970 * 1000)
+    let tripId = "trip_\(now)_\(Int.random(in: 1000...9999))"
+    do {
+      try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: now,
+                                              type: type, classificationSource: classificationSource)
+      currentTripId = tripId
+      currentTripType = type
+      transition(to: .recording)
+      delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: now)
+      delegate?.stateMachine(self, requestAccuracyMode: .best)
+      delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
+      altimeter.start()
+    } catch {
+      TrackingLogger.shared.log(.error, "TripStateMachine: immediateStartTrip failed — \(error)")
     }
   }
 
@@ -325,3 +371,13 @@ final class TripStateMachine {
     a == .walking || a == .running || a == .cycling || a == .automotive
   }
 }
+
+// MARK: - Test helpers (DEBUG only)
+
+#if DEBUG
+extension TripStateMachine {
+  static func makeForTest() -> TripStateMachine {
+    return TripStateMachine()
+  }
+}
+#endif
