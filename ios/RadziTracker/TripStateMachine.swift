@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import CoreMotion
 
 protocol TripStateMachineDelegate: AnyObject {
   func stateMachine(_ sm: TripStateMachine, didTransitionTo state: TripStateMachine.State, from previous: TripStateMachine.State)
@@ -34,6 +35,8 @@ final class TripStateMachine {
   private(set) var currentStagingId: String?
   var config = Config()
 
+  private let reconciler: ActivityHistoryReconciler
+
   private var detectingStartTime: Date?
   private var stationaryStartTime: Date?
   private var cooldownEnteredAt: Date?
@@ -46,6 +49,13 @@ final class TripStateMachine {
   private var stationaryCheckTimer: Timer?
   private let stationaryCheckInterval: TimeInterval = 10
   private let altimeter = AltimeterMonitor()
+
+  init() {
+    reconciler = ActivityHistoryReconciler(
+      motion: ProductionMotionSource(),
+      pedometer: ProductionPedometerSource()
+    )
+  }
 
   func bind(motion: MotionMonitor) {
     self.motionMonitorRef = motion
@@ -293,6 +303,21 @@ final class TripStateMachine {
       let agg = AltimeterMonitor.aggregate(samples: allSamples.map { (timestamp: $0.0, relativeAltitudeM: $0.1) })
       try? TrackingDatabase.shared.updateTripElevation(tripId: tripId, gainM: agg.gainMeters, lossM: agg.lossMeters)
     }
+    DispatchQueue.global(qos: .utility).async { [weak self] in
+      guard let self else { return }
+      let reconcileNow = Date()
+      let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: reconcileNow)) ?? []
+      let synthesized = self.reconciler.reconcile(now: reconcileNow, lookbackMinutes: 35, alreadyCovered: covered)
+      for syn in synthesized {
+        let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
+        try? TrackingDatabase.shared.insertSynthesizedTrip(
+          id: id, start: syn.start, end: syn.end,
+          type: syn.activity == .walking ? "walk" : "cycle",
+          distanceM: syn.distanceM,
+          classificationSource: "apple_motion"
+        )
+      }
+    }
     delegate?.stateMachine(self, didEndTrip: tripId, endTime: now)
   }
 
@@ -369,6 +394,36 @@ final class TripStateMachine {
 
   private static func isMoving(_ a: MotionMonitor.Activity) -> Bool {
     a == .walking || a == .running || a == .cycling || a == .automotive
+  }
+}
+
+// MARK: - Reconciler backfill
+
+extension TripStateMachine {
+  func reconcilerBackfill(now: Date, covered: [(start: Date, end: Date)]) -> [SynthesizedSubTrip] {
+    reconciler.reconcile(now: now, lookbackMinutes: 35, alreadyCovered: covered)
+  }
+}
+
+// MARK: - Production motion/pedometer sources (private)
+
+private final class ProductionMotionSource: MotionHistorySource {
+  private let manager = CMMotionActivityManager()
+  func queryActivities(from: Date, to: Date, completion: @escaping ([CMMotionActivity]) -> Void) {
+    guard CMMotionActivityManager.isActivityAvailable() else { completion([]); return }
+    manager.queryActivityStarting(from: from, to: to, to: OperationQueue.main) { activities, _ in
+      completion(activities ?? [])
+    }
+  }
+}
+
+private final class ProductionPedometerSource: PedometerSource {
+  private let pedometer = CMPedometer()
+  func distanceMeters(from: Date, to: Date, completion: @escaping (Double?) -> Void) {
+    guard CMPedometer.isDistanceAvailable() else { completion(nil); return }
+    pedometer.queryPedometerData(from: from, to: to) { data, _ in
+      completion(data?.distance?.doubleValue)
+    }
   }
 }
 

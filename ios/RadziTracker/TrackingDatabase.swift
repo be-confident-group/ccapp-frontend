@@ -354,6 +354,45 @@ final class TrackingDatabase {
       return nil
     }
   }
+
+  // MARK: - Reconciler helpers
+
+  func recentTripWindows(within seconds: TimeInterval, of date: Date) throws -> [(start: Date, end: Date)] {
+    let cutoff = Int64((date.timeIntervalSince1970 - seconds) * 1000)
+    return try queue.read { db in
+      try Row.fetchAll(db, sql: """
+        SELECT start_time, end_time FROM trips
+        WHERE end_time IS NOT NULL AND end_time >= ? AND engine = 'native'
+        ORDER BY start_time ASC
+      """, arguments: [cutoff]).compactMap { row -> (Date, Date)? in
+        guard let endMs = row["end_time"] as? Int64 else { return nil }
+        let startMs = row["start_time"] as Int64
+        return (
+          Date(timeIntervalSince1970: TimeInterval(startMs) / 1000),
+          Date(timeIntervalSince1970: TimeInterval(endMs) / 1000)
+        )
+      }
+    }
+  }
+
+  func insertSynthesizedTrip(id: String, start: Date, end: Date, type: String,
+                              distanceM: Double?, classificationSource: String) throws {
+    let startMs = Int64(start.timeIntervalSince1970 * 1000)
+    let endMs   = Int64(end.timeIntervalSince1970 * 1000)
+    let durationSec = Int64(end.timeIntervalSince(start))
+    let distanceStored = distanceM ?? 0.0
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: """
+          INSERT OR IGNORE INTO trips
+            (id, user_id, type, status, start_time, end_time, distance, duration,
+             created_at, updated_at, engine, synced, classification_source)
+          VALUES (?, 'current_user', ?, 'completed', ?, ?, ?, ?, ?, ?, 'native', 0, ?)
+        """, arguments: [id, type, startMs, endMs, distanceStored, durationSec,
+                         startMs, startMs, classificationSource])
+      }
+    }
+  }
 }
 
 // MARK: - Altitude samples
