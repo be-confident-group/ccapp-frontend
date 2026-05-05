@@ -15,6 +15,7 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
   private let location = LocationSession()
   private let imu = ImuSampler()
   private let stateMachine = TripStateMachine()
+  private let slcMonitor = SLCMonitor()
   private var hasListeners = false
 
   override init() {
@@ -44,6 +45,28 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
         )
       }
     }
+
+    slcMonitor.onWake = { [weak self] _ in
+      guard let self else { return }
+      // Trigger backfill on SLC wake (force-quit recovery path)
+      DispatchQueue.global(qos: .utility).async {
+        let now = Date()
+        let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: now)) ?? []
+        let synthesized = self.stateMachine.reconcilerBackfill(now: now, covered: covered)
+        for syn in synthesized {
+          let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
+          try? TrackingDatabase.shared.insertSynthesizedTrip(
+            id: id, start: syn.start, end: syn.end,
+            type: syn.activity == .walking ? "walk" : "cycle",
+            distanceM: syn.distanceM,
+            classificationSource: "apple_motion"
+          )
+        }
+      }
+    }
+    slcMonitor.start()
+
+    stateMachine.rehydrateIfNeeded()
   }
 
   override func startObserving() { hasListeners = true }
