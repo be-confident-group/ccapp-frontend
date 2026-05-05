@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 6;
+export const DB_VERSION = 7;
 
 export const SCHEMA = {
   trips: `
@@ -201,7 +201,15 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
-async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number): Promise<void> {
+export async function runMigrationsUpTo(db: SQLite.SQLiteDatabase, maxVersion: number): Promise<void> {
+  // Create all base tables first (needed for ALTER TABLE to work on a fresh DB)
+  for (const createSQL of Object.values(SCHEMA)) {
+    await db.execAsync(createSQL);
+  }
+  await runMigrations(db, 0, maxVersion);
+}
+
+export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number): Promise<void> {
   console.log(`[Database] Running migrations from version ${from} to ${to}`);
 
   // Migration from version 1 to 2: Add backend_id column
@@ -337,6 +345,30 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     await db.execAsync("UPDATE trips SET engine = 'legacy' WHERE engine IS NULL OR engine = ''");
 
     console.log('[Database] Migration 5->6: Completed');
+  }
+
+  // Migration from version 6 to 7: Add user-edit, classification, and moving-stats columns
+  if (from < 7 && to >= 7) {
+    console.log('[Database] Migration 6->7: Adding user-edit and stats columns to trips');
+    for (const stmt of [
+      'ALTER TABLE trips ADD COLUMN user_note TEXT',
+      'ALTER TABLE trips ADD COLUMN validation_log TEXT',
+      'ALTER TABLE trips ADD COLUMN user_note_dirty INTEGER NOT NULL DEFAULT 0',
+      'ALTER TABLE trips ADD COLUMN type_dirty INTEGER NOT NULL DEFAULT 0',
+      'ALTER TABLE trips ADD COLUMN classification_source TEXT',
+      'ALTER TABLE trips ADD COLUMN moving_duration_s INTEGER',
+      'ALTER TABLE trips ADD COLUMN moving_avg_speed_kmh REAL',
+      'ALTER TABLE trips ADD COLUMN max_speed_filtered_kmh REAL',
+      'ALTER TABLE trips ADD COLUMN elevation_loss_m REAL',
+      'ALTER TABLE trips ADD COLUMN backend_avg_speed_kmh REAL',
+    ]) {
+      try {
+        await db.execAsync(stmt);
+      } catch (err) {
+        console.log(`[Database] Migration 6->7: ALTER skipped (likely exists): ${stmt}`);
+      }
+    }
+    console.log('[Database] Migration 6->7: Completed');
   }
 
   console.log('[Database] Migrations completed');

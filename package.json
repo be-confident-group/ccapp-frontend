@@ -66,9 +66,11 @@
     "victory-native": "^41.20.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "baseline-browser-mapping": "^2.9.11",
+    "better-sqlite3": "^12.9.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "ts-jest": "^29.4.9",
