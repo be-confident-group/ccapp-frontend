@@ -83,5 +83,29 @@
     "rating_count": "Valoraciones",
     "your_rating": "Tu Valoración",
     "legend": "Escala de Valoración"
+  },
+  "trip_detail": {
+    "avg_moving_speed": "Velocidad media en movimiento",
+    "max_speed": "Velocidad máxima",
+    "elevation_gain": "{{m}} m ganados",
+    "elevation_loss": "{{m}} m perdidos",
+    "elevation_hidden": "—",
+    "co2_saved": "{{kg}} kg CO₂ ahorrados",
+    "co2_hidden": "—",
+    "notes_placeholder": "Toca para añadir una nota…",
+    "notes_save": "Guardar",
+    "notes_cancel": "Cancelar",
+    "beta_diagnostics": "Diagnósticos beta",
+    "trip_id": "ID de viaje",
+    "backend_id": "ID de servidor",
+    "gps_points": "Puntos GPS",
+    "imu_samples": "Muestras IMU",
+    "classification_source": "Clasificador",
+    "validation_log": "Registro de validación",
+    "synthesized_yes": "Sí (reconstruido del historial de actividad)",
+    "entry_automatic": "Automático",
+    "entry_manual": "Manual",
+    "status": "Estado",
+    "avg_speed_backend": "Velocidad media (servidor)"
   }
 }

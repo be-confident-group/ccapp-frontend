@@ -83,5 +83,29 @@
     "rating_count": "Ratings",
     "your_rating": "Your Rating",
     "legend": "Rating Scale"
+  },
+  "trip_detail": {
+    "avg_moving_speed": "Avg Moving Speed",
+    "max_speed": "Max Speed",
+    "elevation_gain": "{{m}} m gained",
+    "elevation_loss": "{{m}} m lost",
+    "elevation_hidden": "—",
+    "co2_saved": "{{kg}} kg CO₂ saved",
+    "co2_hidden": "—",
+    "notes_placeholder": "Tap to add a note…",
+    "notes_save": "Save",
+    "notes_cancel": "Cancel",
+    "beta_diagnostics": "Beta Diagnostics",
+    "trip_id": "Trip ID",
+    "backend_id": "Backend ID",
+    "gps_points": "GPS Points",
+    "imu_samples": "IMU Samples",
+    "classification_source": "Classifier",
+    "validation_log": "Validation log",
+    "synthesized_yes": "Yes (reconstructed from activity history)",
+    "entry_automatic": "Automatic",
+    "entry_manual": "Manual",
+    "status": "Status",
+    "avg_speed_backend": "Avg Speed (backend)"
   }
 }
