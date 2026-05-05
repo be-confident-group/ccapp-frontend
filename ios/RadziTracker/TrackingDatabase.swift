@@ -355,6 +355,12 @@ final class TrackingDatabase {
     }
   }
 
+  func loadTripType(tripId: String) throws -> String? {
+    try queue.read { db in
+      try String.fetchOne(db, sql: "SELECT type FROM trips WHERE id = ?", arguments: [tripId])
+    }
+  }
+
   // MARK: - Reconciler helpers
 
   func recentTripWindows(within seconds: TimeInterval, of date: Date) throws -> [(start: Date, end: Date)] {

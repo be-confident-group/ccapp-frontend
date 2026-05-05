@@ -405,6 +405,23 @@ extension TripStateMachine {
   }
 }
 
+// MARK: - Rehydration (force-quit recovery)
+
+extension TripStateMachine {
+  func rehydrateIfNeeded() {
+    guard let stale = try? TrackingDatabase.shared.findStaleRecordingTrip(staleAfterMs: 0) else { return }
+    // There's an active native trip from a prior session — reattach to it.
+    currentTripId = stale.id
+    currentTripType = (try? TrackingDatabase.shared.loadTripType(tripId: stale.id)) ?? "walk"
+    transition(to: .recording)
+    altimeter.start()
+    TrackingLogger.shared.log(.info, "TripStateMachine: rehydrated trip \(stale.id)")
+    delegate?.stateMachine(self, didStartTrip: stale.id, startTime: stale.lastUpdate, backfillStart: stale.lastUpdate)
+    delegate?.stateMachine(self, requestAccuracyMode: .best)
+    delegate?.stateMachine(self, requestImuRunning: true, tripId: stale.id)
+  }
+}
+
 // MARK: - Production motion/pedometer sources (private)
 
 private final class ProductionMotionSource: MotionHistorySource {

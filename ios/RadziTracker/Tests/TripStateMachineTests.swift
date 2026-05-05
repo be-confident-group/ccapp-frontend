@@ -173,4 +173,14 @@ final class TripStateMachineTests: XCTestCase {
     XCTAssertNil(sm.currentTripId)
     XCTAssertEqual(sm.state, .idle)
   }
+
+  // MARK: - Task 15: Rehydration
+
+  func test_rehydrateIfNeeded_doesNothingWhenNoStaleTrip() {
+    let sm = TripStateMachine()
+    sm.rehydrateIfNeeded()
+    // No stale trip in DB → remains idle
+    XCTAssertEqual(sm.state, .idle)
+    XCTAssertNil(sm.currentTripId)
+  }
 }
