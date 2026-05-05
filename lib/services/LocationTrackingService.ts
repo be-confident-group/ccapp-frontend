@@ -1058,16 +1058,13 @@ function calculateTripStatistics(locations: LocationPoint[]) {
   // Average speed in km/h
   const avgSpeed = duration > 0 ? (totalDistance / duration) * 3.6 : 0;
 
-  // CO2 saved (kg) - assuming cycling/walking vs car (120g/km)
-  const co2Saved = (totalDistance / 1000) * 0.12;
-
   return {
     totalDistance,
     duration,
     avgSpeed,
     maxSpeed,
     elevationGain,
-    co2Saved,
+    co2Saved: 0, // Backend calculates CO2 (0.129 kg/km); populated via sync
   };
 }
 

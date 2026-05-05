@@ -11,7 +11,6 @@ import { MLSegmentDetector } from './MLSegmentDetector';
 import {
   calculateDistance,
   calculateSpeed,
-  calculateCO2Saved,
   calculateElevationGain,
   calculateElevationLoss,
   calculateCalories,
@@ -217,7 +216,7 @@ export class TripManager {
           max_speed: segment.maxSpeed,
           elevation_gain: segmentStats.elevationGain,
           calories: segmentStats.calories,
-          co2_saved: calculateCO2Saved(segment.distance / 1000),
+          co2_saved: 0, // Backend calculates CO2 (0.129 kg/km); populated via sync
           notes: `Segment ${i + 1} of ${segmentAnalysis.segments.length} (multi-modal trip)`,
           route_data: segmentRouteDataJson,
           created_at: now,
@@ -537,7 +536,6 @@ export class TripManager {
 
     // Calculate stats from manual data
     const avgSpeed = calculateSpeed(data.distance, data.duration);
-    const co2Saved = calculateCO2Saved(data.distance / 1000);
     const calories = calculateCalories(
       data.distance / 1000,
       data.type === 'cycle' ? 'cycling' : 'walking',
@@ -559,7 +557,7 @@ export class TripManager {
       max_speed: avgSpeed, // For manual entries, max = avg
       elevation_gain: 0,
       calories,
-      co2_saved: co2Saved,
+      co2_saved: 0, // Backend calculates CO2 (0.129 kg/km); populated via sync
       notes: data.notes || null,
       route_data: data.routeData ? stringifyRouteData(data.routeData) : null,
       created_at: now,
@@ -699,9 +697,6 @@ export class TripManager {
     const elevationGain = calculateElevationGain(altitudes);
     const elevationLoss = calculateElevationLoss(altitudes);
 
-    // CO2 saved (kg)
-    const co2Saved = calculateCO2Saved(totalDistance / 1000);
-
     // Calories (rough estimate)
     const calories = calculateCalories(
       totalDistance / 1000,
@@ -716,7 +711,7 @@ export class TripManager {
       maxSpeed,
       elevationGain,
       elevationLoss,
-      co2Saved,
+      co2Saved: 0, // Backend calculates CO2 (0.129 kg/km); populated via sync
       calories,
       startTime: locations[0].timestamp,
       endTime: locations[locations.length - 1].timestamp,
