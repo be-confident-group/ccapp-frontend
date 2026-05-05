@@ -69,5 +69,15 @@
     "sixMonths": "6 Months",
     "year": "Year",
     "allTime": "All Time"
+  },
+  "permissions": {
+    "title": "A couple of permissions",
+    "subtitle": "BeActive needs these to track your trips accurately and in the background.",
+    "location_title": "Always On Location",
+    "location_body": "We record your route while you move — even when the app is in the background. \"Always\" access lets us catch trip starts and recover after a force-quit.",
+    "motion_title": "Motion & Fitness",
+    "motion_body": "Apple's activity sensor tells us whether you're walking, cycling, or in a vehicle — so we don't need to guess from GPS speed alone.",
+    "grant": "Grant permissions",
+    "skip": "Maybe later"
   }
 }
