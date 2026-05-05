@@ -39,6 +39,20 @@ class MockSQLiteDatabase {
     return row ?? null;
   }
 
+  runSync(source: string, ...params: unknown[]): void {
+    const stmt = this._db.prepare(source);
+    stmt.run(...(params as unknown[]));
+  }
+
+  async runAsync(source: string, params?: unknown[]): Promise<void> {
+    const stmt = this._db.prepare(source);
+    if (params && params.length > 0) {
+      stmt.run(...(params as unknown[]));
+    } else {
+      stmt.run();
+    }
+  }
+
   async closeAsync(): Promise<void> {
     this._db.close();
   }

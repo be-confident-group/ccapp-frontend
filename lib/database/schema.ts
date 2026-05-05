@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 8;
+export const DB_VERSION = 9;
 
 export const SCHEMA = {
   trips: `
@@ -398,6 +398,34 @@ export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to:
       console.log('[Database] Migration 7->8: Completed');
     } catch (error) {
       console.log('[Database] Migration 7->8: Error (tables may already exist)', error);
+    }
+  }
+
+  // Migration from version 8 to 9: Backfill legacy notes into user_note / validation_log
+  if (from < 9 && to >= 9) {
+    console.log('[Database] Migration 8->9: Backfilling legacy notes');
+    try {
+      const AUTO_PATTERN = /^(Trip contains driving|Walk distance|Ride distance|Trip type)/;
+      const rows = await db.getAllAsync<{ id: string; notes: string | null }>(
+        `SELECT id, notes FROM trips WHERE notes IS NOT NULL AND user_note IS NULL AND validation_log IS NULL`
+      );
+      for (const row of rows) {
+        if (!row.notes) continue;
+        if (AUTO_PATTERN.test(row.notes)) {
+          await db.runAsync(
+            `UPDATE trips SET validation_log = ?, notes = NULL WHERE id = ?`,
+            [row.notes, row.id]
+          );
+        } else {
+          await db.runAsync(
+            `UPDATE trips SET user_note = ?, notes = NULL WHERE id = ?`,
+            [row.notes, row.id]
+          );
+        }
+      }
+      console.log(`[Database] Migration 8->9: Backfilled ${rows.length} rows`);
+    } catch (error) {
+      console.log('[Database] Migration 8->9: Error during backfill', error);
     }
   }
 
