@@ -7,7 +7,6 @@
 
 import * as Notifications from 'expo-notifications';
 import { database, type Trip as DBTrip, type LocationPoint } from '../database';
-import { SegmentDetector } from './SegmentDetector';
 import { MLSegmentDetector } from './MLSegmentDetector';
 import {
   calculateDistance,
