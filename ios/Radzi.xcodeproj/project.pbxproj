@@ -12,23 +12,23 @@
 		21549090062F4355B7D59F65 /* RadziTracker.m in Sources */ = {isa = PBXBuildFile; fileRef = 7ECFEDD3CDA749C7ADA4D452 /* RadziTracker.m */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
-		AHR0001A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */; };
-		SEG0001A1B2C3D4E5F601234 /* Segmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */; };
-		SLC0001A1B2C3D4E5F601234 /* SLCMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */; };
-		BST0001A1B2C3D4E5F601234 /* BackgroundSyncTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */; };
 		547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */; };
 		78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
 		81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
 		A1B2C3D4E5F60001A2B3C4D5 /* AltimeterMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A2B3C4D5 /* AltimeterMonitor.swift */; };
 		A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
+		AHR0001A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */; };
 		B2C3D4E5F6A7B8C9D0E1F2A3 /* SpeedFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A4 /* SpeedFilter.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		BC8D891BB3C54F3DB4DFD571 /* MotionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27DD8E3F247841C499C4F874 /* MotionMonitor.swift */; };
 		BD747262C5424B14BF38EC61 /* RadziTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD9ADD250CA4532B9C39B19 /* RadziTracker.swift */; };
+		BST0001A1B2C3D4E5F601234 /* BackgroundSyncTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */; };
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* MovingStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B5 /* MovingStats.swift */; };
 		D8728C16C5E9BFB8D85C8DFB /* libPods-Radzi.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CBCB87C40AC8AC53A1A8B53D /* libPods-Radzi.a */; };
 		E0E14424079546F3ABC0B16A /* TrackingLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		SEG0001A1B2C3D4E5F601234 /* Segmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */; };
+		SLC0001A1B2C3D4E5F601234 /* SLCMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,13 +38,6 @@
 		17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Radzi/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		17488A59446924C55365F449 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Radzi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
-		AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHistoryReconciler.swift; sourceTree = "<group>"; };
-		AHR0003A1B2C3D4E5F601234 /* ActivityHistoryReconcilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHistoryReconcilerTests.swift; sourceTree = "<group>"; };
-		SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segmenter.swift; sourceTree = "<group>"; };
-		SEG0003A1B2C3D4E5F601234 /* SegmenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmenterTests.swift; sourceTree = "<group>"; };
-		SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitor.swift; sourceTree = "<group>"; };
-		SLC0003A1B2C3D4E5F601234 /* SLCMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitorTests.swift; sourceTree = "<group>"; };
-		BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncTask.swift; sourceTree = "<group>"; };
 		22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
 		27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
 		4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
@@ -58,9 +51,12 @@
 		A1B2C3D4E5F60003A2B3C4D5 /* AltimeterMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterMonitorTests.swift; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Radzi/SplashScreen.storyboard; sourceTree = "<group>"; };
 		AC2E3CF651B343B29521C295 /* LocationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSession.swift; sourceTree = "<group>"; };
+		AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHistoryReconciler.swift; sourceTree = "<group>"; };
+		AHR0003A1B2C3D4E5F601234 /* ActivityHistoryReconcilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHistoryReconcilerTests.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A7B8C9D0E1F2A4 /* SpeedFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedFilter.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A7B8C9D0E1F2A5 /* SpeedFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedFilterTests.swift; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncTask.swift; sourceTree = "<group>"; };
 		C3D4E5F6A7B8C9D0E1F2A3B5 /* MovingStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingStats.swift; sourceTree = "<group>"; };
 		C3D4E5F6A7B8C9D0E1F2A3B6 /* MovingStatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovingStatsTests.swift; sourceTree = "<group>"; };
 		CBCB87C40AC8AC53A1A8B53D /* libPods-Radzi.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Radzi.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,6 +66,10 @@
 		F111D1C01C4249859FA6F25B /* ImuSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImuSampler.swift; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Radzi/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Radzi-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Radzi-Bridging-Header.h"; path = "Radzi/Radzi-Bridging-Header.h"; sourceTree = "<group>"; };
+		SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segmenter.swift; sourceTree = "<group>"; };
+		SEG0003A1B2C3D4E5F601234 /* SegmenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmenterTests.swift; sourceTree = "<group>"; };
+		SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitor.swift; sourceTree = "<group>"; };
+		SLC0003A1B2C3D4E5F601234 /* SLCMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
