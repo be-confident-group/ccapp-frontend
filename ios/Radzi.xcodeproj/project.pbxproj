@@ -14,6 +14,7 @@
 		540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
 		547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */; };
 		78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
+		A1B2C3D4E5F60001A2B3C4D5 /* AltimeterMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002A2B3C4D5 /* AltimeterMonitor.swift */; };
 		81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
 		A5537FA8355A4BDA9112DBA8 /* TrackingDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
@@ -31,6 +32,8 @@
 		17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Radzi/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		17488A59446924C55365F449 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Radzi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		21573E606BA6466E92C8DAE1 /* TrackingDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingDatabase.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60002A2B3C4D5 /* AltimeterMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterMonitor.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60003A2B3C4D5 /* AltimeterMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltimeterMonitorTests.swift; sourceTree = "<group>"; };
 		22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
 		27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
 		4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 				DAA03494286C4E25A2FD10BA /* MotionMonitorTests.swift */,
 				22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */,
 				D4B2C3E5F6A7890123456789 /* TripStateMachineTests.swift */,
+				A1B2C3D4E5F60003A2B3C4D5 /* AltimeterMonitorTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -158,6 +162,7 @@
 				AC2E3CF651B343B29521C295 /* LocationSession.swift */,
 				F111D1C01C4249859FA6F25B /* ImuSampler.swift */,
 				4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */,
+				A1B2C3D4E5F60002A2B3C4D5 /* AltimeterMonitor.swift */,
 				5D214BA2632C4A5283470AE6 /* Tests */,
 			);
 			path = RadziTracker;
@@ -421,6 +426,7 @@
 				81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */,
 				78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */,
 				540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */,
+				A1B2C3D4E5F60001A2B3C4D5 /* AltimeterMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
