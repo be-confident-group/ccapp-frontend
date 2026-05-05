@@ -149,6 +149,7 @@ export default function TripDetailScreen() {
           max_speed: backendTrip.max_speed ?? null,
           elevation_gain: backendTrip.elevation_gain || 0,
           co2_saved: backendTrip.co2_saved,
+          is_valid: backendTrip.is_valid,
           notes: mergedUserNote ?? backendTrip.notes ?? null,
           status: backendTrip.status,
           validation_log: backendTrip.validation_log ?? null,
