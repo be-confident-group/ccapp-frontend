@@ -19,13 +19,16 @@ import { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon, ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
 import { useTrip, useDeleteTrip, useUpdateTrip } from '@/lib/hooks/useTrips';
 import { database } from '@/lib/database';
 import type { Trip } from '@/lib/database/db';
 import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
 import { syncService } from '@/lib/services/SyncService';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/i18n/formatters';
+import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
 
 // Build-time constant — true for dev and EAS preview builds, false for production
 const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
@@ -59,6 +62,7 @@ export default function TripDetailScreen() {
   const isLocalTrip = local === 'true';
   const { colors, isDark } = useTheme();
   const { unitSystem, formatElevation, formatWeight } = useUnits();
+  const { t } = useTranslation('maps');
   const { selectedLayer } = useMapLayer(isDark);
   const [localTrip, setLocalTrip] = useState<Trip | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -151,8 +155,10 @@ export default function TripDetailScreen() {
           co2_saved: backendTrip.co2_saved,
           is_valid: backendTrip.is_valid,
           notes: mergedUserNote ?? backendTrip.notes ?? null,
+          user_note: mergedUserNote,
           status: backendTrip.status,
           validation_log: backendTrip.validation_log ?? null,
+          classification_source: (backendTrip as any).classification_source ?? localTrip?.classification_source ?? null,
         },
         route: transformedRoute,
       };
@@ -191,7 +197,10 @@ export default function TripDetailScreen() {
           elevation_gain: localTrip.elevation_gain,
           co2_saved: localTrip.co2_saved,
           notes: localTrip.notes,
+          user_note: localTrip.user_note ?? null,
           status: localTrip.status,
+          validation_log: localTrip.validation_log ?? null,
+          classification_source: localTrip.classification_source ?? null,
         },
         route: parsedRoute,
       };
@@ -327,10 +336,25 @@ export default function TripDetailScreen() {
     route[Math.floor(route.length / 2)].latitude,
   ] : [-122.4194, 37.7749];
 
+  // Helper to reload local trip after a note save
+  async function reloadLocalTrip() {
+    try {
+      let tripData: Trip | null = null;
+      if (isLocalTrip) {
+        tripData = await database.getTrip(id as string);
+      } else {
+        tripData = await database.getTripByBackendId(tripId);
+      }
+      if (tripData) setLocalTrip(tripData);
+    } catch (error) {
+      console.error('[TripDetail] Error reloading local trip:', error);
+    }
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        {/* Header */}
+        {/* Header — above ScrollView */}
         <View style={[styles.pageHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           <TouchableOpacity
             style={styles.backButton}
@@ -349,236 +373,293 @@ export default function TripDetailScreen() {
           </TouchableOpacity>
         </View>
 
-      <ScrollView>
-        {/* Map */}
-        {route.length > 0 && (
-          <View style={styles.mapContainer}>
-            <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
-              <Mapbox.MapView
-                style={styles.map}
-                styleURL={mapStyle}
-                zoomEnabled={true}
-                scrollEnabled={true}
-                compassEnabled={false}
-                logoEnabled={false}
-              >
-                <Camera
-                  zoomLevel={13}
-                  centerCoordinate={center as [number, number]}
-                  animationDuration={0}
-                />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* 1. Map */}
+          {route.length > 0 && (
+            <View style={styles.mapContainer}>
+              <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
+                <Mapbox.MapView
+                  style={styles.map}
+                  styleURL={mapStyle}
+                  zoomEnabled={true}
+                  scrollEnabled={true}
+                  compassEnabled={false}
+                  logoEnabled={false}
+                >
+                  <Camera
+                    zoomLevel={13}
+                    centerCoordinate={center as [number, number]}
+                    animationDuration={0}
+                  />
 
-                {routeGeoJSON && (
-                  <ShapeSource id="routeSource" shape={routeGeoJSON as any}>
-                    <LineLayer
-                      id="routeLine"
-                      style={{
-                        lineColor: tripColor,
-                        lineWidth: 6,
-                        lineCap: 'round',
-                        lineJoin: 'round',
-                        lineOpacity: 0.9,
-                      }}
-                    />
-                  </ShapeSource>
-                )}
-              </Mapbox.MapView>
-            </View>
-          </View>
-        )}
-
-        {/* Trip Info */}
-        <View style={styles.content}>
-          {/* Trip Info Header */}
-          <View style={styles.tripHeader}>
-            <View style={[styles.tripHeaderIcon, { backgroundColor: tripColor + '20' }]}>
-              <MaterialCommunityIcons name={getTripTypeIcon(trip.type) as any} size={32} color={tripColor} />
-            </View>
-            <View style={styles.tripHeaderText}>
-              <ThemedText style={styles.tripHeaderTitle}>{tripName}</ThemedText>
-              <ThemedText style={[styles.tripHeaderDate, { color: colors.textSecondary }]}>
-                {date.toLocaleDateString()} at {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* Confirmation card — shown when trip hasn't been reviewed yet */}
-          {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
-            <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-              {/* Type selector */}
-              <View style={styles.typeSelector}>
-                {(['walk', 'cycle'] as TripType[]).map((type) => {
-                  const selected = (confirmTypeOverride ?? backendTrip.type) === type;
-                  const tColor = getTripTypeColor(type);
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.typeOption,
-                        {
-                          backgroundColor: selected ? tColor + '25' : colors.background,
-                          borderColor: selected ? tColor : colors.border,
-                        },
-                      ]}
-                      onPress={() => setConfirmTypeOverride(type)}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons
-                        name={getTripTypeIcon(type) as any}
-                        size={18}
-                        color={selected ? tColor : colors.textSecondary}
+                  {routeGeoJSON && (
+                    <ShapeSource id="routeSource" shape={routeGeoJSON as any}>
+                      <LineLayer
+                        id="routeLine"
+                        style={{
+                          lineColor: tripColor,
+                          lineWidth: 6,
+                          lineCap: 'round',
+                          lineJoin: 'round',
+                          lineOpacity: 0.9,
+                        }}
                       />
-                      <ThemedText
-                        style={[
-                          styles.typeOptionText,
-                          { color: selected ? tColor : colors.textSecondary },
-                        ]}
-                      >
-                        {getTripTypeName(type)}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Confirm / Not my trip */}
-              <View style={styles.confirmActions}>
-                {updateTrip.isPending ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
-                      onPress={handleConfirmTrip}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>Confirm</ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
-                      onPress={handleNotMyTrip}
-                      activeOpacity={0.7}
-                    >
-                      <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
-                      <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>Not my trip</ThemedText>
-                    </TouchableOpacity>
-                  </>
-                )}
+                    </ShapeSource>
+                  )}
+                </Mapbox.MapView>
               </View>
             </View>
           )}
 
-          {/* Stats Grid */}
-          <View style={[styles.statsGrid, { backgroundColor: colors.backgroundSecondary }]}>
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDistance(trip.distance, unitSystem)}</ThemedText>
-            </View>
+          <View style={styles.content}>
+            {/* 2. Date subtitle */}
+            <ThemedText style={[styles.dateSubtitle, { color: colors.textSecondary }]}>
+              {formatDate(date, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </ThemedText>
 
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Duration</ThemedText>
-              <ThemedText style={styles.statValue}>{formatDuration(trip.duration)}</ThemedText>
-            </View>
+            {/* Confirmation card — shown when trip hasn't been reviewed yet */}
+            {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
+              <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+                {/* Type selector */}
+                <View style={styles.typeSelector}>
+                  {(['walk', 'cycle'] as TripType[]).map((type) => {
+                    const selected = (confirmTypeOverride ?? backendTrip.type) === type;
+                    const tColor = getTripTypeColor(type);
+                    return (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.typeOption,
+                          {
+                            backgroundColor: selected ? tColor + '25' : colors.background,
+                            borderColor: selected ? tColor : colors.border,
+                          },
+                        ]}
+                        onPress={() => setConfirmTypeOverride(type)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name={getTripTypeIcon(type) as any}
+                          size={18}
+                          color={selected ? tColor : colors.textSecondary}
+                        />
+                        <ThemedText
+                          style={[
+                            styles.typeOptionText,
+                            { color: selected ? tColor : colors.textSecondary },
+                          ]}
+                        >
+                          {getTripTypeName(type)}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Speed</ThemedText>
-              <ThemedText style={styles.statValue}>{formatSpeed(trip.avg_speed, unitSystem)}</ThemedText>
-            </View>
-
-            {trip.max_speed != null && (
-              <View style={styles.statItem}>
-                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Max Speed</ThemedText>
-                <ThemedText style={styles.statValue}>{formatSpeed(trip.max_speed, unitSystem)}</ThemedText>
+                {/* Confirm / Not my trip */}
+                <View style={styles.confirmActions}>
+                  {updateTrip.isPending ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
+                        onPress={handleConfirmTrip}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
+                        <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>Confirm</ThemedText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
+                        onPress={handleNotMyTrip}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
+                        <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>Not my trip</ThemedText>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
               </View>
             )}
 
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>Elevation</ThemedText>
-              <ThemedText style={styles.statValue}>{formatElevation(trip.elevation_gain)}</ThemedText>
+            {/* 3. Headline stats row */}
+            <View style={[styles.headlineRow, { backgroundColor: colors.backgroundSecondary }]}>
+              <View style={styles.headlineStat}>
+                <ThemedText style={[styles.headlineLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
+                <ThemedText style={styles.headlineValue}>{formatDistance(trip.distance, unitSystem)}</ThemedText>
+              </View>
+              <View style={[styles.headlineDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.headlineStat}>
+                <ThemedText style={[styles.headlineLabel, { color: colors.textSecondary }]}>Duration</ThemedText>
+                <ThemedText style={styles.headlineValue}>{formatDuration(trip.duration)}</ThemedText>
+              </View>
             </View>
 
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>CO₂ Saved</ThemedText>
-              <ThemedText style={styles.statValue}>{formatWeight(trip.co2_saved)}</ThemedText>
-            </View>
-          </View>
-
-          {/* Additional Info */}
-          <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary }]}>
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Points Recorded</ThemedText>
-              <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
-            </View>
-
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Entry Type</ThemedText>
-              <ThemedText style={styles.infoValue}>{trip.is_manual ? 'Manual' : 'Automatic'}</ThemedText>
-            </View>
-
-            {(() => {
-              const displayNote = getDisplayNote(trip.notes);
-              return displayNote ? (
-                <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                  <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Notes</ThemedText>
-                  <ThemedText style={[styles.infoValue, { marginTop: 4 }]}>{displayNote}</ThemedText>
-                </View>
-              ) : null;
-            })()}
-          </View>
-
-          {/* Beta Diagnostics */}
-          {isDebugBuild && tripDetails && (
-            <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary, marginTop: Spacing.sm }]}>
-              <TouchableOpacity
-                style={styles.infoRow}
-                onPress={() => setShowDiagnostics(!showDiagnostics)}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                  Beta Diagnostics
+            {/* 4. Speed grid: 2-column */}
+            <View style={[styles.speedGrid, { backgroundColor: colors.backgroundSecondary }]}>
+              <View style={styles.speedItem}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  {t('trip_detail.avg_moving_speed')}
                 </ThemedText>
-                <MaterialCommunityIcons
-                  name={showDiagnostics ? 'chevron-up' : 'chevron-down'}
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
+                <ThemedText style={styles.statValue}>
+                  {formatSpeed(localTrip?.moving_avg_speed_kmh != null
+                    ? localTrip.moving_avg_speed_kmh / 3.6
+                    : trip.avg_speed, unitSystem)}
+                </ThemedText>
+              </View>
+              <View style={styles.speedItem}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  {t('trip_detail.max_speed')}
+                </ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {trip.max_speed != null ? formatSpeed(trip.max_speed, unitSystem) : '—'}
+                </ThemedText>
+              </View>
+            </View>
 
-              {showDiagnostics && (
-                <>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Trip ID</ThemedText>
-                    <ThemedText style={[styles.infoValue, { fontSize: 11 }]} numberOfLines={1}>
-                      {tripDetails.trip.id}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Backend ID</ThemedText>
-                    <ThemedText style={styles.infoValue}>{tripId > 0 ? String(tripId) : 'Not synced'}</ThemedText>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>GPS Points</ThemedText>
-                    <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</ThemedText>
-                    <ThemedText style={styles.infoValue}>{tripDetails.trip.status}</ThemedText>
-                  </View>
-                  {tripDetails.trip.notes && (
-                    <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>Raw Note</ThemedText>
-                      <ThemedText style={[styles.infoValue, { marginTop: 4, fontSize: 11 }]}>
-                        {tripDetails.trip.notes}
+            {/* 5. Elevation row */}
+            {((localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0) ||
+              (trip.elevation_gain != null && trip.elevation_gain !== 0)) && (
+              <View style={[styles.elevationRow, { backgroundColor: colors.backgroundSecondary }]}>
+                {trip.elevation_gain != null && trip.elevation_gain !== 0 && (
+                  <ThemedText style={styles.elevationText}>
+                    {'↗ '}{t('trip_detail.elevation_gain', { m: Math.round(trip.elevation_gain) })}
+                  </ThemedText>
+                )}
+                {trip.elevation_gain != null && trip.elevation_gain !== 0 &&
+                  localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0 && (
+                  <ThemedText style={[styles.elevationSep, { color: colors.textSecondary }]}> · </ThemedText>
+                )}
+                {localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0 && (
+                  <ThemedText style={styles.elevationText}>
+                    {'↘ '}{t('trip_detail.elevation_loss', { m: Math.round(localTrip.elevation_loss_m) })}
+                  </ThemedText>
+                )}
+              </View>
+            )}
+
+            {/* 6. CO₂ row */}
+            {trip.co2_saved != null && trip.co2_saved > 0 && (
+              <View style={[styles.co2Row, { backgroundColor: colors.backgroundSecondary }]}>
+                <ThemedText style={styles.co2Text}>
+                  {'🌱 '}{t('trip_detail.co2_saved', { kg: trip.co2_saved.toFixed(2) })}
+                </ThemedText>
+              </View>
+            )}
+
+            {/* 7. Notes section */}
+            <View style={[styles.sectionCard, { backgroundColor: colors.backgroundSecondary }]}>
+              <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+                Notes
+              </ThemedText>
+              <TripNoteEditor
+                tripId={trip.id}
+                initialValue={trip.user_note ?? trip.notes}
+                onSaved={reloadLocalTrip}
+              />
+            </View>
+
+            {/* 8. Beta Diagnostics drawer */}
+            {isDebugBuild && (
+              <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary, marginTop: Spacing.sm }]}>
+                <TouchableOpacity
+                  style={styles.infoRow}
+                  onPress={() => setShowDiagnostics(!showDiagnostics)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                    {t('trip_detail.beta_diagnostics')}
+                  </ThemedText>
+                  {showDiagnostics
+                    ? <ChevronUpIcon size={18} color={colors.textSecondary} />
+                    : <ChevronDownIcon size={18} color={colors.textSecondary} />
+                  }
+                </TouchableOpacity>
+
+                {showDiagnostics && (
+                  <>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.trip_id')}
+                      </ThemedText>
+                      <ThemedText style={[styles.infoValue, { fontSize: 11 }]} numberOfLines={1}>
+                        {trip.id}
                       </ThemedText>
                     </View>
-                  )}
-                </>
-              )}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.backend_id')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>
+                        {tripId > 0 ? String(tripId) : 'Not synced'}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.gps_points')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.imu_samples')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>
+                        {localTrip?.ml_confidence != null ? 'Available' : '—'}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.classification_source')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>
+                        {trip.classification_source ?? localTrip?.classification_source ?? '—'}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        Entry Type
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>
+                        {trip.is_manual
+                          ? t('trip_detail.entry_manual')
+                          : t('trip_detail.entry_automatic')}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.status')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>{trip.status}</ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.avg_speed_backend')}
+                      </ThemedText>
+                      <ThemedText style={styles.infoValue}>
+                        {localTrip?.backend_avg_speed_kmh != null
+                          ? formatSpeed(localTrip.backend_avg_speed_kmh / 3.6, unitSystem)
+                          : '—'}
+                      </ThemedText>
+                    </View>
+                    {(trip.validation_log ?? localTrip?.validation_log) != null && (
+                      <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                        <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                          {t('trip_detail.validation_log')}
+                        </ThemedText>
+                        <ThemedText style={[styles.infoValue, { marginTop: 4, fontSize: 11 }]}>
+                          {trip.validation_log ?? localTrip?.validation_log}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        </ScrollView>
       </ThemedView>
     </SafeAreaView>
   );
@@ -620,6 +701,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scrollContent: {
+    paddingBottom: Spacing.xl,
+  },
   mapContainer: {
     height: 300,
     width: '100%',
@@ -639,52 +723,97 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: Spacing.md,
+    gap: Spacing.sm,
   },
-  tripHeader: {
+  dateSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  // Headline stats row
+  headlineRow: {
     flexDirection: 'row',
+    borderRadius: 12,
+    padding: Spacing.md,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  tripHeaderIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  tripHeaderText: {
+  headlineStat: {
     flex: 1,
+    alignItems: 'center',
   },
-  tripHeaderTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+  headlineLabel: {
+    fontSize: 12,
     marginBottom: 4,
   },
-  tripHeaderDate: {
-    fontSize: 14,
+  headlineValue: {
+    fontSize: 28,
+    fontWeight: '700',
   },
-  statsGrid: {
+  headlineDivider: {
+    width: 1,
+    height: 40,
+    marginHorizontal: Spacing.sm,
+  },
+  // Speed grid
+  speedGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
+    padding: Spacing.md,
   },
-  statItem: {
-    width: '33.33%',
-    marginBottom: 16,
+  speedItem: {
+    flex: 1,
     alignItems: 'center',
   },
   statLabel: {
     fontSize: 12,
     marginBottom: 4,
+    textAlign: 'center',
   },
   statValue: {
     fontSize: 16,
     fontWeight: '600',
   },
+  // Elevation row
+  elevationRow: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  elevationText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  elevationSep: {
+    fontSize: 14,
+  },
+  // CO₂ row
+  co2Row: {
+    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  co2Text: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Notes / generic section card
+  sectionCard: {
+    borderRadius: 12,
+    padding: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
+  },
+  // Info card (diagnostics)
   infoCard: {
     padding: 16,
     borderRadius: 12,
@@ -701,12 +830,14 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
   confirmCard: {
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   typeSelector: {
     flexDirection: 'row',
