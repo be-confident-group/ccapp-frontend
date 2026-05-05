@@ -45,13 +45,18 @@ enum Segmenter {
       } else {
         isTransit = duration >= transitWindowSeconds
       }
-      // For unknown at high speed, re-classify as automotive transit
+      // Check if unknown activity had sustained high speed for ≥30s (automotive proxy)
       let finalActivity: SegmentActivity
-      if windowActivity == .unknown {
-        let highSpeedDuration = windowPoints
-          .filter { ($0.speedKmh ?? 0) > transitSpeedThresholdKmh }
-          .count > 0 ? duration : 0 // simplified: any high-speed point in window
-        finalActivity = highSpeedDuration > 0 ? .automotive : .unknown
+      if windowActivity == .unknown && windowPoints.count >= 2 {
+        var sustainedHighSpeedSeconds = 0.0
+        for i in 1..<windowPoints.count {
+          let prev = windowPoints[i - 1]
+          let curr = windowPoints[i]
+          if (prev.speedKmh ?? 0) > transitSpeedThresholdKmh && (curr.speedKmh ?? 0) > transitSpeedThresholdKmh {
+            sustainedHighSpeedSeconds += curr.timestamp.timeIntervalSince(prev.timestamp)
+          }
+        }
+        finalActivity = sustainedHighSpeedSeconds >= transitSpeedMinDurationSeconds ? .automotive : .unknown
       } else {
         finalActivity = windowActivity
       }

@@ -44,4 +44,32 @@ final class SegmenterTests: XCTestCase {
     let result = Segmenter.split(timeline: points)
     XCTAssertTrue(result.filter { $0.kind == .transit }.isEmpty)
   }
+
+  func test_unknownWithSustained30sHighSpeed_isAutomotive() {
+    let base = Date(timeIntervalSince1970: 0)
+    var points: [Segmenter.TimelinePoint] = []
+    // 90s of unknown with sustained 40 km/h
+    for s in stride(from: 0, through: 90, by: 10) {
+      points.append(.init(timestamp: base.addingTimeInterval(Double(s)), activity: .unknown, speedKmh: 40))
+    }
+    let result = Segmenter.split(timeline: points)
+    XCTAssertFalse(result.isEmpty)
+    // The automotive-via-speed path should classify the segment as automotive
+    let automotiveSeg = result.first { $0.activity == .automotive }
+    XCTAssertNotNil(automotiveSeg)
+  }
+
+  func test_unknownWithSingleHighSpeedPoint_isNotAutomotive() {
+    let base = Date(timeIntervalSince1970: 0)
+    var points: [Segmenter.TimelinePoint] = []
+    // 2 min unknown, only one 10s window at high speed
+    for s in stride(from: 0, through: 120, by: 10) {
+      let speed: Double = (s == 50) ? 40.0 : 5.0  // only at t=50 is speed high
+      points.append(.init(timestamp: base.addingTimeInterval(Double(s)), activity: .unknown, speedKmh: speed))
+    }
+    let result = Segmenter.split(timeline: points)
+    // Should not be automotive (only 1 point at high speed, not sustained 30s)
+    let automotiveSeg = result.first { $0.activity == .automotive }
+    XCTAssertNil(automotiveSeg)
+  }
 }
