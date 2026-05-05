@@ -288,6 +288,45 @@ final class TrackingDatabase {
   }
 }
 
+// MARK: - Altitude samples
+
+extension TrackingDatabase {
+  func insertAltitudeSample(tripId: String, timestamp: Date, altitudeM: Double) throws {
+    let tsMs = Int64(timestamp.timeIntervalSince1970 * 1000)
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: """
+          INSERT OR REPLACE INTO trip_altitude_samples (trip_id, timestamp, relative_altitude_m)
+          VALUES (?, ?, ?)
+        """, arguments: [tripId, tsMs, altitudeM])
+      }
+    }
+  }
+
+  func loadAltitudeSamples(tripId: String) throws -> [(Date, Double)] {
+    try queue.read { db in
+      try Row.fetchAll(db, sql: """
+        SELECT timestamp, relative_altitude_m FROM trip_altitude_samples
+        WHERE trip_id = ? ORDER BY timestamp ASC
+      """, arguments: [tripId]).map { row -> (Date, Double) in
+        let tsMs = row["timestamp"] as Int64
+        return (Date(timeIntervalSince1970: TimeInterval(tsMs) / 1000.0), row["relative_altitude_m"])
+      }
+    }
+  }
+
+  func updateTripElevation(tripId: String, gainM: Double?, lossM: Double?) throws {
+    guard gainM != nil || lossM != nil else { return }
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: """
+          UPDATE trips SET elevation_gain = ?, elevation_loss_m = ? WHERE id = ?
+        """, arguments: [gainM ?? 0.0, lossM, tripId])
+      }
+    }
+  }
+}
+
 // MARK: - Helpers
 
 private func haversineMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Double) -> Double {

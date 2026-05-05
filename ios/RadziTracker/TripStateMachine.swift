@@ -40,6 +40,7 @@ final class TripStateMachine {
   /// the device is fully stationary).
   private var stationaryCheckTimer: Timer?
   private let stationaryCheckInterval: TimeInterval = 10
+  private let altimeter = AltimeterMonitor()
 
   func bind(motion: MotionMonitor) {
     self.motionMonitorRef = motion
@@ -124,6 +125,7 @@ final class TripStateMachine {
     try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: now)
     currentTripId = tripId
     transition(to: .recording)
+    altimeter.start()
     delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: now)
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
@@ -193,6 +195,7 @@ final class TripStateMachine {
       currentStagingId = nil
       detectingStartTime = nil
       transition(to: .recording)
+      altimeter.start()
       delegate?.stateMachine(self, didStartTrip: tripId, startTime: stagingFirstTs, backfillStart: backfillStart)
       delegate?.stateMachine(self, requestAccuracyMode: .best)
       delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
@@ -204,6 +207,11 @@ final class TripStateMachine {
 
   private func transitionRecordingToCooldown() {
     cancelStationaryCheckTimer()
+    // Don't drain yet — trip may resume. Just stop the hardware.
+    altimeter.stopAndDrain().forEach { s in
+      guard let tripId = currentTripId else { return }
+      try? TrackingDatabase.shared.insertAltitudeSample(tripId: tripId, timestamp: s.timestamp, altitudeM: s.relativeAltitudeM)
+    }
     transition(to: .cooldown)
     cooldownEnteredAt = Date()
     delegate?.stateMachine(self, requestAccuracyMode: .hundred)
@@ -216,6 +224,7 @@ final class TripStateMachine {
     cooldownEnteredAt = nil
     cancelStationaryCheckTimer()
     transition(to: .recording)
+    altimeter.start()
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: currentTripId)
   }
@@ -229,6 +238,15 @@ final class TripStateMachine {
     transition(to: .ending)
     delegate?.stateMachine(self, requestAccuracyMode: .off)
     delegate?.stateMachine(self, requestImuRunning: false, tripId: nil)
+    let drained = altimeter.stopAndDrain()
+    if let tripId = currentTripId {
+      for s in drained {
+        try? TrackingDatabase.shared.insertAltitudeSample(tripId: tripId, timestamp: s.timestamp, altitudeM: s.relativeAltitudeM)
+      }
+      let allSamples = (try? TrackingDatabase.shared.loadAltitudeSamples(tripId: tripId)) ?? []
+      let agg = AltimeterMonitor.aggregate(samples: allSamples.map { (timestamp: $0.0, relativeAltitudeM: $0.1) })
+      try? TrackingDatabase.shared.updateTripElevation(tripId: tripId, gainM: agg.gainMeters, lossM: agg.lossMeters)
+    }
     delegate?.stateMachine(self, didEndTrip: tripId, endTime: now)
   }
 
