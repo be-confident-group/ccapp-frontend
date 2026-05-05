@@ -14,11 +14,7 @@ class MockSQLiteDatabase {
   }
 
   async execAsync(source: string): Promise<void> {
-    // Split on semicolons so multi-statement strings work
-    const stmts = source.split(';').map((s) => s.trim()).filter(Boolean);
-    for (const stmt of stmts) {
-      this._db.exec(stmt);
-    }
+    this._db.exec(source);
   }
 
   async getFirstAsync<T>(source: string, ...params: unknown[]): Promise<T | null> {

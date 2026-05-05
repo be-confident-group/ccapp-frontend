@@ -19,4 +19,10 @@ describe('schema v7 migration', () => {
     expect(cols).toContain('elevation_loss_m');
     expect(cols).toContain('backend_avg_speed_kmh');
   });
+
+  it('is idempotent — running v7 migration twice does not throw', async () => {
+    const db = openDatabaseSync(':memory:');
+    await runMigrationsUpTo(db, 7);
+    await expect(runMigrationsUpTo(db, 7)).resolves.toBeUndefined();
+  });
 });
