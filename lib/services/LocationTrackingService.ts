@@ -10,8 +10,6 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import { database, type LocationPoint } from '../database';
-import { ActivityClassifier } from './ActivityClassifier';
-import { TripDetectionService } from './TripDetectionService';
 import { TripValidationService } from './TripValidationService';
 import { TripManager } from './TripManager';
 import { syncService } from './SyncService';
@@ -64,6 +62,60 @@ const ZOMBIE_TRIP_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes — covers stops 
 // Eliminates single GPS spike false positives.
 const CONSECUTIVE_MOVEMENT_REQUIRED = 3;
 let consecutiveMovementCount = 0;
+
+// ===== INLINE TRIP DETECTION THRESHOLDS =====
+// Previously in TripDetectionService.ts. Stateless config, inlined here.
+const TRIP_DETECTION = {
+  stationarySpeedThreshold: 0.5,   // m/s — ~1.8 km/h
+  stationaryTimeThreshold: 180,     // seconds before ending trip
+  minTripDuration: 90,              // seconds
+  minTripDistance: 200,             // meters
+  movementSpeedThreshold: 1.0,      // m/s — ~3.6 km/h
+};
+
+function tripDetection_shouldStartTrip(speedMps: number): boolean {
+  if (speedMps < TRIP_DETECTION.movementSpeedThreshold) return false;
+  const kmh = speedMps * 3.6;
+  // Stationary if under 2 km/h; valid moving activity otherwise
+  return kmh >= 2;
+}
+
+function tripDetection_justBecameStationary(speedMps: number): boolean {
+  return speedMps <= TRIP_DETECTION.stationarySpeedThreshold;
+}
+
+function tripDetection_shouldEndTrip(
+  tripStartTime: number,
+  tripDistance: number,
+  lastStationaryTimeMs: number | null,
+  currentTime: number,
+): boolean {
+  const tripDuration = (currentTime - tripStartTime) / 1000;
+  if (tripDuration < TRIP_DETECTION.minTripDuration) return false;
+  if (tripDistance < TRIP_DETECTION.minTripDistance) return false;
+  if (lastStationaryTimeMs) {
+    const stationaryDuration = (currentTime - lastStationaryTimeMs) / 1000;
+    return stationaryDuration >= TRIP_DETECTION.stationaryTimeThreshold;
+  }
+  return false;
+}
+
+function tripDetection_shouldDiscardTrip(duration: number, distance: number): boolean {
+  return duration < TRIP_DETECTION.minTripDuration || distance < TRIP_DETECTION.minTripDistance;
+}
+
+// ===== INLINE SPEED CLASSIFIER =====
+// Previously in ActivityClassifier.ts. Used to tag stored location rows with
+// an activity_type / activity_confidence for display; not used for trip logic.
+interface SpeedClassification { type: string; confidence: number }
+
+function classifyBySpeed(speedMps: number): SpeedClassification {
+  const kmh = speedMps * 3.6;
+  if (kmh < 2)  return { type: 'stationary', confidence: kmh < 0.5 ? 95 : 85 };
+  if (kmh < 7)  return { type: 'walking',    confidence: Math.round(Math.max(65, 80 - Math.abs(kmh - 4.5) * 3)) };
+  if (kmh < 30) return { type: 'cycling',    confidence: Math.round(Math.max(70, 85 - Math.abs(kmh - 18.5) * 1.5)) };
+  return { type: 'driving', confidence: kmh > 40 ? 95 : 85 };
+}
 
 // ===== TRIP RECORDING NOTIFICATION =====
 let activeTripNotificationId: string | null = null;
@@ -462,7 +514,6 @@ async function endZombieTrip(tripId: string, _endTime: number): Promise<void> {
   // Reset tracking state
   lastStationaryTime = null;
   resetGpsStabilization();
-  TripDetectionService.resetState();
 }
 
 /**
@@ -738,7 +789,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     // ===== TRIP START LOGIC =====
     if (!activeTrip) {
       // Check if we should start a new trip
-      if (TripDetectionService.shouldStartTrip(currentSpeed)) {
+      if (tripDetection_shouldStartTrip(currentSpeed)) {
         consecutiveMovementCount++;
         console.log(`[LocationTracking] Movement detected (${consecutiveMovementCount}/${CONSECUTIVE_MOVEMENT_REQUIRED} required)`);
         trackingLog('info', `Movement ${consecutiveMovementCount}/${CONSECUTIVE_MOVEMENT_REQUIRED}`);
@@ -795,7 +846,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
         // Store all stabilization buffer locations as the trip's initial points
         for (const bufferedLoc of stabilizationBuffer) {
           const bufferedCoords = bufferedLoc.coords;
-          const bufferedClassification = ActivityClassifier.classifyBySpeed(bufferedCoords.speed || 0);
+          const bufferedClassification = classifyBySpeed(bufferedCoords.speed || 0);
           await database.addLocation({
             trip_id: tripId,
             latitude: bufferedCoords.latitude,
@@ -836,7 +887,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     }
 
     // ===== STATIONARY DETECTION =====
-    if (TripDetectionService.justBecameStationary(currentSpeed)) {
+    if (tripDetection_justBecameStationary(currentSpeed)) {
       if (!lastStationaryTime) {
         lastStationaryTime = timestamp;
         console.log('[LocationTracking] User became stationary');
@@ -848,7 +899,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
     }
 
     // ===== CLASSIFY ACTIVITY =====
-    const classification = ActivityClassifier.classifyBySpeed(currentSpeed);
+    const classification = classifyBySpeed(currentSpeed);
 
     // ===== GPS OUTLIER CHECK =====
     if (!isPointPhysicallyPlausible(latitude, longitude, timestamp)) {
@@ -896,7 +947,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
 
     // ===== CHECK IF SHOULD END TRIP =====
     if (
-      TripDetectionService.shouldEndTrip(
+      tripDetection_shouldEndTrip(
         activeTrip.start_time,
         stats.totalDistance,
         lastStationaryTime,
@@ -904,7 +955,7 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       )
     ) {
       // Check if trip is significant enough to keep
-      if (TripDetectionService.shouldDiscardTrip(stats.duration, stats.totalDistance)) {
+      if (tripDetection_shouldDiscardTrip(stats.duration, stats.totalDistance)) {
         console.log('[LocationTracking] Trip too short, discarding');
         trackingLog('warn', 'Trip too short, discarding');
         await database.updateTrip(activeTrip.id, {
@@ -945,7 +996,6 @@ async function processLocationUpdates(locations: Location.LocationObject[]) {
       lastStationaryTime = null;
       consecutiveMovementCount = 0;
       resetGpsStabilization();
-      TripDetectionService.resetState();
     }
   }
 }
@@ -1008,16 +1058,13 @@ function calculateTripStatistics(locations: LocationPoint[]) {
   // Average speed in km/h
   const avgSpeed = duration > 0 ? (totalDistance / duration) * 3.6 : 0;
 
-  // CO2 saved (kg) - assuming cycling/walking vs car (120g/km)
-  const co2Saved = (totalDistance / 1000) * 0.12;
-
   return {
     totalDistance,
     duration,
     avgSpeed,
     maxSpeed,
     elevationGain,
-    co2Saved,
+    co2Saved: 0, // Backend calculates CO2 (0.129 kg/km); populated via sync
   };
 }
 

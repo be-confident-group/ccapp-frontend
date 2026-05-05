@@ -28,6 +28,18 @@ export interface Trip {
   engine?: 'native' | 'legacy';
   backfill_start?: number | null;
   detection_state?: string | null;
+  // v7 migration fields
+  user_note?: string | null;
+  validation_log?: string | null;
+  user_note_dirty?: number | null; // 0 or 1
+  type_dirty?: number | null; // 0 or 1
+  classification_source?: 'apple_motion' | 'android_motion' | 'manual' | 'speed' | null;
+  moving_duration_s?: number | null;
+  moving_avg_speed_kmh?: number | null;
+  max_speed_filtered_kmh?: number | null;
+  elevation_loss_m?: number | null;
+  backend_avg_speed_kmh?: number | null;
+  visible?: number | null; // 0 or 1
 }
 
 export interface LocationPoint {
@@ -238,7 +250,7 @@ class Database {
   async getAllTrips(filters?: TripFilters): Promise<Trip[]> {
     const db = await this.getDb();
 
-    let query = 'SELECT * FROM trips WHERE 1=1';
+    let query = 'SELECT * FROM trips WHERE (visible = 1 OR visible IS NULL)';
     const params: any[] = [];
 
     if (filters) {

@@ -4,7 +4,7 @@
 
 import NetInfo from '@react-native-community/netinfo';
 import { database } from '../database';
-import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip } from '../api/trips';
+import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip, type ApiTripCreate } from '../api/trips';
 import type { Trip } from '../database/db';
 import { TripValidationService } from './TripValidationService';
 
@@ -309,6 +309,10 @@ class SyncService {
       // that the parent trips have backend_ids.
       void this.syncSensorBatches();
 
+      // Fire-and-forget: propagate dirty field edits (user_note, type) for
+      // already-synced trips.
+      void this.syncDirtyTrips();
+
       return result;
     } catch (error) {
       console.error('[SyncService] Sync error:', error);
@@ -509,6 +513,59 @@ class SyncService {
     } catch (error) {
       console.error('[SyncService] syncSensorBatches crashed:', error);
       return result;
+    }
+  }
+
+  /**
+   * PATCH a single trip's dirty fields to the backend and clear the dirty flags.
+   */
+  async patchTripFields(tripId: string): Promise<void> {
+    const trip = await database.getTrip(tripId);
+    if (!trip || !trip.backend_id) return;
+
+    // Allow null for user_note so clearing a note sends null to the backend.
+    // The intersection type widens user_note to string | null | undefined.
+    type DirtyPatch = Omit<Partial<ApiTripCreate>, 'user_note'> & { user_note?: string | null };
+    const dirty: DirtyPatch = {};
+    if (trip.user_note_dirty) dirty.user_note = trip.user_note;
+    if (trip.type_dirty) dirty.type = trip.type;
+
+    if (Object.keys(dirty).length === 0) return;
+
+    try {
+      await tripAPI.patchTrip(trip.backend_id, dirty as Partial<ApiTripCreate>);
+      await database.updateTrip(tripId, {
+        user_note_dirty: 0,
+        type_dirty: 0,
+      });
+      console.log(`[SyncService] PATCHed trip ${tripId} successfully`);
+    } catch (error) {
+      console.warn(`[SyncService] patchTripFields failed for ${tripId}:`, error instanceof Error ? error.message : error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find all synced trips with dirty flags and PATCH them to the backend.
+   * Best-effort: individual failures leave the dirty flag set for the next cycle.
+   */
+  async syncDirtyTrips(): Promise<void> {
+    try {
+      const isOnline = await this.checkNetwork();
+      if (!isOnline) return;
+
+      // Find all synced trips that still have dirty edit flags
+      const dirtyTrips = await database.getAllTrips({ synced: true });
+      const targets = dirtyTrips.filter(t => t.user_note_dirty || t.type_dirty);
+      for (const trip of targets) {
+        try {
+          await this.patchTripFields(trip.id);
+        } catch {
+          // best-effort: leave dirty flag set, retry next cycle
+        }
+      }
+    } catch (error) {
+      console.warn('[SyncService] syncDirtyTrips error:', error instanceof Error ? error.message : error);
     }
   }
 

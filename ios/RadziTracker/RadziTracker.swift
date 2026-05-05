@@ -15,6 +15,7 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
   private let location = LocationSession()
   private let imu = ImuSampler()
   private let stateMachine = TripStateMachine()
+  private let slcMonitor = SLCMonitor()
   private var hasListeners = false
 
   override init() {
@@ -27,6 +28,45 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
     motion.watchSustain(activity: .running, seconds: stateMachine.config.detectionSustainSeconds)
     motion.watchSustain(activity: .cycling, seconds: stateMachine.config.detectionSustainSeconds)
     motion.watchSustain(activity: .automotive, seconds: stateMachine.config.detectionSustainSeconds)
+
+    // Backfill any trips missed while the app was not running
+    DispatchQueue.global(qos: .utility).async { [weak self] in
+      guard let self else { return }
+      let now = Date()
+      let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: now)) ?? []
+      let synthesized = self.stateMachine.reconcilerBackfill(now: now, covered: covered)
+      for syn in synthesized {
+        let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
+        try? TrackingDatabase.shared.insertSynthesizedTrip(
+          id: id, start: syn.start, end: syn.end,
+          type: syn.activity == .walking ? "walk" : "cycle",
+          distanceM: syn.distanceM,
+          classificationSource: "apple_motion"
+        )
+      }
+    }
+
+    slcMonitor.onWake = { [weak self] _ in
+      guard let self else { return }
+      // Trigger backfill on SLC wake (force-quit recovery path)
+      DispatchQueue.global(qos: .utility).async {
+        let now = Date()
+        let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: now)) ?? []
+        let synthesized = self.stateMachine.reconcilerBackfill(now: now, covered: covered)
+        for syn in synthesized {
+          let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
+          try? TrackingDatabase.shared.insertSynthesizedTrip(
+            id: id, start: syn.start, end: syn.end,
+            type: syn.activity == .walking ? "walk" : "cycle",
+            distanceM: syn.distanceM,
+            classificationSource: "apple_motion"
+          )
+        }
+      }
+    }
+    slcMonitor.start()
+
+    stateMachine.rehydrateIfNeeded()
   }
 
   override func startObserving() { hasListeners = true }

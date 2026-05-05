@@ -8,7 +8,7 @@
 
 import { database } from '@/lib/database';
 import type { MotionSegment, LocationPoint } from '@/lib/database/db';
-import type { TripSegment, SegmentAnalysis } from './SegmentDetector';
+import type { TripSegment, SegmentAnalysis } from './MLSegmentDetector';
 import type { TripType } from '@/types/trip';
 
 // Minimum thresholds for valid segments

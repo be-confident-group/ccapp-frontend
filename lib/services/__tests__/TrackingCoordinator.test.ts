@@ -6,7 +6,14 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 jest.mock('react-native', () => ({
-  Platform: { OS: 'ios' },
+  AppState: { addEventListener: jest.fn().mockReturnValue({ remove: jest.fn() }) },
+}));
+
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
+  scheduleNotificationAsync: jest.fn().mockResolvedValue(undefined),
+  dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockNative = {
@@ -35,17 +42,6 @@ jest.mock('../../native/RadziTracker', () => ({
   RadziTrackerEvents: mockEvents,
 }));
 
-const mockLegacy = {
-  startTracking: jest.fn().mockResolvedValue(undefined),
-  stopTracking: jest.fn().mockResolvedValue(undefined),
-  requestPermissions: jest.fn().mockResolvedValue({ foreground: 'granted', background: 'granted' }),
-  checkPermissions: jest.fn().mockResolvedValue({ foreground: 'granted', background: 'granted' }),
-};
-
-jest.mock('../LocationTrackingService', () => ({
-  LocationTrackingService: mockLegacy,
-}));
-
 jest.mock('../TripFinalizationPipeline', () => ({
   TripFinalizationPipeline: { finalize: jest.fn().mockResolvedValue(undefined) },
 }));
@@ -54,9 +50,9 @@ import { TrackingCoordinator } from '../TrackingCoordinator';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Reset singleton state so each test re-initializes with fresh AsyncStorage mock
-  (TrackingCoordinator as any).initialized = false;
-  (TrackingCoordinator as any).engine = 'native';
+  // Reset singleton state so each test re-initializes with fresh mocks
+  (TrackingCoordinator as any).initPromise = null;
+  (TrackingCoordinator as any).manualOnly = false;
 });
 
 describe('TrackingCoordinator', () => {
@@ -64,28 +60,31 @@ describe('TrackingCoordinator', () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     await TrackingCoordinator.start();
     expect(mockNative.start).toHaveBeenCalledTimes(1);
-    expect(mockLegacy.startTracking).not.toHaveBeenCalled();
   });
 
-  it('routes to legacy engine when @tracking_engine = legacy', async () => {
-    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
-      Promise.resolve(key === '@tracking_engine' ? 'legacy' : null)
-    );
-    await TrackingCoordinator.start();
-    expect(mockLegacy.startTracking).toHaveBeenCalledTimes(1);
-    expect(mockNative.start).not.toHaveBeenCalled();
+  it('getEngine always returns native', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    const engine = await TrackingCoordinator.getEngine();
+    expect(engine).toBe('native');
   });
 
-  it('forceStartTrip resolves with tripId on native', async () => {
+  it('forceStartTrip resolves with tripId', async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     const result = await TrackingCoordinator.forceStartTrip();
     expect(result.tripId).toBe('trip_1');
   });
 
-  it('forceStartTrip throws on legacy engine', async () => {
+  it('stop delegates to native', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    await TrackingCoordinator.stop();
+    expect(mockNative.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call start when manualOnly is set', async () => {
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
-      Promise.resolve(key === '@tracking_engine' ? 'legacy' : null)
+      Promise.resolve(key === '@tracking_manual_only' ? 'true' : null)
     );
-    await expect(TrackingCoordinator.forceStartTrip()).rejects.toThrow();
+    await TrackingCoordinator.start();
+    expect(mockNative.start).not.toHaveBeenCalled();
   });
 });

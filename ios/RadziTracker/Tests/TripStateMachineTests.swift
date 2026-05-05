@@ -144,4 +144,43 @@ final class TripStateMachineTests: XCTestCase {
     _ = try? sm.forceStart()
     XCTAssertThrowsError(try sm.forceStart())
   }
+
+  // MARK: - Task 8: GPS stabilization timeout
+
+  func test_gpsStabilizationTimeoutIs8s() {
+    XCTAssertEqual(TripStateMachine.gpsStabilizationTimeoutSeconds, 8.0, accuracy: 0.001)
+  }
+
+  // NOTE: test_tripStartsAfter2ConsecutiveMovementReadings_not3 is intentionally
+  // omitted — it references a feed(speedMps:) API and a "consecutive readings"
+  // model that don't exist in the current state machine design. The 8s timeout
+  // reduction (Task 8) achieves the same intent of faster trip starts.
+  // TODO: Add this test if a feed(speedMps:) / consecutive-readings model is added.
+
+  // MARK: - Task 9: Immediate-start on Apple Motion classification
+
+  func test_handleMotionUpdate_mediumConfidence_startsTripImmediately() {
+    let sm = TripStateMachine.makeForTest()
+    sm.handleMotionUpdate(activity: .cycling, confidence: .medium)
+    XCTAssertNotNil(sm.currentTripId)
+    XCTAssertEqual(sm.currentTripType, "cycle")
+    XCTAssertEqual(sm.state, .recording)
+  }
+
+  func test_handleMotionUpdate_lowConfidence_doesNotStart() {
+    let sm = TripStateMachine.makeForTest()
+    sm.handleMotionUpdate(activity: .cycling, confidence: .low)
+    XCTAssertNil(sm.currentTripId)
+    XCTAssertEqual(sm.state, .idle)
+  }
+
+  // MARK: - Task 15: Rehydration
+
+  func test_rehydrateIfNeeded_doesNothingWhenNoStaleTrip() {
+    let sm = TripStateMachine()
+    sm.rehydrateIfNeeded()
+    // No stale trip in DB → remains idle
+    XCTAssertEqual(sm.state, .idle)
+    XCTAssertNil(sm.currentTripId)
+  }
 }

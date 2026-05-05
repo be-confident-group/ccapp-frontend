@@ -137,17 +137,6 @@ export function formatDurationHuman(seconds: number): string {
 }
 
 /**
- * Calculate CO2 saved (cycling vs car)
- * Average car emits ~120g CO2 per km
- *
- * @param distanceKm - Distance in kilometers
- * @returns CO2 saved in kg
- */
-export function calculateCO2Saved(distanceKm: number): number {
-  return distanceKm * 0.12; // kg of CO2
-}
-
-/**
  * Calculate calories burned
  * Rough estimates based on activity type and distance
  *

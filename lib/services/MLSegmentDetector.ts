@@ -2,19 +2,38 @@
  * ML-driven segment detector.
  *
  * Consumes the per-window ML predictions stored in `activity_windows` for a
- * trip and produces the same `SegmentAnalysis` shape the legacy speed-based
- * `SegmentDetector` does, so the rest of the pipeline (multi-modal split in
- * TripManager, UI code) does not change.
+ * trip and produces the same `SegmentAnalysis` shape, so the rest of the
+ * pipeline (multi-modal split in TripManager, UI code) does not change.
  *
  * Fallback: if no activity_windows rows exist for the trip (typical for
  * background-only trips on iOS where expo-sensors can't stream), this
- * detector delegates to the speed-based `SegmentDetector`.
+ * detector falls back to a simple speed-based segmenter inlined below.
  */
 
 import { database, type ActivityWindow, type LocationPoint } from '../database';
 import { activityClassToTripType, type ActivityClass } from '../activity/classifier';
-import { SegmentDetector, type SegmentAnalysis, type TripSegment } from './SegmentDetector';
 import type { TripType } from '@/types/trip';
+
+// ===== Shared segment types (previously in SegmentDetector.ts) =====
+
+export interface TripSegment {
+  startIndex: number;
+  endIndex: number;
+  locations: LocationPoint[];
+  type: TripType;
+  distance: number; // meters
+  duration: number; // seconds
+  avgSpeed: number; // km/h
+  maxSpeed: number; // km/h
+  confidence: number; // 0-100
+}
+
+export interface SegmentAnalysis {
+  isMultiModal: boolean;
+  segments: TripSegment[];
+  dominantType: TripType;
+  confidence: number;
+}
 
 const MIN_SEGMENT_DURATION_SEC = 30;
 const MIN_SEGMENT_DISTANCE_M = 100;
@@ -39,7 +58,7 @@ export class MLSegmentDetector {
       console.log(
         `[MLSegmentDetector] No activity_windows for ${tripId}, falling back to speed-based`,
       );
-      const legacy = SegmentDetector.analyzeTrip(locations);
+      const legacy = speedBasedFallback(locations);
       return {
         ...legacy,
         classificationMethod: 'speed',
@@ -262,4 +281,100 @@ function haversineMeters(a: LocationPoint, b: LocationPoint): number {
   const h =
     Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+// ===== Speed-based fallback segmenter =====
+// Used when no activity_windows exist for a trip (background-only iOS trips).
+// Intentionally minimal: classifies each point by speed thresholds, then
+// coalesces runs of the same type into segments.
+
+const SPEED_STATIONARY_KMH = 2;
+const SPEED_WALKING_KMH = 7;
+const SPEED_CYCLING_KMH = 30;
+
+function classifySpeedKmh(speedMps: number): TripType {
+  const kmh = speedMps * 3.6;
+  if (kmh < SPEED_STATIONARY_KMH) return 'walk'; // stationary treated as walk for fallback
+  if (kmh < SPEED_WALKING_KMH) return 'walk';
+  if (kmh < SPEED_CYCLING_KMH) return 'cycle';
+  return 'drive';
+}
+
+function speedBasedFallback(locations: LocationPoint[]): SegmentAnalysis {
+  if (locations.length < 2) {
+    return { isMultiModal: false, segments: [], dominantType: 'walk', confidence: 0 };
+  }
+
+  // Label each point
+  const labels = locations.map((loc) => classifySpeedKmh(loc.speed ?? 0));
+
+  // Coalesce runs of the same label
+  interface FallbackRun { type: TripType; startIdx: number; endIdx: number }
+  const runs: FallbackRun[] = [];
+  let cur: FallbackRun = { type: labels[0], startIdx: 0, endIdx: 0 };
+  for (let i = 1; i < labels.length; i++) {
+    if (labels[i] === cur.type) {
+      cur.endIdx = i;
+    } else {
+      runs.push(cur);
+      cur = { type: labels[i], startIdx: i, endIdx: i };
+    }
+  }
+  runs.push(cur);
+
+  // Build TripSegments
+  const rawSegments: TripSegment[] = runs.map((run) => {
+    const segLocs = locations.slice(run.startIdx, run.endIdx + 1);
+    let distance = 0;
+    let maxSpeedKmh = 0;
+    for (let i = 1; i < segLocs.length; i++) {
+      distance += haversineMeters(segLocs[i - 1], segLocs[i]);
+      const s = (segLocs[i].speed ?? 0) * 3.6;
+      if (s > maxSpeedKmh) maxSpeedKmh = s;
+    }
+    const duration = segLocs.length > 1
+      ? (segLocs[segLocs.length - 1].timestamp - segLocs[0].timestamp) / 1000
+      : 0;
+    const avgSpeed = duration > 0 ? (distance / 1000) / (duration / 3600) : 0;
+    return {
+      startIndex: run.startIdx,
+      endIndex: run.endIdx,
+      locations: segLocs,
+      type: run.type,
+      distance,
+      duration,
+      avgSpeed,
+      maxSpeed: maxSpeedKmh,
+      confidence: 60,
+    };
+  });
+
+  // Filter short segments and merge adjacent same-type
+  const filtered = rawSegments.filter(
+    (s) => s.duration >= MIN_SEGMENT_DURATION_SEC && s.distance >= MIN_SEGMENT_DISTANCE_M,
+  );
+
+  const merged: TripSegment[] = [];
+  for (const seg of filtered) {
+    if (merged.length > 0 && merged[merged.length - 1].type === seg.type) {
+      const prev = merged[merged.length - 1];
+      prev.endIndex = seg.endIndex;
+      prev.locations = [...prev.locations, ...seg.locations];
+      prev.distance += seg.distance;
+      prev.duration += seg.duration;
+      prev.avgSpeed = prev.duration > 0 ? (prev.distance / 1000) / (prev.duration / 3600) : 0;
+      prev.maxSpeed = Math.max(prev.maxSpeed, seg.maxSpeed);
+    } else {
+      merged.push({ ...seg, locations: [...seg.locations] });
+    }
+  }
+
+  const uniqueTypes = new Set(merged.map((s) => s.type));
+  const dominantType = getDominantType(merged);
+  return {
+    isMultiModal: uniqueTypes.size > 1,
+    segments: merged,
+    dominantType,
+    confidence: merged.length > 0 ? 60 : 0,
+  };
 }

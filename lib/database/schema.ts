@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 6;
+export const DB_VERSION = 10;
 
 export const SCHEMA = {
   trips: `
@@ -201,7 +201,15 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
-async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number): Promise<void> {
+export async function runMigrationsUpTo(db: SQLite.SQLiteDatabase, maxVersion: number): Promise<void> {
+  // Create all base tables first (needed for ALTER TABLE to work on a fresh DB)
+  for (const createSQL of Object.values(SCHEMA)) {
+    await db.execAsync(createSQL);
+  }
+  await runMigrations(db, 0, maxVersion);
+}
+
+export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number): Promise<void> {
   console.log(`[Database] Running migrations from version ${from} to ${to}`);
 
   // Migration from version 1 to 2: Add backend_id column
@@ -337,6 +345,99 @@ async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to: number
     await db.execAsync("UPDATE trips SET engine = 'legacy' WHERE engine IS NULL OR engine = ''");
 
     console.log('[Database] Migration 5->6: Completed');
+  }
+
+  // Migration from version 6 to 7: Add user-edit, classification, and moving-stats columns
+  if (from < 7 && to >= 7) {
+    console.log('[Database] Migration 6->7: Adding user-edit and stats columns to trips');
+    for (const stmt of [
+      'ALTER TABLE trips ADD COLUMN user_note TEXT',
+      'ALTER TABLE trips ADD COLUMN validation_log TEXT',
+      'ALTER TABLE trips ADD COLUMN user_note_dirty INTEGER NOT NULL DEFAULT 0',
+      'ALTER TABLE trips ADD COLUMN type_dirty INTEGER NOT NULL DEFAULT 0',
+      'ALTER TABLE trips ADD COLUMN classification_source TEXT',
+      'ALTER TABLE trips ADD COLUMN moving_duration_s INTEGER',
+      'ALTER TABLE trips ADD COLUMN moving_avg_speed_kmh REAL',
+      'ALTER TABLE trips ADD COLUMN max_speed_filtered_kmh REAL',
+      'ALTER TABLE trips ADD COLUMN elevation_loss_m REAL',
+      'ALTER TABLE trips ADD COLUMN backend_avg_speed_kmh REAL',
+    ]) {
+      try {
+        await db.execAsync(stmt);
+      } catch (err) {
+        console.log(`[Database] Migration 6->7: ALTER skipped (likely exists): ${stmt}`);
+      }
+    }
+    console.log('[Database] Migration 6->7: Completed');
+  }
+
+  // Migration from version 7 to 8: Add trip_altitude_samples and activity_history_snapshot tables
+  if (from < 8 && to >= 8) {
+    console.log('[Database] Migration 7->8: Adding altitude samples and activity history tables');
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS trip_altitude_samples (
+          trip_id TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          relative_altitude_m REAL NOT NULL,
+          PRIMARY KEY (trip_id, timestamp)
+        )
+      `);
+      await db.execAsync(
+        `CREATE INDEX IF NOT EXISTS idx_alt_trip ON trip_altitude_samples(trip_id)`
+      );
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS activity_history_snapshot (
+          trip_id TEXT NOT NULL,
+          query_start INTEGER NOT NULL,
+          query_end INTEGER NOT NULL,
+          raw_activities_json TEXT NOT NULL,
+          PRIMARY KEY (trip_id, query_start)
+        )
+      `);
+      console.log('[Database] Migration 7->8: Completed');
+    } catch (error) {
+      console.log('[Database] Migration 7->8: Error (tables may already exist)', error);
+    }
+  }
+
+  // Migration from version 8 to 9: Backfill legacy notes into user_note / validation_log
+  if (from < 9 && to >= 9) {
+    console.log('[Database] Migration 8->9: Backfilling legacy notes');
+    try {
+      const AUTO_PATTERN = /^(Trip contains driving|Walk distance|Ride distance|Trip type)/;
+      const rows = await db.getAllAsync<{ id: string; notes: string | null }>(
+        `SELECT id, notes FROM trips WHERE notes IS NOT NULL AND user_note IS NULL AND validation_log IS NULL`
+      );
+      for (const row of rows) {
+        if (!row.notes) continue;
+        if (AUTO_PATTERN.test(row.notes)) {
+          await db.runAsync(
+            `UPDATE trips SET validation_log = ?, notes = NULL WHERE id = ?`,
+            [row.notes, row.id]
+          );
+        } else {
+          await db.runAsync(
+            `UPDATE trips SET user_note = ?, notes = NULL WHERE id = ?`,
+            [row.notes, row.id]
+          );
+        }
+      }
+      console.log(`[Database] Migration 8->9: Backfilled ${rows.length} rows`);
+    } catch (error) {
+      console.log('[Database] Migration 8->9: Error during backfill', error);
+    }
+  }
+
+  // Migration from version 9 to 10: Add visible column to trips (1=show, 0=hide transit)
+  if (from < 10 && to >= 10) {
+    console.log('[Database] Migration 9->10: Adding visible column to trips');
+    try {
+      await db.execAsync('ALTER TABLE trips ADD COLUMN visible INTEGER NOT NULL DEFAULT 1');
+    } catch (err) {
+      console.log('[Database] Migration 9->10: ALTER skipped (likely exists):', err);
+    }
+    console.log('[Database] Migration 9->10: Completed');
   }
 
   console.log('[Database] Migrations completed');

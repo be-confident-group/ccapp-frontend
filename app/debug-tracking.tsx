@@ -123,7 +123,7 @@ function LiveTab({ status, lastActivity, stateHistory, colors }: {
           </>
         )}
         {!status && (
-          <Text style={[s.empty, { color: colors.textSecondary }]}>No native status (legacy engine or not init)</Text>
+          <Text style={[s.empty, { color: colors.textSecondary }]}>No native status (not yet initialised)</Text>
         )}
       </Card>
 
@@ -410,7 +410,7 @@ export default function DebugTrackingScreen() {
     const poll = async () => {
       try {
         const s = await TrackingCoordinator.getStatus();
-        if ('state' in s) setStatus(s as TrackingStatus);
+        setStatus(s);
       } catch {}
     };
     poll();
@@ -429,8 +429,8 @@ export default function DebugTrackingScreen() {
   const loadTripData = async () => {
     try {
       const s = await TrackingCoordinator.getStatus();
-      const stateLabel = 'state' in s ? (s as TrackingStatus).state : 'legacy';
-      const activeTripId = ('tripId' in s ? (s as any).tripId : null) as string | null;
+      const stateLabel = s.state;
+      const activeTripId = (s.tripId ?? null) as string | null;
 
       let activeTrip: TripTabData['activeTrip'] = null;
       if (activeTripId) {
@@ -455,7 +455,6 @@ export default function DebugTrackingScreen() {
             }
           } catch { /* non-fatal */ }
 
-          const isNativeActive = (trip as any).engine === 'native' && trip.status === 'active';
           activeTrip = {
             id: trip.id.slice(0, 22) + '…',
             startTime: new Date(trip.start_time).toLocaleTimeString(),
@@ -463,7 +462,7 @@ export default function DebugTrackingScreen() {
             distanceMeters,
             gpsPointCount,
             type: trip.type || '?',
-            classMethod: isNativeActive ? 'live' : (trip.classification_method || 'speed'),
+            classMethod: trip.status === 'active' ? 'live' : (trip.classification_method || 'speed'),
             backfillDelta,
           };
         }

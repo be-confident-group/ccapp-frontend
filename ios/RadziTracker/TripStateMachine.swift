@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import CoreMotion
 
 protocol TripStateMachineDelegate: AnyObject {
   func stateMachine(_ sm: TripStateMachine, didTransitionTo state: TripStateMachine.State, from previous: TripStateMachine.State)
@@ -14,8 +15,12 @@ final class TripStateMachine {
 
   enum State: String { case idle, detecting, recording, cooldown, ending }
 
+  /// Seconds of sustained GPS+motion activity required before promoting to .detecting.
+  /// Also used as the GPS stabilization window for the immediate-start path.
+  static let gpsStabilizationTimeoutSeconds: TimeInterval = 8
+
   struct Config {
-    var detectionSustainSeconds: TimeInterval = 15    // 15s sustained walking before entering detecting
+    var detectionSustainSeconds: TimeInterval = TripStateMachine.gpsStabilizationTimeoutSeconds
     var detectingMinDurationSeconds: TimeInterval = 30 // 30s minimum in detecting before promoting
     var detectingMinDisplacementMeters: Double = 20   // 20m GPS displacement to confirm real movement
     var falseStartGpsDisplacementMeters: Double = 8   // abort detecting if <8m after minDuration (not actually moving)
@@ -26,8 +31,11 @@ final class TripStateMachine {
   weak var delegate: TripStateMachineDelegate?
   private(set) var state: State = .idle
   private(set) var currentTripId: String?
+  private(set) var currentTripType: String?
   private(set) var currentStagingId: String?
   var config = Config()
+
+  private let reconciler: ActivityHistoryReconciler
 
   private var detectingStartTime: Date?
   private var stationaryStartTime: Date?
@@ -40,6 +48,14 @@ final class TripStateMachine {
   /// the device is fully stationary).
   private var stationaryCheckTimer: Timer?
   private let stationaryCheckInterval: TimeInterval = 10
+  private let altimeter = AltimeterMonitor()
+
+  init() {
+    reconciler = ActivityHistoryReconciler(
+      motion: ProductionMotionSource(),
+      pedometer: ProductionPedometerSource()
+    )
+  }
 
   func bind(motion: MotionMonitor) {
     self.motionMonitorRef = motion
@@ -47,7 +63,26 @@ final class TripStateMachine {
 
   // MARK: - Inputs
 
+  /// Called by MotionMonitor when CMMotionActivityManager reports a new activity.
+  /// If we're idle and confidence is medium or high, skip the detecting phase and
+  /// start the trip immediately ("immediate-start path").
+  func handleMotionUpdate(activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
+    guard state == .idle else { return }
+    guard confidence != .low else { return }
+    let type: String
+    switch activity {
+    case .walking:  type = "walk"
+    case .running:  type = "run"
+    case .cycling:  type = "cycle"
+    default: return
+    }
+    immediateStartTrip(type: type, classificationSource: "apple_motion")
+  }
+
   func onMotionActivity(_ activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
+    // Immediate-start path for high/medium confidence classifications
+    handleMotionUpdate(activity: activity, confidence: confidence)
+
     self.lastMotionActivity = activity
     switch state {
     case .idle:
@@ -112,6 +147,28 @@ final class TripStateMachine {
     }
   }
 
+  // MARK: - Immediate-start (Apple Motion classification)
+
+  /// Bypasses the detecting phase and transitions directly to .recording when
+  /// CMMotionActivityManager reports a walk/run/cycle with medium+ confidence.
+  private func immediateStartTrip(type: String, classificationSource: String) {
+    let now = Int64(Date().timeIntervalSince1970 * 1000)
+    let tripId = "trip_\(now)_\(Int.random(in: 1000...9999))"
+    do {
+      try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: now,
+                                              type: type, classificationSource: classificationSource)
+      currentTripId = tripId
+      currentTripType = type
+      transition(to: .recording)
+      delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: now)
+      delegate?.stateMachine(self, requestAccuracyMode: .best)
+      delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
+      altimeter.start()
+    } catch {
+      TrackingLogger.shared.log(.error, "TripStateMachine: immediateStartTrip failed — \(error)")
+    }
+  }
+
   // MARK: - Force start/stop
 
   func forceStart() throws -> String {
@@ -124,6 +181,7 @@ final class TripStateMachine {
     try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: now)
     currentTripId = tripId
     transition(to: .recording)
+    altimeter.start()
     delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: now)
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
@@ -193,6 +251,7 @@ final class TripStateMachine {
       currentStagingId = nil
       detectingStartTime = nil
       transition(to: .recording)
+      altimeter.start()
       delegate?.stateMachine(self, didStartTrip: tripId, startTime: stagingFirstTs, backfillStart: backfillStart)
       delegate?.stateMachine(self, requestAccuracyMode: .best)
       delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
@@ -204,6 +263,11 @@ final class TripStateMachine {
 
   private func transitionRecordingToCooldown() {
     cancelStationaryCheckTimer()
+    // Don't drain yet — trip may resume. Just stop the hardware.
+    altimeter.stopAndDrain().forEach { s in
+      guard let tripId = currentTripId else { return }
+      try? TrackingDatabase.shared.insertAltitudeSample(tripId: tripId, timestamp: s.timestamp, altitudeM: s.relativeAltitudeM)
+    }
     transition(to: .cooldown)
     cooldownEnteredAt = Date()
     delegate?.stateMachine(self, requestAccuracyMode: .hundred)
@@ -216,6 +280,7 @@ final class TripStateMachine {
     cooldownEnteredAt = nil
     cancelStationaryCheckTimer()
     transition(to: .recording)
+    altimeter.start()
     delegate?.stateMachine(self, requestAccuracyMode: .best)
     delegate?.stateMachine(self, requestImuRunning: true, tripId: currentTripId)
   }
@@ -229,6 +294,30 @@ final class TripStateMachine {
     transition(to: .ending)
     delegate?.stateMachine(self, requestAccuracyMode: .off)
     delegate?.stateMachine(self, requestImuRunning: false, tripId: nil)
+    let drained = altimeter.stopAndDrain()
+    if let tripId = currentTripId {
+      for s in drained {
+        try? TrackingDatabase.shared.insertAltitudeSample(tripId: tripId, timestamp: s.timestamp, altitudeM: s.relativeAltitudeM)
+      }
+      let allSamples = (try? TrackingDatabase.shared.loadAltitudeSamples(tripId: tripId)) ?? []
+      let agg = AltimeterMonitor.aggregate(samples: allSamples.map { (timestamp: $0.0, relativeAltitudeM: $0.1) })
+      try? TrackingDatabase.shared.updateTripElevation(tripId: tripId, gainM: agg.gainMeters, lossM: agg.lossMeters)
+    }
+    DispatchQueue.global(qos: .utility).async { [weak self] in
+      guard let self else { return }
+      let reconcileNow = Date()
+      let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: reconcileNow)) ?? []
+      let synthesized = self.reconciler.reconcile(now: reconcileNow, lookbackMinutes: 35, alreadyCovered: covered)
+      for syn in synthesized {
+        let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
+        try? TrackingDatabase.shared.insertSynthesizedTrip(
+          id: id, start: syn.start, end: syn.end,
+          type: syn.activity == .walking ? "walk" : "cycle",
+          distanceM: syn.distanceM,
+          classificationSource: "apple_motion"
+        )
+      }
+    }
     delegate?.stateMachine(self, didEndTrip: tripId, endTime: now)
   }
 
@@ -307,3 +396,60 @@ final class TripStateMachine {
     a == .walking || a == .running || a == .cycling || a == .automotive
   }
 }
+
+// MARK: - Reconciler backfill
+
+extension TripStateMachine {
+  func reconcilerBackfill(now: Date, covered: [(start: Date, end: Date)]) -> [SynthesizedSubTrip] {
+    reconciler.reconcile(now: now, lookbackMinutes: 35, alreadyCovered: covered)
+  }
+}
+
+// MARK: - Rehydration (force-quit recovery)
+
+extension TripStateMachine {
+  func rehydrateIfNeeded() {
+    guard let stale = try? TrackingDatabase.shared.findStaleRecordingTrip(staleAfterMs: 0) else { return }
+    // There's an active native trip from a prior session — reattach to it.
+    currentTripId = stale.id
+    currentTripType = (try? TrackingDatabase.shared.loadTripType(tripId: stale.id)) ?? "walk"
+    transition(to: .recording)
+    altimeter.start()
+    TrackingLogger.shared.log(.info, "TripStateMachine: rehydrated trip \(stale.id)")
+    delegate?.stateMachine(self, didStartTrip: stale.id, startTime: stale.lastUpdate, backfillStart: stale.lastUpdate)
+    delegate?.stateMachine(self, requestAccuracyMode: .best)
+    delegate?.stateMachine(self, requestImuRunning: true, tripId: stale.id)
+  }
+}
+
+// MARK: - Production motion/pedometer sources (private)
+
+private final class ProductionMotionSource: MotionHistorySource {
+  private let manager = CMMotionActivityManager()
+  func queryActivities(from: Date, to: Date, completion: @escaping ([CMMotionActivity]) -> Void) {
+    guard CMMotionActivityManager.isActivityAvailable() else { completion([]); return }
+    manager.queryActivityStarting(from: from, to: to, to: OperationQueue.main) { activities, _ in
+      completion(activities ?? [])
+    }
+  }
+}
+
+private final class ProductionPedometerSource: PedometerSource {
+  private let pedometer = CMPedometer()
+  func distanceMeters(from: Date, to: Date, completion: @escaping (Double?) -> Void) {
+    guard CMPedometer.isDistanceAvailable() else { completion(nil); return }
+    pedometer.queryPedometerData(from: from, to: to) { data, _ in
+      completion(data?.distance?.doubleValue)
+    }
+  }
+}
+
+// MARK: - Test helpers (DEBUG only)
+
+#if DEBUG
+extension TripStateMachine {
+  static func makeForTest() -> TripStateMachine {
+    return TripStateMachine()
+  }
+}
+#endif

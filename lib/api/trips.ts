@@ -4,6 +4,7 @@
 
 import { apiClient } from './client';
 import type { TripType, TripStatus } from '@/types/trip';
+import { RouteFilter } from '@/lib/services/RouteFilter';
 
 /**
  * Per-club result returned by POST /api/trips/{id}/share/.
@@ -34,10 +35,9 @@ export interface ApiTripCreate {
   is_manual: boolean;
   status?: TripStatus;
   elevation_gain?: number;
-  notes?: string;
-  ml_activity_type?: TripType | null;
-  ml_confidence?: number | null;
-  classification_method?: 'ml' | 'speed';
+  classification_source: 'apple_motion' | 'android_motion' | 'manual' | 'speed';
+  user_note?: string;
+  elevation_loss?: number;
 }
 
 export interface ApiTrip {
@@ -55,11 +55,18 @@ export interface ApiTrip {
   is_valid: boolean;
   user_confirmed: boolean | null;
   elevation_gain?: number;
-  notes?: string;
+  notes?: string; // @deprecated — use user_note or validation_log
   created_at: string;
   updated_at: string;
   duration: number; // Backend calculated (seconds)
   co2_saved: number; // Backend calculated (kg)
+  max_speed?: number;
+  moving_avg_speed?: number;
+  moving_duration?: number;
+  user_note?: string;
+  validation_log?: string;
+  elevation_loss?: number;
+  classification_source: 'apple_motion' | 'android_motion' | 'manual' | 'speed';
 }
 
 export interface TripFilters {
@@ -101,33 +108,39 @@ export interface DBTrip {
   created_at: number;
   updated_at: number;
   synced: number; // 0 or 1
+  backend_id: number | null;
   ml_activity_type?: TripType | null;
   ml_confidence?: number | null;
-  classification_method?: 'ml' | 'speed';
+  classification_method?: 'ml' | 'speed' | null;
+  engine?: string | null;
+  backfill_start?: number | null;
+  detection_state?: string | null;
+  // v7 migration fields
+  user_note?: string | null;
+  validation_log?: string | null;
+  user_note_dirty?: number | null; // 0 or 1
+  type_dirty?: number | null; // 0 or 1
+  classification_source?: 'apple_motion' | 'android_motion' | 'manual' | 'speed' | null;
+  moving_duration_s?: number | null;
+  moving_avg_speed_kmh?: number | null;
+  max_speed_filtered_kmh?: number | null;
+  elevation_loss_m?: number | null;
+  backend_avg_speed_kmh?: number | null;
+  visible?: number | null; // 0 or 1
 }
 
 /**
  * Transform frontend DB trip to backend API format
  */
 export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
-  console.log('[TripAPI] Transforming trip:', {
-    id: dbTrip.id,
-    type: dbTrip.type,
-    status: dbTrip.status,
-    is_manual: dbTrip.is_manual,
-    start_time: dbTrip.start_time,
-    end_time: dbTrip.end_time,
-    duration: dbTrip.duration,
-  });
+  // Guard: native engine trips must have a classification_source
+  if (!dbTrip.classification_source && dbTrip.engine === 'native') {
+    throw new Error(`Trip ${dbTrip.id} has native engine but no classification_source`);
+  }
 
   // Validate trip type
   const validTypes = ['walk', 'run', 'cycle', 'drive'];
   if (!dbTrip.type || !validTypes.includes(dbTrip.type)) {
-    console.error('[TripAPI] Invalid trip type:', {
-      tripId: dbTrip.id,
-      type: dbTrip.type,
-      validTypes,
-    });
     throw new Error(`Invalid trip type "${dbTrip.type}" for trip ${dbTrip.id}. Must be one of: ${validTypes.join(', ')}`);
   }
 
@@ -138,70 +151,57 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
     try {
       const routeData = JSON.parse(dbTrip.route_data);
       if (Array.isArray(routeData) && routeData.length > 0) {
-        console.log(`[TripAPI] Parsing ${routeData.length} route coordinates for trip ${dbTrip.id}`);
-        console.log(`[TripAPI] First coordinate sample:`, routeData[0]);
-
         // Filter and validate coordinates
         // Support both {lat, lng} and {latitude, longitude} formats
-        const validCoords = routeData.filter((coord: any, index: number) => {
+        const validCoords = routeData.filter((coord: any) => {
           const lat = coord.lat ?? coord.latitude;
           const lng = coord.lng ?? coord.longitude;
-
-          const isValid =
+          return (
             lat != null &&
             lng != null &&
             !isNaN(lat) &&
             !isNaN(lng) &&
             lat >= -90 && lat <= 90 &&
-            lng >= -180 && lng <= 180;
-
-          if (!isValid) {
-            console.warn(`[TripAPI] Invalid coordinate at index ${index}:`, coord);
-          }
-
-          return isValid;
+            lng >= -180 && lng <= 180
+          );
         });
 
         if (validCoords.length > 0) {
-          route = validCoords.map((coord: any) => {
-            // Handle timestamp conversion safely
-            let timestamp: string;
-            try {
-              // Check if timestamp exists and is valid
-              if (coord.timestamp) {
-                const date = new Date(coord.timestamp);
-                if (isNaN(date.getTime())) {
-                  // Invalid date, use current time as fallback
-                  timestamp = new Date().toISOString();
-                } else {
-                  timestamp = date.toISOString();
-                }
-              } else {
-                // No timestamp provided, use current time
-                timestamp = new Date().toISOString();
-              }
-            } catch (e) {
-              // Timestamp conversion failed, use current time
-              timestamp = new Date().toISOString();
-            }
-
-            // Only include fields backend expects: lat, lng, timestamp
-            return {
+          // Apply RouteFilter to remove accuracy outliers, duplicates, and speed spikes
+          const activity = (dbTrip.type === 'walk' || dbTrip.type === 'run' || dbTrip.type === 'cycle')
+            ? dbTrip.type
+            : 'cycle'; // safe default for drive or unknown
+          const filteredCoords = RouteFilter.filter(
+            validCoords.map((coord: any) => ({
               lat: coord.lat ?? coord.latitude,
               lng: coord.lng ?? coord.longitude,
-              timestamp,
-            };
-          });
-          console.log(`[TripAPI] Transformed ${route.length} valid coordinates (${routeData.length - validCoords.length} invalid filtered out)`);
-        } else {
-          console.warn(`[TripAPI] All ${routeData.length} coordinates were invalid for trip ${dbTrip.id}`);
+              timestamp: (() => {
+                try {
+                  if (coord.timestamp) {
+                    const date = new Date(coord.timestamp);
+                    return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+                  }
+                  return new Date().toISOString();
+                } catch {
+                  return new Date().toISOString();
+                }
+              })(),
+              accuracy: coord.accuracy,
+            })),
+            activity
+          );
+
+          route = filteredCoords.map(coord => ({
+            lat: coord.lat,
+            lng: coord.lng,
+            timestamp: coord.timestamp,
+          }));
         }
       }
     } catch (error) {
       console.error('[TripAPI] Error parsing route data:', {
         tripId: dbTrip.id,
         error: error instanceof Error ? error.message : 'Unknown error',
-        routeDataLength: dbTrip.route_data?.length,
       });
     }
   }
@@ -211,24 +211,10 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
 
   // Validate timestamps
   if (!dbTrip.start_time || !endTime) {
-    console.error('[TripAPI] Invalid timestamps for trip:', {
-      tripId: dbTrip.id,
-      start_time: dbTrip.start_time,
-      end_time: dbTrip.end_time,
-      duration: dbTrip.duration,
-      computed_end_time: endTime,
-    });
     throw new Error(`Invalid timestamps for trip ${dbTrip.id}`);
   }
 
   if (dbTrip.start_time >= endTime) {
-    console.error('[TripAPI] Start time >= end time:', {
-      tripId: dbTrip.id,
-      start_time: dbTrip.start_time,
-      end_time: endTime,
-      start_iso: new Date(dbTrip.start_time).toISOString(),
-      end_iso: new Date(endTime).toISOString(),
-    });
     throw new Error(`Invalid timestamps for trip ${dbTrip.id}: start time >= end time`);
   }
 
@@ -241,24 +227,12 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
     is_manual: dbTrip.is_manual === 1,
     status: dbTrip.status,
     elevation_gain: dbTrip.elevation_gain > 0 ? dbTrip.elevation_gain : undefined,
-    notes: dbTrip.notes || undefined,
-    classification_method: dbTrip.classification_method ?? 'speed',
-    ml_activity_type: dbTrip.ml_activity_type ?? undefined,
-    ml_confidence:
-      typeof dbTrip.ml_confidence === 'number' ? dbTrip.ml_confidence : undefined,
+    classification_source: (dbTrip.classification_source as ApiTripCreate['classification_source']) ?? 'speed',
+    user_note: dbTrip.user_note ?? undefined,
+    elevation_loss: dbTrip.elevation_loss_m ?? undefined,
   };
 
-  console.log('[TripAPI] Transformed trip payload:', {
-    client_id: apiTrip.client_id,
-    type: apiTrip.type,
-    status: apiTrip.status,
-    is_manual: apiTrip.is_manual,
-    start_timestamp: apiTrip.start_timestamp,
-    end_timestamp: apiTrip.end_timestamp,
-    route_points: route?.length || 0,
-    elevation_gain: apiTrip.elevation_gain,
-    has_notes: !!apiTrip.notes,
-  });
+  console.log(`[TripAPI] Transformed trip ${dbTrip.id}: type=${dbTrip.type}, source=${dbTrip.classification_source}, route=${route?.length ?? 0} pts`);
 
   return apiTrip;
 }
@@ -451,6 +425,13 @@ class TripAPI {
       console.error('[TripAPI] Error unsharing trip:', error);
       throw error;
     }
+  }
+
+  /**
+   * Partially update a trip on the backend (dirty-field propagation)
+   */
+  async patchTrip(backendId: number, fields: Partial<ApiTripCreate>): Promise<ApiTrip> {
+    return apiClient.patch<ApiTrip>(`/api/trips/${backendId}/`, fields);
   }
 
   /**
