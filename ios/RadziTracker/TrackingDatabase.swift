@@ -30,13 +30,14 @@ final class TrackingDatabase {
 
   // MARK: - Trip operations
 
-  func createTrip(id: String, startTime: Int64, backfillStart: Int64) throws {
+  func createTrip(id: String, startTime: Int64, backfillStart: Int64,
+                  type: String = "walk", classificationSource: String = "speed") throws {
     try writeQueue.sync {
       try queue.write { db in
         try db.execute(sql: """
-          INSERT INTO trips (id, user_id, status, start_time, created_at, updated_at, engine, backfill_start, detection_state)
-          VALUES (?, 'current_user', 'active', ?, ?, ?, 'native', ?, 'recording')
-        """, arguments: [id, startTime, startTime, startTime, backfillStart])
+          INSERT INTO trips (id, user_id, type, status, start_time, created_at, updated_at, engine, backfill_start, detection_state, classification_source)
+          VALUES (?, 'current_user', ?, 'active', ?, ?, ?, 'native', ?, 'recording', ?)
+        """, arguments: [id, type, startTime, startTime, startTime, backfillStart, classificationSource])
       }
     }
   }
