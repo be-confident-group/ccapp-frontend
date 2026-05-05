@@ -14,6 +14,8 @@
 		540935DA7126473F971115C6 /* TripStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0FEA5922164314B10F0B93 /* TripStateMachine.swift */; };
 		AHR0001A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */; };
 		SEG0001A1B2C3D4E5F601234 /* Segmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */; };
+		SLC0001A1B2C3D4E5F601234 /* SLCMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */; };
+		BST0001A1B2C3D4E5F601234 /* BackgroundSyncTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */; };
 		547BE0EA631A366B852F716A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17007F2C637907E47D4A43C9 /* ExpoModulesProvider.swift */; };
 		78F9AAF4FD9C4BE4B1400076 /* ImuSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F111D1C01C4249859FA6F25B /* ImuSampler.swift */; };
 		81F967EA090D483DA37C4BA8 /* LocationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E3CF651B343B29521C295 /* LocationSession.swift */; };
@@ -40,6 +42,9 @@
 		AHR0003A1B2C3D4E5F601234 /* ActivityHistoryReconcilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHistoryReconcilerTests.swift; sourceTree = "<group>"; };
 		SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Segmenter.swift; sourceTree = "<group>"; };
 		SEG0003A1B2C3D4E5F601234 /* SegmenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmenterTests.swift; sourceTree = "<group>"; };
+		SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitor.swift; sourceTree = "<group>"; };
+		SLC0003A1B2C3D4E5F601234 /* SLCMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SLCMonitorTests.swift; sourceTree = "<group>"; };
+		BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncTask.swift; sourceTree = "<group>"; };
 		22A665FF2A664E06BCDACBB7 /* LocationSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationSessionTests.swift; sourceTree = "<group>"; };
 		27DD8E3F247841C499C4F874 /* MotionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionMonitor.swift; sourceTree = "<group>"; };
 		4DC30DDEB1A443AEBCB73515 /* TrackingLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingLogger.swift; sourceTree = "<group>"; };
@@ -124,6 +129,7 @@
 				C3D4E5F6A7B8C9D0E1F2A3B6 /* MovingStatsTests.swift */,
 				AHR0003A1B2C3D4E5F601234 /* ActivityHistoryReconcilerTests.swift */,
 				SEG0003A1B2C3D4E5F601234 /* SegmenterTests.swift */,
+				SLC0003A1B2C3D4E5F601234 /* SLCMonitorTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -183,6 +189,8 @@
 				C3D4E5F6A7B8C9D0E1F2A3B5 /* MovingStats.swift */,
 				AHR0002A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift */,
 				SEG0002A1B2C3D4E5F601234 /* Segmenter.swift */,
+				SLC0002A1B2C3D4E5F601234 /* SLCMonitor.swift */,
+				BST0002A1B2C3D4E5F601234 /* BackgroundSyncTask.swift */,
 				5D214BA2632C4A5283470AE6 /* Tests */,
 			);
 			path = RadziTracker;
@@ -451,6 +459,8 @@
 				C3D4E5F6A7B8C9D0E1F2A3B4 /* MovingStats.swift in Sources */,
 				AHR0001A1B2C3D4E5F601234 /* ActivityHistoryReconciler.swift in Sources */,
 				SEG0001A1B2C3D4E5F601234 /* Segmenter.swift in Sources */,
+				SLC0001A1B2C3D4E5F601234 /* SLCMonitor.swift in Sources */,
+				BST0001A1B2C3D4E5F601234 /* BackgroundSyncTask.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
