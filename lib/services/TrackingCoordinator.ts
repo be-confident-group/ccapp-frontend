@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   RadziTrackerNative,
@@ -12,13 +12,11 @@ import {
   type StateChangedEvent,
   type LocationStoredEvent,
 } from '../native/RadziTracker';
-import { LocationTrackingService } from './LocationTrackingService';
 import { TripFinalizationPipeline } from './TripFinalizationPipeline';
 
-const ENGINE_KEY = '@tracking_engine';
 const MANUAL_ONLY_KEY = '@tracking_manual_only';
 
-export type Engine = 'native' | 'legacy';
+export type Engine = 'native';
 
 interface CoordinatorListeners {
   state: Set<(e: StateChangedEvent) => void>;
@@ -29,7 +27,6 @@ interface CoordinatorListeners {
 }
 
 class CoordinatorImpl {
-  private engine: Engine = 'native';
   private manualOnly = false;
   private subs: Array<() => void> = [];
   private listeners: CoordinatorListeners = {
@@ -52,30 +49,17 @@ class CoordinatorImpl {
   }
 
   private async _doInit(): Promise<void> {
-    const storedEngine = await AsyncStorage.getItem(ENGINE_KEY);
-    this.engine = storedEngine === 'legacy' ? 'legacy' : 'native';
     const storedManual = await AsyncStorage.getItem(MANUAL_ONLY_KEY);
     this.manualOnly = storedManual === 'true';
 
-    if (Platform.OS !== 'ios') {
-      this.engine = 'legacy';
-      console.log('[TrackingCoordinator] non-iOS platform — forcing legacy engine');
-    }
-
-    if (this.engine === 'native') {
-      try {
-        const { LocationTrackingService } = await import('./LocationTrackingService');
-        await LocationTrackingService.stopTracking();
-      } catch { /* ignore */ }
-      this.attachNativeSubscriptions();
-      try {
-        const result = await RadziTrackerNative.recoverStaleTrip();
-        if (result.recovered) {
-          console.warn(`[TrackingCoordinator] Recovered stale trip ${result.recovered}`);
-        }
-      } catch (err) {
-        console.error(`[TrackingCoordinator] recoverStaleTrip failed: ${String(err)}`);
+    this.attachNativeSubscriptions();
+    try {
+      const result = await RadziTrackerNative.recoverStaleTrip();
+      if (result.recovered) {
+        console.warn(`[TrackingCoordinator] Recovered stale trip ${result.recovered}`);
       }
+    } catch (err) {
+      console.error(`[TrackingCoordinator] recoverStaleTrip failed: ${String(err)}`);
     }
 
     const appStateSub = AppState.addEventListener('change', async (state) => {
@@ -92,12 +76,7 @@ class CoordinatorImpl {
     this.subs.push(() => appStateSub.remove());
   }
 
-  async getEngine(): Promise<Engine> { return this.engine; }
-
-  async setEngine(engine: Engine): Promise<void> {
-    this.engine = engine;
-    await AsyncStorage.setItem(ENGINE_KEY, engine);
-  }
+  async getEngine(): Promise<Engine> { return 'native'; }
 
   async setManualOnly(value: boolean): Promise<void> {
     this.manualOnly = value;
@@ -106,68 +85,39 @@ class CoordinatorImpl {
 
   async start(): Promise<void> {
     await this.init();
-    if (this.engine === 'native' && !this.manualOnly) {
+    if (!this.manualOnly) {
       await RadziTrackerNative.start();
-    } else if (this.engine === 'legacy') {
-      await LocationTrackingService.startTracking({});
     }
   }
 
   async stop(): Promise<void> {
     await this.init();
-    if (this.engine === 'native') {
-      await RadziTrackerNative.stop();
-    } else {
-      await LocationTrackingService.stopTracking();
-    }
+    await RadziTrackerNative.stop();
   }
 
   async forceStartTrip(): Promise<{ tripId: string }> {
     await this.init();
-    if (this.engine === 'native') {
-      return RadziTrackerNative.forceStartTrip();
-    }
-    throw new Error('forceStartTrip not supported on legacy engine');
+    return RadziTrackerNative.forceStartTrip();
   }
 
   async forceStopTrip(): Promise<void> {
     await this.init();
-    if (this.engine === 'native') {
-      return RadziTrackerNative.forceStopTrip();
-    }
-    throw new Error('forceStopTrip not supported on legacy engine');
+    return RadziTrackerNative.forceStopTrip();
   }
 
-  async getStatus(): Promise<TrackingStatus | { engine: 'legacy' }> {
+  async getStatus(): Promise<TrackingStatus> {
     await this.init();
-    if (this.engine === 'native') {
-      return RadziTrackerNative.getStatus();
-    }
-    return { engine: 'legacy' };
+    return RadziTrackerNative.getStatus();
   }
 
   async requestPermissions(): Promise<PermissionStatus> {
     await this.init();
-    if (this.engine === 'native') {
-      return RadziTrackerNative.requestPermissions();
-    }
-    const result = await LocationTrackingService.requestPermissions();
-    return {
-      location: result.background === 'granted' ? 'granted' : (result.foreground === 'granted' ? 'whenInUse' : 'denied'),
-      motion: 'granted',
-    };
+    return RadziTrackerNative.requestPermissions();
   }
 
   async checkPermissions(): Promise<PermissionStatus> {
     await this.init();
-    if (this.engine === 'native') {
-      return RadziTrackerNative.checkPermissions();
-    }
-    const result = await LocationTrackingService.checkPermissions();
-    return {
-      location: result.background === 'granted' ? 'granted' : (result.foreground === 'granted' ? 'whenInUse' : 'denied'),
-      motion: 'granted',
-    };
+    return RadziTrackerNative.checkPermissions();
   }
 
   onStateChange(cb: (e: StateChangedEvent) => void): () => void {

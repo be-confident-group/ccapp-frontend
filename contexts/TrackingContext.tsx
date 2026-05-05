@@ -16,7 +16,7 @@ import {
 } from '@/lib/services/LocationTrackingService';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { database } from '@/lib/database';
-import { streamingSegmenter, sensorBuffer, type LiveActivityState } from '@/lib/activity';
+import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
 
 interface TrackingContextType {
   isTracking: boolean;
@@ -78,20 +78,6 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       const perms = await TrackingCoordinator.checkPermissions();
       const hasPerms = perms.location === 'granted';
       setHasPermissions(hasPerms);
-
-      // Make sure the ML sensor buffer is running if tracking on legacy engine.
-      // Native engine uses CMMA for activity detection — no sensor buffer needed.
-      if (tracking && !('state' in status && (await TrackingCoordinator.getEngine()) === 'native')) {
-        try {
-          await sensorBuffer.start();
-          const existing = await database.getActiveTrip();
-          if (existing && sensorBuffer.getActiveTripId() !== existing.id) {
-            sensorBuffer.attachTrip(existing.id);
-          }
-        } catch (err) {
-          console.warn('[TrackingContext] Failed to resume sensor buffer:', err);
-        }
-      }
 
       // Request notification permission if tracking is active and we haven't asked yet.
       // This handles users who upgrade to a version with notifications while already tracking.
