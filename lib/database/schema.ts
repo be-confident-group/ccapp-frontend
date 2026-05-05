@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 7;
+export const DB_VERSION = 8;
 
 export const SCHEMA = {
   trips: `
@@ -369,6 +369,36 @@ export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to:
       }
     }
     console.log('[Database] Migration 6->7: Completed');
+  }
+
+  // Migration from version 7 to 8: Add trip_altitude_samples and activity_history_snapshot tables
+  if (from < 8 && to >= 8) {
+    console.log('[Database] Migration 7->8: Adding altitude samples and activity history tables');
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS trip_altitude_samples (
+          trip_id TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          relative_altitude_m REAL NOT NULL,
+          PRIMARY KEY (trip_id, timestamp)
+        )
+      `);
+      await db.execAsync(
+        `CREATE INDEX IF NOT EXISTS idx_alt_trip ON trip_altitude_samples(trip_id)`
+      );
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS activity_history_snapshot (
+          trip_id TEXT NOT NULL,
+          query_start INTEGER NOT NULL,
+          query_end INTEGER NOT NULL,
+          raw_activities_json TEXT NOT NULL,
+          PRIMARY KEY (trip_id, query_start)
+        )
+      `);
+      console.log('[Database] Migration 7->8: Completed');
+    } catch (error) {
+      console.log('[Database] Migration 7->8: Error (tables may already exist)', error);
+    }
   }
 
   console.log('[Database] Migrations completed');

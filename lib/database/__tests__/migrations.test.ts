@@ -26,3 +26,32 @@ describe('schema v7 migration', () => {
     await expect(runMigrationsUpTo(db, 7)).resolves.toBeUndefined();
   });
 });
+
+describe('schema v8 migration', () => {
+  it('creates trip_altitude_samples and activity_history_snapshot tables', async () => {
+    const db = openDatabaseSync(':memory:');
+    await runMigrationsUpTo(db, 8);
+
+    const tables = db
+      .getAllSync<{ name: string }>(
+        `SELECT name FROM sqlite_master WHERE type='table';`
+      )
+      .map((r) => r.name);
+
+    expect(tables).toContain('trip_altitude_samples');
+    expect(tables).toContain('activity_history_snapshot');
+
+    const altCols = db
+      .getAllSync<{ name: string }>(`PRAGMA table_info(trip_altitude_samples);`)
+      .map((r) => r.name);
+    expect(altCols).toEqual(
+      expect.arrayContaining(['trip_id', 'timestamp', 'relative_altitude_m'])
+    );
+  });
+
+  it('is idempotent — running v8 migration twice does not throw', async () => {
+    const db = openDatabaseSync(':memory:');
+    await runMigrationsUpTo(db, 8);
+    await expect(runMigrationsUpTo(db, 8)).resolves.toBeUndefined();
+  });
+});
