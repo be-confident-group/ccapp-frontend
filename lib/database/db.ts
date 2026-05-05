@@ -238,7 +238,7 @@ class Database {
   async getAllTrips(filters?: TripFilters): Promise<Trip[]> {
     const db = await this.getDb();
 
-    let query = 'SELECT * FROM trips WHERE 1=1';
+    let query = 'SELECT * FROM trips WHERE (visible = 1 OR visible IS NULL)';
     const params: any[] = [];
 
     if (filters) {

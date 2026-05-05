@@ -100,3 +100,12 @@ describe('schema v9 migration', () => {
     expect(t3!.validation_log).toBeNull();
   });
 });
+
+describe('schema v10 migration', () => {
+  it('adds visible column with default 1', async () => {
+    const db = openDatabaseSync(':memory:');
+    await runMigrationsUpTo(db, 10);
+    const cols = db.getAllSync<{ name: string }>(`PRAGMA table_info(trips);`).map(r => r.name);
+    expect(cols).toContain('visible');
+  });
+});

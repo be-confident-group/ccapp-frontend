@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 9;
+export const DB_VERSION = 10;
 
 export const SCHEMA = {
   trips: `
@@ -427,6 +427,17 @@ export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to:
     } catch (error) {
       console.log('[Database] Migration 8->9: Error during backfill', error);
     }
+  }
+
+  // Migration from version 9 to 10: Add visible column to trips (1=show, 0=hide transit)
+  if (from < 10 && to >= 10) {
+    console.log('[Database] Migration 9->10: Adding visible column to trips');
+    try {
+      await db.execAsync('ALTER TABLE trips ADD COLUMN visible INTEGER NOT NULL DEFAULT 1');
+    } catch (err) {
+      console.log('[Database] Migration 9->10: ALTER skipped (likely exists):', err);
+    }
+    console.log('[Database] Migration 9->10: Completed');
   }
 
   console.log('[Database] Migrations completed');
