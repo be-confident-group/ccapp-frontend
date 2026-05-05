@@ -130,7 +130,7 @@ export default function TripDetailScreen() {
       // since the last sync (indicated by the dirty flags in SQLite).
       const mergedType = localTrip?.type_dirty
         ? localTrip.type
-        : (backendTrip.type ?? localTrip?.type ?? backendTrip.type);
+        : (backendTrip.type ?? localTrip?.type);
       const mergedUserNote = localTrip?.user_note_dirty
         ? localTrip.user_note
         : (backendTrip.user_note ?? localTrip?.user_note ?? null);
