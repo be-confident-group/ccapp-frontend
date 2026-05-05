@@ -91,6 +91,23 @@ final class TrackingDatabase {
       }
     }
     TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.0f", stats.distanceMeters))m, \(stats.durationSec)s, avg: \(String(format: "%.1f", avgSpeedKmh)) km/h, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
+
+    let filteredMax = computeFilteredMaxSpeed(tripId: tripId)
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: "UPDATE trips SET max_speed_filtered_kmh = ? WHERE id = ?",
+                       arguments: [filteredMax, tripId])
+      }
+    }
+
+    let movingStats = computeMovingStats(tripId: tripId)
+    try writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: """
+          UPDATE trips SET moving_duration_s = ?, moving_avg_speed_kmh = ? WHERE id = ?
+        """, arguments: [movingStats.movingDurationS, movingStats.movingAvgSpeedKmh, tripId])
+      }
+    }
   }
 
   /// Reads all location rows for the trip and returns total haversine distance
@@ -147,6 +164,56 @@ final class TrackingDatabase {
     } catch {
       TrackingLogger.shared.log(.error, "TrackingDatabase: computeTripStats failed — \(error)")
       return (0, 0, 0, nil)
+    }
+  }
+
+  // MARK: - Enhanced trip stats
+
+  private func computeFilteredMaxSpeed(tripId: String) -> Double? {
+    do {
+      let rows = try queue.read { db in
+        try Row.fetchAll(db,
+          sql: "SELECT speed, accuracy FROM locations WHERE trip_id = ? AND speed IS NOT NULL ORDER BY timestamp ASC",
+          arguments: [tripId])
+      }
+      guard rows.count >= 5 else { return nil }
+      let speedsKmh = rows.compactMap { row -> Double? in
+        guard let s = row["speed"] as? Double else { return nil }
+        return s * 3.6 // m/s → km/h
+      }
+      let accuracies = rows.compactMap { row -> Double? in
+        row["accuracy"] as? Double
+      }
+      guard speedsKmh.count == accuracies.count, speedsKmh.count >= 5 else { return nil }
+      // Default to cycling ceiling — conservative (highest ceiling)
+      return SpeedFilter.maxSpeed(speedsKmh: speedsKmh, horizontalAccuraciesM: accuracies, activity: .cycling)
+    } catch {
+      TrackingLogger.shared.log(.error, "TrackingDatabase: computeFilteredMaxSpeed failed — \(error)")
+      return nil
+    }
+  }
+
+  private func computeMovingStats(tripId: String) -> MovingStats.Result {
+    do {
+      struct LocRow { let ts: Int64; let lat: Double; let lng: Double }
+      let rows = try queue.read { db -> [LocRow] in
+        try Row.fetchAll(db,
+          sql: "SELECT timestamp, latitude, longitude FROM locations WHERE trip_id = ? ORDER BY timestamp ASC",
+          arguments: [tripId]).map { LocRow(ts: $0["timestamp"], lat: $0["latitude"], lng: $0["longitude"]) }
+      }
+      guard rows.count >= 2 else { return MovingStats.compute(intervals: []) }
+
+      var intervals: [(distanceM: Double, seconds: Double)] = []
+      for i in 1..<rows.count {
+        let d = haversineMeters(lat1: rows[i-1].lat, lng1: rows[i-1].lng,
+                                lat2: rows[i].lat,   lng2: rows[i].lng)
+        let dt = Double(rows[i].ts - rows[i-1].ts) / 1000.0
+        if dt > 0 { intervals.append((d, dt)) }
+      }
+      return MovingStats.compute(intervals: intervals)
+    } catch {
+      TrackingLogger.shared.log(.error, "TrackingDatabase: computeMovingStats failed — \(error)")
+      return MovingStats.compute(intervals: [])
     }
   }
 
