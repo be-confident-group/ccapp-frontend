@@ -68,7 +68,7 @@ export default function PermissionsExplainerScreen() {
             onPress={handleGrant}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.primaryBtnText}>{t('common:permissions.grant')}</ThemedText>
+            <ThemedText style={[styles.primaryBtnText, { color: '#fff' }]}>{t('common:permissions.grant')}</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryBtn}
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   cardBody: { fontSize: 14, lineHeight: 20 },
   actions: { paddingBottom: Spacing.lg, gap: 10 },
   primaryBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  primaryBtnText: { fontSize: 16, fontWeight: '700' },
   secondaryBtn: { alignItems: 'center', paddingVertical: 10 },
   secondaryBtnText: { fontSize: 15 },
 });
