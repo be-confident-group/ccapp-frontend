@@ -25,6 +25,7 @@ import { database } from '@/lib/database';
 import type { Trip } from '@/lib/database/db';
 import type { TripType } from '@/types/trip';
 import NetInfo from '@react-native-community/netinfo';
+import { syncService } from '@/lib/services/SyncService';
 
 // Build-time constant — true for dev and EAS preview builds, false for production
 const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
@@ -95,6 +96,8 @@ export default function TripDetailScreen() {
           }
           if (mounted && tripData) {
             setLocalTrip(tripData);
+            // Flush any pending dirty edits to backend (fire-and-forget; offline is fine)
+            void syncService.patchTripFields(tripData.id).catch(() => {/* offline, retry later */});
           }
         } catch (error) {
           console.error('[TripDetail] Error loading local trip:', error);
@@ -122,21 +125,33 @@ export default function TripDetailScreen() {
           }))
         : [];
 
+      // Dirty-flag-aware merge: trust backend for computed/read-only fields,
+      // but prefer local value for writable fields that the user has edited
+      // since the last sync (indicated by the dirty flags in SQLite).
+      const mergedType = localTrip?.type_dirty
+        ? localTrip.type
+        : (backendTrip.type ?? localTrip?.type ?? backendTrip.type);
+      const mergedUserNote = localTrip?.user_note_dirty
+        ? localTrip.user_note
+        : (backendTrip.user_note ?? localTrip?.user_note ?? null);
+
       return {
         trip: {
           id: backendTrip.client_id,
-          type: backendTrip.type,
+          type: mergedType,
           is_manual: backendTrip.is_manual ? 1 : 0,
           start_time: new Date(backendTrip.start_timestamp).getTime(),
           end_time: new Date(backendTrip.end_timestamp).getTime(),
+          // Always trust backend for computed/read-only fields:
           distance: backendTrip.distance * 1000, // Convert km to meters
           duration: backendTrip.duration,
           avg_speed: backendTrip.average_speed,
-          max_speed: null, // Backend doesn't return max_speed — hide the stat
+          max_speed: backendTrip.max_speed ?? null,
           elevation_gain: backendTrip.elevation_gain || 0,
           co2_saved: backendTrip.co2_saved,
-          notes: backendTrip.notes || null,
+          notes: mergedUserNote ?? backendTrip.notes ?? null,
           status: backendTrip.status,
+          validation_log: backendTrip.validation_log ?? null,
         },
         route: transformedRoute,
       };
