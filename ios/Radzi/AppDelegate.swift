@@ -1,3 +1,4 @@
+import BackgroundTasks
 import Expo
 import React
 import ReactAppDependencyProvider
@@ -29,7 +30,14 @@ public class AppDelegate: ExpoAppDelegate {
       launchOptions: launchOptions)
 #endif
 
+    BackgroundSyncTask.register()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  public override func applicationDidEnterBackground(_ application: UIApplication) {
+    super.applicationDidEnterBackground(application)
+    BackgroundSyncTask.schedule()
   }
 
   // Linking API
