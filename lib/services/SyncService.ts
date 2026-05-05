@@ -4,7 +4,7 @@
 
 import NetInfo from '@react-native-community/netinfo';
 import { database } from '../database';
-import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip } from '../api/trips';
+import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip, type ApiTripCreate } from '../api/trips';
 import type { Trip } from '../database/db';
 import { TripValidationService } from './TripValidationService';
 
@@ -523,14 +523,17 @@ class SyncService {
     const trip = await database.getTrip(tripId);
     if (!trip || !trip.backend_id) return;
 
-    const dirty: Partial<import('../api/trips').ApiTripCreate> = {};
-    if (trip.user_note_dirty) dirty.user_note = trip.user_note ?? '';
+    // Allow null for user_note so clearing a note sends null to the backend.
+    // The intersection type widens user_note to string | null | undefined.
+    type DirtyPatch = Omit<Partial<ApiTripCreate>, 'user_note'> & { user_note?: string | null };
+    const dirty: DirtyPatch = {};
+    if (trip.user_note_dirty) dirty.user_note = trip.user_note;
     if (trip.type_dirty) dirty.type = trip.type;
 
     if (Object.keys(dirty).length === 0) return;
 
     try {
-      await tripAPI.patchTrip(trip.backend_id, dirty);
+      await tripAPI.patchTrip(trip.backend_id, dirty as Partial<ApiTripCreate>);
       await database.updateTrip(tripId, {
         user_note_dirty: 0,
         type_dirty: 0,
@@ -552,8 +555,8 @@ class SyncService {
       if (!isOnline) return;
 
       // Find all synced trips that still have dirty edit flags
-      const dirtyTrips = await database.getAllTrips({ status: 'completed' });
-      const targets = dirtyTrips.filter(t => t.synced === 1 && (t.user_note_dirty || t.type_dirty));
+      const dirtyTrips = await database.getAllTrips({ synced: true });
+      const targets = dirtyTrips.filter(t => t.user_note_dirty || t.type_dirty);
       for (const trip of targets) {
         try {
           await this.patchTripFields(trip.id);

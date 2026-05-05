@@ -1,5 +1,7 @@
 import { database } from '../../database';
 import { tripAPI } from '../../api/trips';
+import type { ApiTrip } from '../../api/trips';
+import type { Trip } from '../../database/db';
 import { syncService } from '../SyncService';
 
 // Mock dependencies
@@ -46,8 +48,8 @@ describe('SyncService.patchTripFields', () => {
       type_dirty: 0,
       type: 'cycle',
       synced: 1,
-    } as any);
-    mockTripAPI.patchTrip.mockResolvedValue({} as any);
+    } as unknown as Trip);
+    mockTripAPI.patchTrip.mockResolvedValue({ id: 99 } as ApiTrip);
 
     await syncService.patchTripFields('t1');
 
@@ -64,8 +66,8 @@ describe('SyncService.patchTripFields', () => {
       type_dirty: 1,
       type: 'walk',
       synced: 1,
-    } as any);
-    mockTripAPI.patchTrip.mockResolvedValue({} as any);
+    } as unknown as Trip);
+    mockTripAPI.patchTrip.mockResolvedValue({ id: 42 } as ApiTrip);
 
     await syncService.patchTripFields('t2');
 
@@ -81,7 +83,7 @@ describe('SyncService.patchTripFields', () => {
       type_dirty: 0,
       type: 'walk',
       synced: 1,
-    } as any);
+    } as unknown as Trip);
 
     await syncService.patchTripFields('t3');
 
@@ -95,7 +97,7 @@ describe('SyncService.patchTripFields', () => {
       user_note_dirty: 1,
       user_note: 'test',
       synced: 0,
-    } as any);
+    } as unknown as Trip);
 
     await syncService.patchTripFields('t4');
 
@@ -108,5 +110,59 @@ describe('SyncService.patchTripFields', () => {
     await syncService.patchTripFields('missing');
 
     expect(mockTripAPI.patchTrip).not.toHaveBeenCalled();
+  });
+});
+
+describe('SyncService.syncDirtyTrips', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('patches each dirty synced trip', async () => {
+    const NetInfo = require('@react-native-community/netinfo');
+    NetInfo.fetch.mockResolvedValue({ isConnected: true, isInternetReachable: true });
+
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'a', synced: 1, backend_id: 1, user_note_dirty: 1, user_note: 'note', type_dirty: 0, type: 'walk' } as unknown as Trip,
+      { id: 'b', synced: 1, backend_id: 2, user_note_dirty: 0, type_dirty: 1, type: 'cycle', user_note: null } as unknown as Trip,
+    ]);
+    mockDatabase.getTrip
+      .mockResolvedValueOnce({ id: 'a', synced: 1, backend_id: 1, user_note_dirty: 1, user_note: 'note', type_dirty: 0, type: 'walk' } as unknown as Trip)
+      .mockResolvedValueOnce({ id: 'b', synced: 1, backend_id: 2, user_note_dirty: 0, type_dirty: 1, type: 'cycle', user_note: null } as unknown as Trip);
+    mockTripAPI.patchTrip.mockResolvedValue({ id: 99 } as unknown as ApiTrip);
+
+    await syncService.syncDirtyTrips();
+
+    expect(mockTripAPI.patchTrip).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips when offline', async () => {
+    const NetInfo = require('@react-native-community/netinfo');
+    NetInfo.fetch.mockResolvedValue({ isConnected: false, isInternetReachable: false });
+
+    await syncService.syncDirtyTrips();
+
+    expect(mockTripAPI.patchTrip).not.toHaveBeenCalled();
+  });
+
+  it('continues patching other trips when one fails', async () => {
+    const NetInfo = require('@react-native-community/netinfo');
+    NetInfo.fetch.mockResolvedValue({ isConnected: true, isInternetReachable: true });
+
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'a', synced: 1, backend_id: 1, user_note_dirty: 1, user_note: 'note', type_dirty: 0, type: 'walk' } as unknown as Trip,
+      { id: 'b', synced: 1, backend_id: 2, user_note_dirty: 1, user_note: 'note2', type_dirty: 0, type: 'cycle' } as unknown as Trip,
+    ]);
+    mockDatabase.getTrip
+      .mockResolvedValueOnce({ id: 'a', synced: 1, backend_id: 1, user_note_dirty: 1, user_note: 'note', type_dirty: 0, type: 'walk' } as unknown as Trip)
+      .mockResolvedValueOnce({ id: 'b', synced: 1, backend_id: 2, user_note_dirty: 1, user_note: 'note2', type_dirty: 0, type: 'cycle' } as unknown as Trip);
+    mockTripAPI.patchTrip
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({ id: 99 } as unknown as ApiTrip);
+
+    await syncService.syncDirtyTrips();
+
+    expect(mockTripAPI.patchTrip).toHaveBeenCalledTimes(2);
+    expect(mockDatabase.updateTrip).toHaveBeenCalledTimes(1);
   });
 });
