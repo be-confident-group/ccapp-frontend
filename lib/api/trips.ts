@@ -428,6 +428,13 @@ class TripAPI {
   }
 
   /**
+   * Partially update a trip on the backend (dirty-field propagation)
+   */
+  async patchTrip(backendId: number, fields: Partial<ApiTripCreate>): Promise<ApiTrip> {
+    return apiClient.patch<ApiTrip>(`/api/trips/${backendId}/`, fields);
+  }
+
+  /**
    * Upload a raw IMU sensor batch recorded during a trip. Used by the
    * frontend to ship the `sensor_batches` table to the backend for future
    * model retraining.
