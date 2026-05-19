@@ -82,8 +82,11 @@ export const SCHEMA = {
     )
   `,
 
-  // Per-window ML predictions produced by the on-device classifier.
-  // One row per 256-sample window (~5.12 s at 50 Hz).
+  // DORMANT — DATA COLLECTION ONLY.
+  // Populated by lib/activity/streamingSegmenter.ts (XGBoost predictions per
+  // 256-sample IMU window). Not consumed by live classification. Trip type is
+  // set by CMMotionActivityManager (CMMA) via MotionActivitySegmenter.ts.
+  // Kept for future model training and MLSegmentDetector activation.
   activity_windows: `
     CREATE TABLE IF NOT EXISTS activity_windows (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,9 +100,10 @@ export const SCHEMA = {
     )
   `,
 
-  // Rolling raw IMU chunks (~60 s each) uploaded to the backend for model
-  // retraining. Stored as opaque JSON so the frontend does not need to know
-  // the final sample-data schema.
+  // DORMANT — DATA COLLECTION ONLY.
+  // Rolling raw IMU chunks (~60 s each) flushed by ImuSampler.swift during
+  // recording. Raw training input for the XGBoost model. Not used in live
+  // classification. Upload path to backend is preserved but not active in v1.
   sensor_batches: `
     CREATE TABLE IF NOT EXISTS sensor_batches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,6 +140,10 @@ export const SCHEMA = {
     )
   `,
 
+  // DORMANT — DATA COLLECTION ONLY.
+  // Populated by ShadowClassifierLogger.ts after each trip ends. Records
+  // windows where XGBoost and CMMA disagree. Used for offline model evaluation.
+  // Does not affect trip type, validation, or sync.
   classifier_disagreements: `
     CREATE TABLE IF NOT EXISTS classifier_disagreements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

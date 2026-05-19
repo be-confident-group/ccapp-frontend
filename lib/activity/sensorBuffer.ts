@@ -1,16 +1,16 @@
 /**
- * IMU ring buffer + window driver.
+ * DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
+ *
+ * IMU ring buffer + window driver for the XGBoost classifier stack.
  *
  * Subscribes to `expo-sensors` Accelerometer and Gyroscope, linearly resamples
  * each stream onto a shared 50 Hz grid, maintains a 256-sample ring buffer,
- * and emits a prediction every 128 new samples (≈2.56 s). Also keeps a raw
- * 60-second rolling chunk that gets flushed into the `sensor_batches` table
- * for later retraining.
+ * and emits a prediction every 128 new samples (≈2.56 s). Also flushes raw
+ * 60-second rolling chunks into the `sensor_batches` table for later retraining.
  *
- * Background caveat: `expo-sensors` may be unreliable on some devices in the
- * background. However, since the location foreground service keeps the JS thread alive,
- * we attempt to keep sensors running so the ML model can classify background trips.
- * If no samples are received, the app falls back to the legacy speed-based classifier.
+ * Trip classification uses Apple's CMMotionActivityManager (CMMA) via
+ * lib/services/MotionActivitySegmenter.ts — not this module.
+ * This module collects raw IMU data used as training input for future models.
  */
 
 import { AppState, type AppStateStatus } from 'react-native';

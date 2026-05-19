@@ -21,10 +21,11 @@ import { RadziTrackerNative } from '@/lib/native/RadziTracker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { onTrackingLog, getTrackingLogBuffer, clearTrackingLogBuffer, type LogEntry } from '@/lib/services/TrackingLogger';
 import type { ActivityClass } from '@/lib/activity/classifier';
+import { useTrackingConfig } from '@/lib/services/TrackingConfig';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = 'live' | 'trip' | 'history' | 'disagree' | 'logs';
+type Tab = 'live' | 'trip' | 'history' | 'disagree' | 'logs' | 'config';
 
 interface TripTabData {
   stateLabel: string;
@@ -395,6 +396,60 @@ function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRe
   );
 }
 
+function ConfigTab({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
+  const config = useTrackingConfig();
+  const fetchedAt = config.fetchedAt > 0
+    ? new Date(config.fetchedAt).toLocaleString()
+    : 'never (using defaults)';
+
+  const rows: [string, string][] = [
+    ['Version', config.configVersion],
+    ['Fetched at', fetchedAt],
+    ['', ''],
+    ['— Detecting phase —', ''],
+    ['Min duration (s)', String(config.detectingMinDurationSec)],
+    ['Min displacement (m)', String(config.detectingMinDisplacementM)],
+    ['False-start threshold (m)', String(config.falseStartGpsDisplacementM)],
+    ['Min pedometer steps', String(config.detectingMinPedometerSteps)],
+    ['Multi-window vote (s)', String(config.multiWindowVoteSec)],
+    ['Allow low-conf walking', config.allowLowConfidenceWalking ? 'yes' : 'no'],
+    ['', ''],
+    ['— GPS quality —', ''],
+    ['Accuracy threshold (m)', String(config.locationAccuracyThresholdM)],
+    ['', ''],
+    ['— Trip lifecycle —', ''],
+    ['Cooldown enter (s)', String(config.cooldownEnterSec)],
+    ['Cooldown end (s)', String(config.cooldownEndSec)],
+    ['', ''],
+    ['— Validation ceilings —', ''],
+    ['Max speed walk (km/h)', String(config.maxSpeedWalkKmh)],
+    ['Max speed run (km/h)', String(config.maxSpeedRunKmh)],
+    ['Max speed cycle (km/h)', String(config.maxSpeedCycleKmh)],
+    ['Min dist walk (km)', String(config.minDistanceWalkKm)],
+    ['Min dist cycle (km)', String(config.minDistanceCycleKm)],
+    ['', ''],
+    ['— 0 m rejection —', ''],
+    ['Min trip dist (m)', String(config.minTripDistanceM)],
+    ['Min location count', String(config.minTripLocationCount)],
+    ['Min pedometer steps', String(config.minTripPedometerSteps)],
+  ];
+
+  return (
+    <ScrollView style={s.tabScroll} contentContainerStyle={s.tabContent}>
+      {rows.map(([k, v], i) => {
+        if (k === '') return <View key={i} style={{ height: 6 }} />;
+        if (v === '') return <Text key={i} style={[s.sectionHeader, { color: colors.textSecondary }]}>{k}</Text>;
+        return (
+          <View key={i} style={[s.row, { borderBottomColor: colors.border }]}>
+            <Text style={[s.rowLabel, { color: colors.textSecondary }]}>{k}</Text>
+            <Text style={[s.rowValue, { color: colors.text }]}>{v}</Text>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function DebugTrackingScreen() {
@@ -578,6 +633,7 @@ export default function DebugTrackingScreen() {
     { key: 'history', label: 'History' },
     { key: 'disagree', label: 'Disagree' },
     { key: 'logs', label: 'Logs' },
+    { key: 'config', label: 'Config' },
   ];
 
   return (
@@ -638,6 +694,7 @@ export default function DebugTrackingScreen() {
           scrollRef={logScrollRef} colors={colors}
         />
       )}
+      {tab === 'config' && <ConfigTab colors={colors} />}
     </View>
   );
 }
@@ -664,6 +721,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 },
   rowLabel: { fontSize: 12 },
   rowValue: { fontSize: 12, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
+  sectionHeader: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginTop: 4 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   statusText: { fontSize: 13, fontWeight: '500' },
   dot: { width: 10, height: 10, borderRadius: 5 },

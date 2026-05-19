@@ -1,3 +1,13 @@
+// DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
+//
+// Samples accelerometer + gyroscope at 50 Hz using CMDeviceMotion during
+// active trip recording. Batches 60 s of raw IMU data and flushes each batch
+// into the sensor_batches table via TrackingDatabase.
+//
+// This data is the training input for the on-device XGBoost model. It is NOT
+// consumed during live trip classification. Trip type is determined by
+// CMMotionActivityManager (CMMA) via MotionMonitor / TripStateMachine.
+
 import Foundation
 import CoreMotion
 

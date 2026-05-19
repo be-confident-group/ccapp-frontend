@@ -10,10 +10,7 @@ import { database } from '@/lib/database';
 import type { MotionSegment, LocationPoint } from '@/lib/database/db';
 import type { TripSegment, SegmentAnalysis } from './MLSegmentDetector';
 import type { TripType } from '@/types/trip';
-
-// Minimum thresholds for valid segments
-const MIN_SEGMENT_DURATION_S = 30; // seconds
-const MIN_SEGMENT_DISTANCE_M = 100; // meters
+import { getTrackingConfig } from './TrackingConfig';
 
 /** Map CMMA activity strings to TripType */
 function mapActivity(activity: MotionSegment['activity']): TripType | null {
@@ -210,10 +207,11 @@ export class MotionActivitySegmenter {
     // Step 2: Merge adjacent segments of the same type
     const merged = mergeAdjacentSameType(rawSegments);
 
-    // Step 3: Filter out segments that are too short
+    // Step 3: Filter out segments that are too short (thresholds from remote config).
+    const cfg = getTrackingConfig();
     const filtered = merged.filter(
       (seg) =>
-        seg.duration >= MIN_SEGMENT_DURATION_S && seg.distance >= MIN_SEGMENT_DISTANCE_M
+        seg.duration >= cfg.detectingMinDurationSec && seg.distance >= cfg.minTripDistanceM
     );
 
     const uniqueTypes = new Set(filtered.map((s) => s.type));

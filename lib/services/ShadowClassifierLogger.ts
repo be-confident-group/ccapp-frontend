@@ -1,3 +1,16 @@
+/**
+ * DORMANT — DATA COLLECTION ONLY. DOES NOT AFFECT TRIP TYPE.
+ *
+ * After each trip ends, this module replays the trip's raw IMU batches through
+ * the XGBoost classifier and compares predictions against the CMMA ground truth
+ * recorded in motion_segments. Disagreements are written to the
+ * `classifier_disagreements` table for offline model evaluation.
+ *
+ * This runs post-trip, after all type decisions are final. It cannot change
+ * trip type, validation status, or any sync field. Called from
+ * TripFinalizationPipeline.ts after the trip payload has already been built.
+ */
+
 import { database } from '../database';
 import { getClassifier } from '../activity/classifier';
 import type { ClassifierDisagreement, MotionSegment } from '../database';

@@ -67,6 +67,7 @@ export interface ApiTrip {
   validation_log?: string;
   elevation_loss?: number;
   classification_source: 'apple_motion' | 'android_motion' | 'manual' | 'speed';
+  auto_reclassified_from?: string | null;
 }
 
 export interface TripFilters {
@@ -111,7 +112,7 @@ export interface DBTrip {
   backend_id: number | null;
   ml_activity_type?: TripType | null;
   ml_confidence?: number | null;
-  classification_method?: 'ml' | 'speed' | null;
+  classification_method?: 'cmma' | 'ml' | 'speed' | null;
   engine?: string | null;
   backfill_start?: number | null;
   detection_state?: string | null;
@@ -452,6 +453,27 @@ class TripAPI {
       console.error('[TripAPI] Error uploading sensor batch:', error);
       throw error;
     }
+  }
+
+  /**
+   * Batch delete trips by backend ID.
+   * Requires backend POST /api/trips/batch-delete/ endpoint (see backend design doc).
+   * Returns per-ID results so partial failures can be surfaced.
+   */
+  async batchDelete(tripIds: number[]): Promise<{ deleted: number[]; failed: { trip_id: number; error: string }[] }> {
+    return apiClient.post('/api/trips/batch-delete/', { trip_ids: tripIds });
+  }
+
+  /**
+   * Batch update trips by backend ID.
+   * Allowed fields: user_confirmed (boolean), type (TripType).
+   * Requires backend POST /api/trips/batch-update/ endpoint (see backend design doc).
+   */
+  async batchUpdate(
+    tripIds: number[],
+    fields: { user_confirmed?: boolean; type?: TripType },
+  ): Promise<{ updated: number[]; failed: { trip_id: number; error: string }[] }> {
+    return apiClient.post('/api/trips/batch-update/', { trip_ids: tripIds, fields });
   }
 }
 

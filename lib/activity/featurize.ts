@@ -1,5 +1,8 @@
 /**
+ * DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
+ *
  * TypeScript port of `radzi-ml-project/pipeline/featurizer_v1.py` (136 features).
+ * Extracts statistical features from 256×6 IMU windows for classifier.ts.
  *
  * This file MUST stay bit-identical (within 1e-4 on float32) to the Python
  * implementation. The parity test in `__tests__/parity.test.ts` enforces this.

@@ -60,12 +60,37 @@ final class TrackingDatabase {
     }
   }
 
-  func endTrip(tripId: String, endTime: Int64) throws {
+  func cancelTrip(tripId: String, reason: String) {
+    let now = Int64(Date().timeIntervalSince1970 * 1000)
+    try? writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: "UPDATE trips SET status = 'cancelled', updated_at = ? WHERE id = ?",
+                       arguments: [now, tripId])
+      }
+    }
+    TrackingLogger.shared.log(.info, "TrackingDatabase: cancelTrip \(tripId) — \(reason)")
+  }
+
+  struct TripEndStats {
+    let distanceMeters: Double
+    let locationCount: Int
+    let durationSec: Int64
+    let maxSpeedKmh: Double
+  }
+
+  /// Ends the trip: writes stats and status='completed'. Returns computed stats so the
+  /// caller can decide whether to cancel the trip (B.7: 0 m rejection).
+  @discardableResult
+  func endTrip(tripId: String, endTime: Int64) throws -> TripEndStats {
     // Compute distance and duration from stored location points while we still
     // have full WAL visibility.  The JS finalization pipeline reads from
     // expo-sqlite which uses a different WAL reader and cannot see GRDB writes,
     // so we must persist stats into the trips row before handing off.
     let stats = computeTripStats(tripId: tripId)
+    let locationCount = (try? queue.read { db in
+      try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM locations WHERE trip_id = ?", arguments: [tripId]) ?? 0
+    }) ?? 0
+
     // avg_speed in km/h = (meters / 1000) / (seconds / 3600)
     let avgSpeedKmh = stats.durationSec > 0
       ? (stats.distanceMeters / 1000.0) / (Double(stats.durationSec) / 3600.0)
@@ -91,7 +116,7 @@ final class TrackingDatabase {
         ])
       }
     }
-    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.0f", stats.distanceMeters))m, \(stats.durationSec)s, avg: \(String(format: "%.1f", avgSpeedKmh)) km/h, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
+    TrackingLogger.shared.log(.info, "TrackingDatabase: endTrip \(tripId) — \(String(format: "%.0f", stats.distanceMeters))m, locs=\(locationCount), \(stats.durationSec)s, avg: \(String(format: "%.1f", avgSpeedKmh)) km/h, max: \(String(format: "%.1f", stats.maxSpeedKmh)) km/h")
 
     let filteredMax = computeFilteredMaxSpeed(tripId: tripId)
     try writeQueue.sync {
@@ -109,6 +134,13 @@ final class TrackingDatabase {
         """, arguments: [movingStats.movingDurationS, movingStats.movingAvgSpeedKmh, tripId])
       }
     }
+
+    return TripEndStats(
+      distanceMeters: stats.distanceMeters,
+      locationCount: locationCount,
+      durationSec: stats.durationSec,
+      maxSpeedKmh: stats.maxSpeedKmh
+    )
   }
 
   /// Reads all location rows for the trip and returns total haversine distance

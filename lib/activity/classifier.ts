@@ -1,12 +1,18 @@
 /**
- * On-device activity classifier.
+ * DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
  *
- * Bundles the XGBoost model + feature config that ship in
- * `ccapp-frontend/assets/model/` and exposes a single `predict()` that takes
- * a 256×6 sample window and returns a class label + probabilities.
+ * This module loads the bundled XGBoost model (assets/model/best_model.json)
+ * and exposes a predict() over 256×6 IMU windows. Its predictions are persisted
+ * to the `activity_windows` table by streamingSegmenter.ts during recording.
  *
- * The class labels are the 4-class set the model was trained on:
- * `walking`, `cycling`, `running`, `vehicle`.
+ * Trip classification is performed by Apple's CMMotionActivityManager (CMMA)
+ * via lib/services/MotionActivitySegmenter.ts. Nothing in the live path reads
+ * from activity_windows. This stack is preserved so we can:
+ *   1. Collect training data + on-device prediction labels.
+ *   2. Compare ML predictions to CMMA via ShadowClassifierLogger.
+ *   3. Graduate the model to primary if and when we choose to.
+ *
+ * Do not wire this into trip type decisions without an explicit product call.
  */
 
 import { DEFAULT_FEATURIZER_CONFIG, extractFeatures, type FeaturizerConfig } from './featurize';

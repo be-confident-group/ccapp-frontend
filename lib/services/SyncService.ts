@@ -7,6 +7,7 @@ import { database } from '../database';
 import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip, type ApiTripCreate } from '../api/trips';
 import type { Trip } from '../database/db';
 import { TripValidationService } from './TripValidationService';
+import { getTrackingConfig } from './TrackingConfig';
 
 export interface SyncResult {
   success: boolean;
@@ -102,6 +103,19 @@ class SyncService {
       if (trip.status !== 'completed') {
         console.log(`[SyncService] Trip ${tripId} not completed (${trip.status}), skipping sync`);
         return false;
+      }
+
+      // Defensive gate: cancel trivially short/empty trips before they hit the backend.
+      // Belt-and-braces — the native layer should already reject these at endTrip().
+      if (!trip.is_manual) {
+        const cfg = getTrackingConfig();
+        const locationCount = (trip as any).location_count ?? 0;
+        const distanceM = (trip.distance ?? 0) * 1000;
+        if (distanceM < cfg.minTripDistanceM && locationCount < cfg.minTripLocationCount) {
+          console.log(`[SyncService] Cancelling trivially short trip ${tripId} (dist=${distanceM}m, locs=${locationCount})`);
+          await database.updateTrip(tripId, { status: 'cancelled' });
+          return false;
+        }
       }
 
       // Transform to API format

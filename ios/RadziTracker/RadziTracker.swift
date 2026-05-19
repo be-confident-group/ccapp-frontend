@@ -155,11 +155,22 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
   func setConfig(_ config: NSDictionary,
                  resolver resolve: @escaping RCTPromiseResolveBlock,
                  rejecter reject: @escaping RCTPromiseRejectBlock) {
-    if let v = config["detectionSustainSeconds"] as? Double { stateMachine.config.detectionSustainSeconds = v }
-    if let v = config["detectingMinDurationSeconds"] as? Double { stateMachine.config.detectingMinDurationSeconds = v }
-    if let v = config["detectingMinDisplacementMeters"] as? Double { stateMachine.config.detectingMinDisplacementMeters = v }
-    if let v = config["cooldownEnterSeconds"] as? Double { stateMachine.config.cooldownEnterSeconds = v }
-    if let v = config["cooldownEndSeconds"] as? Double { stateMachine.config.cooldownEndSeconds = v }
+    // Sane ranges: silently ignore values outside them so a bad server config can't break tracking.
+    if let v = config["detectionSustainSeconds"] as? Double, v > 0 && v < 120 { stateMachine.config.detectionSustainSeconds = v }
+    if let v = config["detectingMinDurationSeconds"] as? Double, v > 0 && v < 300 { stateMachine.config.detectingMinDurationSeconds = v }
+    if let v = config["detectingMinDisplacementMeters"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingMinDisplacementMeters = v }
+    if let v = config["falseStartGpsDisplacementMeters"] as? Double, v > 0 && v < 200 { stateMachine.config.falseStartGpsDisplacementMeters = v }
+    if let v = config["locationAccuracyThresholdM"] as? Double, v > 0 && v < 500 { stateMachine.config.locationAccuracyThresholdM = v }
+    if let v = config["detectingMinPedometerSteps"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingMinPedometerSteps = Int(v) }
+    if let v = config["cooldownEnterSeconds"] as? Double, v > 0 && v < 600 { stateMachine.config.cooldownEnterSeconds = v }
+    if let v = config["cooldownEndSeconds"] as? Double, v > 0 && v < 1800 { stateMachine.config.cooldownEndSeconds = v }
+    if let v = config["multiWindowVoteSec"] as? Double, v > 0 && v < 120 { stateMachine.config.multiWindowVoteSec = v }
+    if let v = config["allowLowConfidenceWalking"] as? Bool { stateMachine.config.allowLowConfidenceWalking = v }
+    // Re-apply the sustained-activity watch windows with updated detectionSustainSeconds.
+    motion.watchSustain(activity: .walking,    seconds: stateMachine.config.detectionSustainSeconds)
+    motion.watchSustain(activity: .running,    seconds: stateMachine.config.detectionSustainSeconds)
+    motion.watchSustain(activity: .cycling,    seconds: stateMachine.config.detectionSustainSeconds)
+    motion.watchSustain(activity: .automotive, seconds: stateMachine.config.detectionSustainSeconds)
     resolve(nil)
   }
 
@@ -167,12 +178,17 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
   func getConfig(_ resolve: @escaping RCTPromiseResolveBlock,
                  rejecter reject: @escaping RCTPromiseRejectBlock) {
     resolve([
-      "detectionSustainSeconds": stateMachine.config.detectionSustainSeconds,
-      "detectingMinDurationSeconds": stateMachine.config.detectingMinDurationSeconds,
-      "detectingMinDisplacementMeters": stateMachine.config.detectingMinDisplacementMeters,
-      "cooldownEnterSeconds": stateMachine.config.cooldownEnterSeconds,
-      "cooldownEndSeconds": stateMachine.config.cooldownEndSeconds,
-      "imuSampleRateHz": ImuSampler.sampleRateHz,
+      "detectionSustainSeconds":          stateMachine.config.detectionSustainSeconds,
+      "detectingMinDurationSeconds":      stateMachine.config.detectingMinDurationSeconds,
+      "detectingMinDisplacementMeters":   stateMachine.config.detectingMinDisplacementMeters,
+      "falseStartGpsDisplacementMeters":  stateMachine.config.falseStartGpsDisplacementMeters,
+      "locationAccuracyThresholdM":       stateMachine.config.locationAccuracyThresholdM,
+      "detectingMinPedometerSteps":       stateMachine.config.detectingMinPedometerSteps,
+      "cooldownEnterSeconds":             stateMachine.config.cooldownEnterSeconds,
+      "cooldownEndSeconds":               stateMachine.config.cooldownEndSeconds,
+      "multiWindowVoteSec":               stateMachine.config.multiWindowVoteSec,
+      "allowLowConfidenceWalking":        stateMachine.config.allowLowConfidenceWalking,
+      "imuSampleRateHz":                  ImuSampler.sampleRateHz,
     ])
   }
 

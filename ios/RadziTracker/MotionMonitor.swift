@@ -89,10 +89,13 @@ final class MotionMonitor {
   private func handle(activity: CMMotionActivity) {
     let new = Self.classify(activity)
     let conf = Self.mapConfidence(activity.confidence)
-    // Low-confidence stationary is allowed through — iOS CMMA almost always reports
-    // stationary with low confidence, and we need it to trigger cooldown/trip-ending.
-    // Low-confidence motion activities are still dropped to avoid spurious trip starts.
-    if conf == .low && new != .stationary {
+    // Low-confidence stationary is always allowed through — iOS CMMA almost always
+    // reports stationary with low confidence, and we need it for cooldown/trip-ending.
+    // Low-confidence walking is forwarded to TripStateMachine which decides whether
+    // to act based on config.allowLowConfidenceWalking (default: true).
+    // All other low-confidence activities (running, cycling, automotive) are dropped.
+    let isLowConfWalking = conf == .low && new == .walking
+    if conf == .low && new != .stationary && !isLowConfWalking {
       TrackingLogger.shared.log(.info, "MotionMonitor: low-confidence ignored (\(new.rawValue))")
       return
     }

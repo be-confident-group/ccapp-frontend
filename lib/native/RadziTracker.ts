@@ -23,8 +23,13 @@ export interface TrackerConfig {
   detectionSustainSeconds: number;
   detectingMinDurationSeconds: number;
   detectingMinDisplacementMeters: number;
+  falseStartGpsDisplacementMeters: number;
+  locationAccuracyThresholdM: number;
+  detectingMinPedometerSteps: number;
   cooldownEnterSeconds: number;
   cooldownEndSeconds: number;
+  multiWindowVoteSec: number;
+  allowLowConfidenceWalking: boolean;
   imuSampleRateHz: number;
 }
 

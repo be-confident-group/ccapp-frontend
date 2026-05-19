@@ -1,6 +1,9 @@
 /**
- * Minimal XGBoost booster evaluator that reads the native JSON produced by
- * `xgboost.Booster.save_model(path.json)` and runs multi-class softmax inference.
+ * DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
+ *
+ * Minimal XGBoost booster evaluator for the bundled best_model.json.
+ * Reads the native JSON produced by xgboost.Booster.save_model() and runs
+ * multi-class softmax inference over 136-feature windows from featurize.ts.
  *
  * Target: the booster exported by `radzi-ml-project/pipeline/export.py` for
  * the shipped `best_model.pkl` (multi:softprob, 4 classes, gbtree).

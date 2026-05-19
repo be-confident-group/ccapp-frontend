@@ -159,6 +159,7 @@ export default function TripDetailScreen() {
           status: backendTrip.status,
           validation_log: backendTrip.validation_log ?? null,
           classification_source: (backendTrip as any).classification_source ?? localTrip?.classification_source ?? null,
+          auto_reclassified_from: backendTrip.auto_reclassified_from ?? null,
         },
         route: transformedRoute,
       };
@@ -201,6 +202,7 @@ export default function TripDetailScreen() {
           status: localTrip.status,
           validation_log: localTrip.validation_log ?? null,
           classification_source: localTrip.classification_source ?? null,
+          auto_reclassified_from: null,
         },
         route: parsedRoute,
       };
@@ -418,12 +420,27 @@ export default function TripDetailScreen() {
               {formatDate(date, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </ThemedText>
 
+            {/* Auto-reclassification notice — backend changed the trip type due to speed */}
+            {trip.auto_reclassified_from != null && (
+              <View style={[styles.reclassifyBanner, { backgroundColor: '#FF9800' + '18', borderColor: '#FF9800' + '60' }]}>
+                <MaterialCommunityIcons name="swap-horizontal" size={20} color="#FF9800" />
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.reclassifyTitle, { color: '#FF9800' }]}>
+                    Trip type updated automatically
+                  </ThemedText>
+                  <ThemedText style={[styles.reclassifyBody, { color: colors.textSecondary }]}>
+                    Changed from {getTripTypeName(trip.auto_reclassified_from as any)} to {getTripTypeName(trip.type as any)} based on speed — does that match what you remember?
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+
             {/* Confirmation card — shown when trip hasn't been reviewed yet */}
             {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
               <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
                 {/* Type selector */}
                 <View style={styles.typeSelector}>
-                  {(['walk', 'cycle'] as TripType[]).map((type) => {
+                  {(['walk', 'cycle', 'drive'] as TripType[]).map((type) => {
                     const selected = (confirmTypeOverride ?? backendTrip.type) === type;
                     const tColor = getTripTypeColor(type);
                     return (
@@ -879,5 +896,23 @@ const styles = StyleSheet.create({
   confirmBtnText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  reclassifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  reclassifyTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
+  reclassifyBody: {
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

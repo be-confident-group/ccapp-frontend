@@ -13,6 +13,7 @@ import {
   type LocationStoredEvent,
 } from '../native/RadziTracker';
 import { TripFinalizationPipeline } from './TripFinalizationPipeline';
+import { database } from '../database';
 
 const MANUAL_ONLY_KEY = '@tracking_manual_only';
 
@@ -49,6 +50,9 @@ class CoordinatorImpl {
   }
 
   private async _doInit(): Promise<void> {
+    // Ensure JS-side DB migrations run before native code queries the same SQLite file.
+    await database.init();
+
     const storedManual = await AsyncStorage.getItem(MANUAL_ONLY_KEY);
     this.manualOnly = storedManual === 'true';
 

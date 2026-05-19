@@ -1,13 +1,16 @@
 /**
- * ML-driven segment detector.
+ * DORMANT — NOT IMPORTED BY LIVE PIPELINE. DATA COLLECTION PATH ONLY.
  *
- * Consumes the per-window ML predictions stored in `activity_windows` for a
- * trip and produces the same `SegmentAnalysis` shape, so the rest of the
- * pipeline (multi-modal split in TripManager, UI code) does not change.
+ * ML-driven segment detector that consumes per-window XGBoost predictions from
+ * the `activity_windows` table and produces a SegmentAnalysis for a trip.
  *
- * Fallback: if no activity_windows rows exist for the trip (typical for
- * background-only trips on iOS where expo-sensors can't stream), this
- * detector falls back to a simple speed-based segmenter inlined below.
+ * This file is NOT imported by TripFinalizationPipeline.ts. Trip segmentation
+ * uses MotionActivitySegmenter.ts (CMMA-based) exclusively. This detector is
+ * preserved as the future activation path if/when the XGBoost model graduates
+ * to primary classifier. To activate: swap the import in TripFinalizationPipeline.ts.
+ *
+ * The speed-based fallback inlined at the bottom is also dormant — it was the
+ * first-generation classifier and is no longer used anywhere in the live path.
  */
 
 import { database, type ActivityWindow, type LocationPoint } from '../database';

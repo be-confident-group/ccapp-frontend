@@ -76,8 +76,8 @@ export class TripFinalizationPipeline {
           
           const segmentStartTime = segment.locations[0].timestamp;
           const segmentEndTime = segment.locations[segment.locations.length - 1].timestamp;
-          const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
-          
+          const method = seg.classificationMethod === 'cmma' ? 'cmma' : 'speed';
+
           await database.createTrip({
             id: subTripId,
             user_id: freshTrip.user_id || 'current_user',
@@ -99,11 +99,11 @@ export class TripFinalizationPipeline {
             updated_at: Date.now(),
             synced: 0,
           });
-          // Set ML classification fields (not in createTrip's INSERT)
+          // Set classification fields (not in createTrip's INSERT)
           await database.updateTrip(subTripId, {
             classification_method: method,
-            ml_activity_type: method === 'ml' ? segment.type : null,
-            ml_confidence: method === 'ml' ? segment.confidence / 100 : null,
+            ml_activity_type: method === 'cmma' ? segment.type : null,
+            ml_confidence: method === 'cmma' ? segment.confidence / 100 : null,
           });
           
           console.log(`[TripFinalizationPipeline] Validating sub-trip ${subTripId}...`);
@@ -121,7 +121,7 @@ export class TripFinalizationPipeline {
         
       } else {
         // Single-mode trip
-        const method = ['ml', 'cmma'].includes(seg.classificationMethod) ? 'ml' : 'speed';
+        const method = seg.classificationMethod === 'cmma' ? 'cmma' : 'speed';
         await database.updateTrip(tripId, {
           classification_method: method,
           type: seg.dominantType as any,

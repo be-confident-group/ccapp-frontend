@@ -21,11 +21,15 @@ final class TripStateMachine {
 
   struct Config {
     var detectionSustainSeconds: TimeInterval = TripStateMachine.gpsStabilizationTimeoutSeconds
-    var detectingMinDurationSeconds: TimeInterval = 30 // 30s minimum in detecting before promoting
-    var detectingMinDisplacementMeters: Double = 20   // 20m GPS displacement to confirm real movement
-    var falseStartGpsDisplacementMeters: Double = 8   // abort detecting if <8m after minDuration (not actually moving)
+    var detectingMinDurationSeconds: TimeInterval = 60  // minimum detecting duration before promoting
+    var detectingMinDisplacementMeters: Double = 30     // GPS displacement required to confirm real movement
+    var falseStartGpsDisplacementMeters: Double = 15    // abort detecting if below this after minDuration
+    var locationAccuracyThresholdM: Double = 20         // drop GPS fixes with accuracy worse than this (m)
+    var detectingMinPedometerSteps: Int = 40            // pedometer fallback for urban-canyon promotion
     var cooldownEnterSeconds: TimeInterval = 30
     var cooldownEndSeconds: TimeInterval = 180
+    var multiWindowVoteSec: TimeInterval = 20           // vote window for multi-sample CMMA type selection
+    var allowLowConfidenceWalking: Bool = true          // allow low-confidence walking through MotionMonitor
   }
 
   weak var delegate: TripStateMachineDelegate?
@@ -42,6 +46,15 @@ final class TripStateMachine {
   private var cooldownEnteredAt: Date?
   private var lastMotionActivity: MotionMonitor.Activity = .unknown
   private weak var motionMonitorRef: MotionMonitor?
+
+  // Multi-window CMMA vote state (B.2)
+  private var voteBuffer: [(type: String, weight: Int)] = []
+  private var voteTimer: Timer?
+
+  // Pedometer corroboration state (B.4)
+  private var detectingPedometerSteps: Int = 0
+  private var detectingPedometerQueried = false
+  private let pedometer = CMPedometer()
 
   /// Fires every 10 s when in recording/cooldown so we can check elapsed-time
   /// thresholds even when CMMA stops delivering new events (which it does once
@@ -64,19 +77,67 @@ final class TripStateMachine {
   // MARK: - Inputs
 
   /// Called by MotionMonitor when CMMotionActivityManager reports a new activity.
-  /// If we're idle and confidence is medium or high, skip the detecting phase and
-  /// start the trip immediately ("immediate-start path").
+  /// Implements a multi-window vote: buffers samples for `multiWindowVoteSec` before
+  /// starting a trip, so a brief walking window before boarding a train can't lock the
+  /// type as "walk". High-confidence samples short-circuit immediately.
   func handleMotionUpdate(activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
     guard state == .idle else { return }
-    guard confidence != .low else { return }
+
+    // Allow low-confidence walking through if configured (B.6 — catches urban canyon walks).
+    let isLowConfWalking = confidence == .low && activity == .walking && config.allowLowConfidenceWalking
+    guard confidence != .low || isLowConfWalking else { return }
+
     let type: String
     switch activity {
-    case .walking:  type = "walk"
-    case .running:  type = "run"
-    case .cycling:  type = "cycle"
+    case .walking:    type = "walk"
+    case .running:    type = "run"
+    case .cycling:    type = "cycle"
+    case .automotive: type = "drive"   // B.1 — now handled instead of silently dropped
     default: return
     }
-    immediateStartTrip(type: type, classificationSource: "apple_motion")
+
+    // High-confidence: short-circuit the vote window and start immediately.
+    if confidence == .high {
+      cancelVoteTimer()
+      voteBuffer.removeAll()
+      immediateStartTrip(type: type, classificationSource: "apple_motion")
+      return
+    }
+
+    // Medium (or allowed low-confidence walking): accumulate into vote buffer.
+    let weight = confidence == .medium ? 2 : 1
+    voteBuffer.append((type: type, weight: weight))
+
+    // Start the vote timer if not already running.
+    if voteTimer == nil {
+      scheduleVoteTimer()
+    }
+  }
+
+  private func scheduleVoteTimer() {
+    guard Thread.isMainThread else {
+      DispatchQueue.main.async { [weak self] in self?.scheduleVoteTimer() }
+      return
+    }
+    let interval = config.multiWindowVoteSec
+    voteTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+      self?.commitVote()
+    }
+  }
+
+  private func cancelVoteTimer() {
+    voteTimer?.invalidate()
+    voteTimer = nil
+    voteBuffer.removeAll()
+  }
+
+  private func commitVote() {
+    defer { voteBuffer.removeAll(); voteTimer = nil }
+    guard state == .idle, !voteBuffer.isEmpty else { return }
+    var scores: [String: Int] = [:]
+    for entry in voteBuffer { scores[entry.type, default: 0] += entry.weight }
+    guard let winnerType = scores.max(by: { $0.value < $1.value })?.key else { return }
+    immediateStartTrip(type: winnerType, classificationSource: "apple_motion")
   }
 
   func onMotionActivity(_ activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence) {
@@ -123,6 +184,11 @@ final class TripStateMachine {
     case .idle, .ending:
       return
     case .detecting:
+      // B.3: Drop low-accuracy fixes — cold-start GPS at ±100–500 m corrupts displacement maths.
+      guard accuracy <= config.locationAccuracyThresholdM else {
+        TrackingLogger.shared.log(.info, "TripStateMachine: detecting — dropped low-accuracy fix (\(Int(accuracy))m)")
+        return
+      }
       guard let stagingId = currentStagingId else { return }
       try? TrackingDatabase.shared.insertStagingLocation(
         stagingId: stagingId, lat: lat, lng: lng,
@@ -130,6 +196,11 @@ final class TripStateMachine {
       )
       checkDetectingPromotion()
     case .recording:
+      // B.3: Drop low-accuracy fixes during recording too.
+      guard accuracy <= config.locationAccuracyThresholdM else {
+        TrackingLogger.shared.log(.info, "TripStateMachine: recording — dropped low-accuracy fix (\(Int(accuracy))m)")
+        return
+      }
       guard let tripId = currentTripId else { return }
       try? TrackingDatabase.shared.insertLocation(
         tripId: tripId, lat: lat, lng: lng, accuracy: accuracy, speed: speed,
@@ -138,12 +209,9 @@ final class TripStateMachine {
       try? TrackingDatabase.shared.updateTripUpdatedAt(tripId: tripId, updatedAt: timestamp)
       delegate?.stateMachine(self, didStoreLocation: tripId, lat: lat, lng: lng, accuracy: accuracy, speed: speed, timestamp: timestamp)
     case .cooldown:
-      guard let tripId = currentTripId else { return }
-      try? TrackingDatabase.shared.insertLocation(
-        tripId: tripId, lat: lat, lng: lng, accuracy: accuracy, speed: speed,
-        heading: nil, altitude: nil, timestamp: timestamp, accuracyMode: "hundred"
-      )
-      try? TrackingDatabase.shared.updateTripUpdatedAt(tripId: tripId, updatedAt: timestamp)
+      // B.10: Skip GPS insertion during cooldown entirely. The device is in .hundred mode
+      // (100 m accuracy) and these fixes don't add value — they just corrupt distance stats.
+      break
     }
   }
 
@@ -196,17 +264,22 @@ final class TripStateMachine {
   // MARK: - Transitions
 
   private func transitionIdleToDetecting() {
+    cancelVoteTimer()  // Cancel any in-progress vote window; detecting path takes over.
     let stagingId = "staging_\(Int64(Date().timeIntervalSince1970 * 1000))"
     currentStagingId = stagingId
     detectingStartTime = Date()
+    detectingPedometerSteps = 0
+    detectingPedometerQueried = false
     transition(to: .detecting)
-    delegate?.stateMachine(self, requestAccuracyMode: .best)  // best accuracy for reliable displacement measurement
+    delegate?.stateMachine(self, requestAccuracyMode: .best)
   }
 
   private func transitionDetectingToIdle(reason: String) {
     if let stagingId = currentStagingId { try? TrackingDatabase.shared.discardStaging(stagingId: stagingId) }
     currentStagingId = nil
     detectingStartTime = nil
+    detectingPedometerSteps = 0
+    detectingPedometerQueried = false
     transition(to: .idle)
     delegate?.stateMachine(self, requestAccuracyMode: .off)
     TrackingLogger.shared.log(.info, "TripStateMachine: detecting→idle (\(reason))")
@@ -217,13 +290,40 @@ final class TripStateMachine {
     let elapsed = Date().timeIntervalSince(start)
     let displacement = (try? TrackingDatabase.shared.stagingDisplacementMeters(stagingId: stagingId)) ?? 0
 
-    if elapsed >= config.detectingMinDurationSeconds && displacement >= config.detectingMinDisplacementMeters {
+    guard elapsed >= config.detectingMinDurationSeconds else { return }
+
+    // GPS displacement sufficient → promote.
+    if displacement >= config.detectingMinDisplacementMeters {
       transitionDetectingToRecording()
       return
     }
 
-    if elapsed >= config.detectingMinDurationSeconds && displacement < config.falseStartGpsDisplacementMeters {
-      transitionDetectingToIdle(reason: "GPS displacement <\(Int(config.falseStartGpsDisplacementMeters))m after \(Int(elapsed))s")
+    // B.4: Query pedometer once for step-count corroboration (catches urban-canyon / indoor walks).
+    if !detectingPedometerQueried {
+      detectingPedometerQueried = true
+      if CMPedometer.isStepCountingAvailable() {
+        let queryFrom = start
+        pedometer.queryPedometerData(from: queryFrom, to: Date()) { [weak self] data, _ in
+          DispatchQueue.main.async {
+            guard let self, self.state == .detecting else { return }
+            self.detectingPedometerSteps = data?.numberOfSteps.intValue ?? 0
+            TrackingLogger.shared.log(.info, "TripStateMachine: pedometer steps in detecting window: \(self.detectingPedometerSteps)")
+            self.checkDetectingPromotion()
+          }
+        }
+      }
+      return  // Wait for the async result before deciding.
+    }
+
+    // Pedometer shows real movement → promote even without GPS displacement.
+    if detectingPedometerSteps >= config.detectingMinPedometerSteps {
+      transitionDetectingToRecording()
+      return
+    }
+
+    // B.4: Only abort if BOTH GPS displacement AND pedometer steps are below threshold.
+    if displacement < config.falseStartGpsDisplacementMeters && detectingPedometerSteps < config.detectingMinPedometerSteps {
+      transitionDetectingToIdle(reason: "GPS <\(Int(config.falseStartGpsDisplacementMeters))m, steps=\(detectingPedometerSteps) after \(Int(elapsed))s")
     }
   }
 
@@ -290,7 +390,7 @@ final class TripStateMachine {
     cancelStationaryCheckTimer()
     cooldownEnteredAt = nil
     let now = Int64(Date().timeIntervalSince1970 * 1000)
-    try? TrackingDatabase.shared.endTrip(tripId: tripId, endTime: now)
+    let endStats = try? TrackingDatabase.shared.endTrip(tripId: tripId, endTime: now)
     transition(to: .ending)
     delegate?.stateMachine(self, requestAccuracyMode: .off)
     delegate?.stateMachine(self, requestImuRunning: false, tripId: nil)
@@ -303,6 +403,41 @@ final class TripStateMachine {
       let agg = AltimeterMonitor.aggregate(samples: allSamples.map { (timestamp: $0.0, relativeAltitudeM: $0.1) })
       try? TrackingDatabase.shared.updateTripElevation(tripId: tripId, gainM: agg.gainMeters, lossM: agg.lossMeters)
     }
+
+    // B.7: Reject trivially short/empty trips. If GPS distance and location count are
+    // both below minimums, check pedometer. Only notify JS if the trip is worth keeping.
+    let distanceM = endStats?.distanceMeters ?? 0
+    let locationCount = endStats?.locationCount ?? 0
+    let durationSec = endStats?.durationSec ?? 0
+    let shouldCheckPedometer = distanceM < 50.0 && locationCount < 3
+
+    if shouldCheckPedometer && CMPedometer.isStepCountingAvailable() {
+      // Use recorded duration to compute trip start; fall back to 5 min window.
+      let tripStartMs = durationSec > 0 ? (Double(now) - Double(durationSec) * 1000.0) : (Double(now) - 300_000)
+      let tripStartDate = Date(timeIntervalSince1970: tripStartMs / 1000.0)
+      let capturedTripId = tripId
+      pedometer.queryPedometerData(from: tripStartDate, to: Date()) { [weak self] data, _ in
+        let steps = data?.numberOfSteps.intValue ?? 0
+        DispatchQueue.main.async {
+          guard let self else { return }
+          if steps >= self.config.detectingMinPedometerSteps || distanceM >= 50.0 {
+            // Keep the trip — pedometer shows real movement.
+            TrackingLogger.shared.log(.info, "TripStateMachine: kept short trip \(capturedTripId) via pedometer (steps=\(steps), dist=\(Int(distanceM))m)")
+            self.finishEndingTrip(tripId: capturedTripId, endTime: now)
+          } else {
+            // Cancel — neither GPS nor pedometer shows real movement.
+            TrackingLogger.shared.log(.info, "TripStateMachine: cancelled 0m trip \(capturedTripId) (steps=\(steps), dist=\(Int(distanceM))m, locs=\(locationCount))")
+            TrackingDatabase.shared.cancelTrip(tripId: capturedTripId, reason: "0m rejection: steps=\(steps), dist=\(Int(distanceM))m")
+            self.finishEndingNoNotify()
+          }
+        }
+      }
+    } else {
+      finishEndingTrip(tripId: tripId, endTime: now)
+    }
+  }
+
+  private func finishEndingTrip(tripId: String, endTime: Int64) {
     DispatchQueue.global(qos: .utility).async { [weak self] in
       guard let self else { return }
       let reconcileNow = Date()
@@ -318,7 +453,17 @@ final class TripStateMachine {
         )
       }
     }
-    delegate?.stateMachine(self, didEndTrip: tripId, endTime: now)
+    delegate?.stateMachine(self, didEndTrip: tripId, endTime: endTime)
+  }
+
+  private func finishEndingNoNotify() {
+    // Trip was cancelled — don't notify JS. JS will not attempt to finalize it.
+    // onFinalizationComplete() still needs to be called to reset state; fire it directly.
+    cancelStationaryCheckTimer()
+    currentTripId = nil
+    stationaryStartTime = nil
+    cooldownEnteredAt = nil
+    transition(to: .idle)
   }
 
   func onFinalizationComplete() {

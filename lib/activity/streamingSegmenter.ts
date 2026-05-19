@@ -1,18 +1,17 @@
 /**
- * Runtime glue between per-window predictions and the rest of the app.
+ * DORMANT — DATA COLLECTION ONLY. NOT IN LIVE CLASSIFICATION PATH.
  *
- * Responsibilities:
- *  - Persist every window prediction to the `activity_windows` table so that
- *    post-hoc segmentation (`MLSegmentDetector`) has data to work with.
- *  - Maintain a small smoothing window that represents the "currently shown"
- *    activity for the active trip (used for live UI hints like a chip or
- *    badge). This is NOT the final trip type — that is decided when the
- *    trip is stopped by `MLSegmentDetector`.
- *  - Notify a single subscriber (TrackingContext) of live activity changes.
+ * Runtime glue between per-window XGBoost predictions and the `activity_windows`
+ * table. Persists every prediction so that post-hoc analysis tools (e.g.
+ * MLSegmentDetector, ShadowClassifierLogger) have data to work with.
  *
- * The smoothing rule is simple and intentional: require `CONFIRM_WINDOWS`
- * consecutive windows of the same label above `MIN_CONFIDENCE` before we
- * update the live activity. This kills jitter at the cost of ~5 s latency.
+ * This module also maintains a live smoothing window for UI hints (e.g. an
+ * activity chip during recording). These UI hints are cosmetic only — they
+ * do NOT set the final trip type. Final trip type is decided at trip-end by
+ * MotionActivitySegmenter (CMMA-based).
+ *
+ * The smoothing rule: require `CONFIRM_WINDOWS` consecutive windows of the
+ * same label above `MIN_CONFIDENCE` before updating the displayed activity.
  */
 
 import { database } from '../database';

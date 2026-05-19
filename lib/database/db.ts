@@ -24,7 +24,7 @@ export interface Trip {
   backend_id: number | null;
   ml_activity_type: 'walk' | 'run' | 'cycle' | 'drive' | null;
   ml_confidence: number | null;
-  classification_method: 'ml' | 'speed';
+  classification_method: 'cmma' | 'ml' | 'speed';
   engine?: 'native' | 'legacy';
   backfill_start?: number | null;
   detection_state?: string | null;
