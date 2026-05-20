@@ -4,7 +4,7 @@ import { HeartIcon as HeartIconSolid, ChatBubbleOvalLeftIcon } from 'react-nativ
 import { HeartIcon as HeartIconOutline } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes } from '@/constants/theme';
 
 interface PostActionsProps {
   likeCount: number;
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionText: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     fontWeight: '500',
   },
 });
