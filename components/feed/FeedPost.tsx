@@ -128,7 +128,7 @@ export const FeedPost = React.memo(function FeedPost({
                     </ThemedText>
                   </View>
                 )}
-                <View style={[styles.activityTypePill, { backgroundColor: metaColor + '20', marginLeft: 'auto' as any }]}>
+                <View style={[styles.activityTypePill, { backgroundColor: metaColor + '20' }]}>
                   <ThemedText style={[styles.activityTypeText, { color: metaColor }]}>{metaLabel}</ThemedText>
                 </View>
               </View>
