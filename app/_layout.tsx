@@ -68,7 +68,12 @@ function RootLayoutNav() {
   // Handle taps on trip-completion and rate-trip notifications
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as any;
+      const data = response.notification.request.content.data as {
+        type?: string;
+        tripId?: string | number;
+        postId?: string | number;
+        clubId?: string | number;
+      } | null;
       if (data?.type === 'trip_completed' && data?.tripId) {
         router.replace(`/home/trip-detail?id=${data.tripId}`);
       } else if (data?.type === 'rate_trip' && data?.tripId) {
@@ -77,9 +82,9 @@ function RootLayoutNav() {
         (data?.type === 'post_liked' || data?.type === 'post_commented' || data?.type === 'club_new_post') &&
         data?.postId
       ) {
-        router.push(`/feed/post-detail?id=${data.postId}`);
+        router.replace(`/feed/post-detail?id=${data.postId}`);
       } else if (data?.type === 'join_request_accepted' && data?.clubId) {
-        router.push(`/clubs/${data.clubId}`);
+        router.replace(`/clubs/${data.clubId}`);
       }
     });
     return () => subscription.remove();
