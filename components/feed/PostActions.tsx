@@ -36,7 +36,7 @@ export const PostActions = React.memo(function PostActions({
         activeOpacity={0.7}
       >
         {isLiked ? (
-          <HeartIconSolid size={20} color="#EF4444" />
+          <HeartIconSolid size={20} color={colors.error} />
         ) : (
           <HeartIconOutline size={20} color={colors.textSecondary} />
         )}

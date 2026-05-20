@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
+import { formatRelativeTime } from '@/lib/i18n/formatters';
 import type { ActivityPost } from '@/types/feed';
 import { UserAvatar } from './UserAvatar';
 import { PhotoGallery } from './PhotoGallery';
@@ -32,22 +33,6 @@ interface FeedPostProps {
   onPhotoPress?: (photos: string[], index: number) => void;
 }
 
-const formatTimeAgo = (timestamp: string): string => {
-  const now = new Date();
-  const postDate = new Date(timestamp);
-  const diffMs = now.getTime() - postDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  // Show date for older posts
-  return postDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
 
 export const FeedPost = React.memo(function FeedPost({
   post,
@@ -93,7 +78,7 @@ export const FeedPost = React.memo(function FeedPost({
               <View style={styles.userRow}>
                 <ThemedText style={styles.userName}>{post.user.name}</ThemedText>
                 <ThemedText style={[styles.timestamp, { color: colors.textMuted }]}>
-                  {formatTimeAgo(post.createdAt)}
+                  {formatRelativeTime(post.createdAt)}
                 </ThemedText>
               </View>
               {post.location && (
@@ -179,14 +164,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   cardShadow: {
-    borderRadius: 20,
+    borderRadius: BorderRadius.xl,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
   },
   cardInner: {
-    borderRadius: 20,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
   },
   cardTopHighlight: {
@@ -195,8 +180,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 60,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
     zIndex: 1,
   },
   userSection: {
@@ -216,16 +201,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   userName: {
-    fontSize: 15,
+    fontSize: FontSizes.md,
     fontWeight: '600',
     flex: 1,
   },
   timestamp: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     fontWeight: '500',
   },
   location: {
-    fontSize: 13,
+    fontSize: FontSizes.xs,
   },
   activityBanner: {
     flexDirection: 'row',
@@ -234,7 +219,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     padding: Spacing.sm + 2,
-    borderRadius: 10,
+    borderRadius: BorderRadius.md,
     borderLeftWidth: 3,
   },
   activityStats: {
@@ -247,21 +232,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   activityValue: {
-    fontSize: 15,
+    fontSize: FontSizes.md,
     fontWeight: '700',
   },
   activityStatLabel: {
-    fontSize: 11,
+    fontSize: FontSizes.xs,
     marginTop: 1,
   },
   activityTypePill: {
     marginLeft: 'auto' as any,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
   activityTypeText: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     fontWeight: '600',
   },
   titleSection: {
@@ -269,7 +254,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   title: {
-    fontSize: 17,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
     lineHeight: 22,
   },
@@ -278,7 +263,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   caption: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     lineHeight: 20,
   },
   divider: {

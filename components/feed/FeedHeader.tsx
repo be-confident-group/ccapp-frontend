@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { TrophyIcon, UsersIcon } from 'react-native-heroicons/outline';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes } from '@/constants/theme';
 
 interface FeedHeaderProps {
   onLeaderboardPress: () => void;
@@ -15,11 +16,12 @@ export function FeedHeader({
   onMyClubsPress,
 }: FeedHeaderProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation('groups');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title - Left */}
-      <ThemedText style={styles.title}>Feed</ThemedText>
+      <ThemedText style={styles.title}>{t('title')}</ThemedText>
 
       {/* Icons - Right */}
       <View style={styles.iconsContainer}>
@@ -54,7 +56,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   title: {
-    fontSize: 22,
+    fontSize: FontSizes.xl,
     fontWeight: '600',
   },
   iconsContainer: {
