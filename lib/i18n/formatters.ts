@@ -78,64 +78,41 @@ export function formatWeight(kg: number, decimals: number = 2): string {
   });
 }
 
+// Intl.RelativeTimeFormat is not available in Hermes (production React Native builds).
+// Use i18n keys for all relative time strings so it works on real devices.
+function relativeTimeString(value: number, unit: string): string {
+  const key = `common:time.${unit}${value === 1 ? '_one' : '_other'}`;
+  const fallbacks: Record<string, string> = {
+    'common:time.second_one': 'just now',
+    'common:time.second_other': `${value}s ago`,
+    'common:time.minute_one': '1 min ago',
+    'common:time.minute_other': `${value} min ago`,
+    'common:time.hour_one': '1 hr ago',
+    'common:time.hour_other': `${value} hr ago`,
+    'common:time.day_one': 'yesterday',
+    'common:time.day_other': `${value} days ago`,
+    'common:time.week_one': '1 week ago',
+    'common:time.week_other': `${value} weeks ago`,
+    'common:time.month_one': '1 month ago',
+    'common:time.month_other': `${value} months ago`,
+  };
+  const translated = i18n.t(key, { count: value, defaultValue: fallbacks[key] ?? `${value} ${unit}s ago` });
+  return translated;
+}
+
 /**
- * Format a relative time (e.g., "2 hours ago", "yesterday")
+ * Format a relative time (e.g., "2 hours ago", "yesterday").
+ * Uses i18n keys — safe on Hermes (no Intl.RelativeTimeFormat).
  */
 export function formatRelativeTime(date: Date | string): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
 
-  const locale = i18n.language;
-
-  // Less than a minute
-  if (diffInSeconds < 60) {
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-      -diffInSeconds,
-      'second'
-    );
-  }
-
-  // Less than an hour
-  if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-      -minutes,
-      'minute'
-    );
-  }
-
-  // Less than a day
-  if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-      -hours,
-      'hour'
-    );
-  }
-
-  // Less than a week
-  if (diffInSeconds < 604800) {
-    const days = Math.floor(diffInSeconds / 86400);
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-      -days,
-      'day'
-    );
-  }
-
-  // Less than a month
-  if (diffInSeconds < 2592000) {
-    const weeks = Math.floor(diffInSeconds / 604800);
-    return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-      -weeks,
-      'week'
-    );
-  }
-
-  // More than a month
-  const months = Math.floor(diffInSeconds / 2592000);
-  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-    -months,
-    'month'
-  );
+  if (diffInSeconds < 60) return relativeTimeString(diffInSeconds, 'second');
+  if (diffInSeconds < 3600) return relativeTimeString(Math.floor(diffInSeconds / 60), 'minute');
+  if (diffInSeconds < 86400) return relativeTimeString(Math.floor(diffInSeconds / 3600), 'hour');
+  if (diffInSeconds < 604800) return relativeTimeString(Math.floor(diffInSeconds / 86400), 'day');
+  if (diffInSeconds < 2592000) return relativeTimeString(Math.floor(diffInSeconds / 604800), 'week');
+  return relativeTimeString(Math.floor(diffInSeconds / 2592000), 'month');
 }

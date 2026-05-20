@@ -71,6 +71,20 @@
     "year": "Year",
     "allTime": "All Time"
   },
+  "time": {
+    "second_one": "just now",
+    "second_other": "{{count}}s ago",
+    "minute_one": "1 min ago",
+    "minute_other": "{{count}} min ago",
+    "hour_one": "1 hr ago",
+    "hour_other": "{{count}} hr ago",
+    "day_one": "yesterday",
+    "day_other": "{{count}} days ago",
+    "week_one": "1 week ago",
+    "week_other": "{{count}} weeks ago",
+    "month_one": "1 month ago",
+    "month_other": "{{count}} months ago"
+  },
   "profile": {
     "unknownUser": "User"
   },

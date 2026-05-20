@@ -206,16 +206,18 @@ export default function AllTripsScreen() {
           onPress: async () => {
             setIsBatching(true);
             try {
-              // Optimistic: remove from local state immediately
               setLocalTrips(prev => prev.filter(t => !ids.includes(t.id)));
               exitSelectionMode();
 
               if (backendIds.length > 0) {
-                const result = await tripAPI.batchDelete(backendIds);
-                if (result.failed.length > 0) {
+                const results = await Promise.allSettled(
+                  backendIds.map(id => tripAPI.deleteTrip(id))
+                );
+                const failedCount = results.filter(r => r.status === 'rejected').length;
+                if (failedCount > 0) {
                   Alert.alert(
                     'Partial failure',
-                    `Deleted ${result.deleted.length} of ${backendIds.length} trips. ${result.failed.length} failed.`,
+                    `Deleted ${backendIds.length - failedCount} of ${backendIds.length} trips. ${failedCount} failed.`,
                   );
                 }
               }
