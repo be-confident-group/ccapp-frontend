@@ -16,7 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { useMyClubs } from '@/lib/hooks/useClubs';
 import { UsersIcon, PlusCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
@@ -81,7 +81,7 @@ export default function MyClubsScreen() {
             <View style={styles.clubMeta}>
               <UsersIcon size={14} color={colors.textMuted} />
               <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-                {item.members_count} {item.members_count === 1 ? 'member' : 'members'}
+                {t('clubs.memberCount', { count: item.members_count })}
               </ThemedText>
             </View>
           </View>
@@ -194,13 +194,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
-    borderRadius: 10,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     gap: Spacing.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: FontSizes.md,
     paddingVertical: Spacing.xs,
   },
   listContent: {
@@ -241,11 +241,11 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   clubName: {
-    fontSize: 18,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
   },
   clubDescription: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     lineHeight: 20,
   },
   clubMeta: {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   memberCount: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
   },
   emptyState: {
     flex: 1,
@@ -265,11 +265,11 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
   },
   emptyMessage: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     textAlign: 'center',
     paddingHorizontal: Spacing.xl,
   },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   browseButtonText: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
 });

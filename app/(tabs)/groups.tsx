@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes } from '@/constants/theme';
 import {
   FeedHeader,
   FeedPost,
@@ -220,11 +220,11 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
   },
   emptyMessage: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     textAlign: 'center',
     paddingHorizontal: Spacing.xl,
   },
