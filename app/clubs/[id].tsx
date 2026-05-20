@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   View,
@@ -19,7 +20,7 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
-import { showAlert, showConfirmAlert } from '@/lib/utils/alert';
+import { showAlert } from '@/lib/utils/alert';
 import {
   useClub,
   useJoinClub,
@@ -142,29 +143,33 @@ export default function ClubDetailScreen() {
         showAlert('groups:clubs.requestAlreadyPendingTitle', 'groups:clubs.requestAlreadyPendingMessage');
       } else {
         console.error('Failed to join/leave club:', error);
-        showAlert('alerts:error.title', 'alerts:error.message');
+        showAlert('alerts:error.title', 'alerts:error.generic');
       }
     }
   }, [club, isMember, joinClubMutation, leaveClubMutation, requestJoinMutation]);
 
   const handleRemoveMember = useCallback(
     (memberName: string, userId: number) => {
-      showConfirmAlert(
-        'groups:clubs.removeMemberTitle',
-        'groups:clubs.removeMemberMessage',
-        async () => {
-          try {
-            await removeMemberMutation.mutateAsync(userId);
-          } catch {
-            showAlert('alerts:error.title', 'groups:clubs.removeMemberError');
-          }
-        },
-        'common:buttons.confirm',
-        'common:buttons.cancel',
-        'destructive'
+      Alert.alert(
+        t('clubs.removeMemberTitle'),
+        t('clubs.removeMemberMessage', { name: memberName }),
+        [
+          { text: t('common:buttons.cancel', 'Cancel'), style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await removeMemberMutation.mutateAsync(userId);
+              } catch {
+                showAlert('alerts:error.title', 'groups:clubs.removeMemberError');
+              }
+            },
+          },
+        ]
       );
     },
-    [removeMemberMutation]
+    [removeMemberMutation, t]
   );
 
   const handleCreatePost = useCallback(() => {
@@ -543,12 +548,12 @@ const styles = StyleSheet.create({
   clubPhoto: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
   },
   clubPhotoPlaceholder: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -643,7 +648,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   memberName: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     textAlign: 'center',
   },
   postsHeader: {
@@ -657,7 +662,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyMessage: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     textAlign: 'center',
   },
   pendingRow: {
@@ -669,7 +674,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pendingRowText: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     fontWeight: '600',
   },
 });
