@@ -760,11 +760,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 72,
+    paddingVertical: Spacing.sm,
+    minHeight: 96,
   },
   headlineLabel: {
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   headlineValue: {
     fontSize: 28,
