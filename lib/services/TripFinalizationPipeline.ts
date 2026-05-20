@@ -137,6 +137,24 @@ export class TripFinalizationPipeline {
       }
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] segmentation/validation failed: ${String(err)}`);
+      // Safety net: if an error left the trip as 'completed' with insufficient distance, cancel it.
+      try {
+        const t = await database.getTripById(tripId);
+        if (t && t.status === 'completed') {
+          const dist = t.distance ?? 0;
+          const minDist = t.type === 'cycle' ? 1000 : 400;
+          if (dist < minDist) {
+            await database.updateTrip(tripId, {
+              status: 'cancelled',
+              notes: `Cancelled: ${dist}m < ${minDist}m minimum (pipeline error)`,
+              updated_at: Date.now(),
+            });
+            console.warn(`[TripFinalizationPipeline] safety-cancelled trip ${tripId} (${dist}m)`);
+          }
+        }
+      } catch (safetyErr) {
+        console.warn(`[TripFinalizationPipeline] safety-cancel failed: ${String(safetyErr)}`);
+      }
     }
 
     // Run shadow classifier (best-effort)

@@ -444,11 +444,15 @@ final class TripStateMachine {
       let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: reconcileNow)) ?? []
       let synthesized = self.reconciler.reconcile(now: reconcileNow, lookbackMinutes: 35, alreadyCovered: covered)
       for syn in synthesized {
+        guard let dist = syn.distanceM, dist > 0 else {
+          TrackingLogger.shared.log(.info, "TripStateMachine: skipping 0-distance synthesized trip (pedometer nil)")
+          continue
+        }
         let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
         try? TrackingDatabase.shared.insertSynthesizedTrip(
           id: id, start: syn.start, end: syn.end,
           type: syn.activity == .walking ? "walk" : "cycle",
-          distanceM: syn.distanceM,
+          distanceM: dist,
           classificationSource: "apple_motion"
         )
       }

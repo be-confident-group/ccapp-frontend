@@ -754,11 +754,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 12,
     padding: Spacing.md,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   headlineStat: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 72,
   },
   headlineLabel: {
     fontSize: 12,
@@ -770,7 +772,7 @@ const styles = StyleSheet.create({
   },
   headlineDivider: {
     width: 1,
-    height: 40,
+    alignSelf: 'stretch',
     marginHorizontal: Spacing.sm,
   },
   // Speed grid
@@ -782,6 +784,8 @@ const styles = StyleSheet.create({
   speedItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xs,
   },
   statLabel: {
     fontSize: 12,
