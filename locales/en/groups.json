@@ -1,4 +1,11 @@
 {
+  "activity": {
+    "ride": "Ride",
+    "walk": "Walk",
+    "run": "Run",
+    "distance": "Distance",
+    "duration": "Duration"
+  },
   "title": "Feed",
   "tabs": {
     "feed": "Feed",

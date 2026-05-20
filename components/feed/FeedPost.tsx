@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -17,10 +17,11 @@ function fmtDuration(secs: number): string {
   return `${m}m`;
 }
 
-const ACTIVITY_META: Record<string, { icon: string; color: string; label: string }> = {
-  ride:  { icon: 'bike',  color: '#2196F3', label: 'Ride'  },
-  walk:  { icon: 'walk',  color: '#4CAF50', label: 'Walk'  },
-  run:   { icon: 'run',   color: '#FF9800', label: 'Run'   },
+type ActivityMeta = { colorKey: 'info' | 'success' | 'warning'; labelKey: string };
+const ACTIVITY_META: Record<string, ActivityMeta> = {
+  ride: { colorKey: 'info',    labelKey: 'activity.ride' },
+  walk: { colorKey: 'success', labelKey: 'activity.walk' },
+  run:  { colorKey: 'warning', labelKey: 'activity.run'  },
 };
 
 interface FeedPostProps {
@@ -56,8 +57,11 @@ export const FeedPost = React.memo(function FeedPost({
   onPhotoPress,
 }: FeedPostProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation('groups');
   const isTripPost = post.distance != null || post.duration != null;
   const meta = ACTIVITY_META[post.activityType] ?? ACTIVITY_META.walk;
+  const metaColor = colors[meta.colorKey];
+  const metaLabel = t(meta.labelKey);
 
   return (
     <View style={styles.cardContainer}>
@@ -102,8 +106,7 @@ export const FeedPost = React.memo(function FeedPost({
 
           {/* Activity stats banner — shown for trip posts */}
           {isTripPost && (
-            <View style={[styles.activityBanner, { backgroundColor: meta.color + '12', borderLeftColor: meta.color }]}>
-              <MaterialCommunityIcons name={meta.icon as any} size={20} color={meta.color} />
+            <View style={[styles.activityBanner, { backgroundColor: metaColor + '12', borderLeftColor: metaColor }]}>
               <View style={styles.activityStats}>
                 {post.distance != null && (
                   <View style={styles.activityStat}>
@@ -112,17 +115,21 @@ export const FeedPost = React.memo(function FeedPost({
                         ? `${post.distance.toFixed(1)} km`
                         : `${Math.round(post.distance * 1000)} m`}
                     </ThemedText>
-                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>Distance</ThemedText>
+                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>
+                      {t('activity.distance')}
+                    </ThemedText>
                   </View>
                 )}
                 {post.duration != null && (
                   <View style={styles.activityStat}>
                     <ThemedText style={[styles.activityValue, { color: colors.text }]}>{fmtDuration(post.duration)}</ThemedText>
-                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>Duration</ThemedText>
+                    <ThemedText style={[styles.activityStatLabel, { color: colors.textMuted }]}>
+                      {t('activity.duration')}
+                    </ThemedText>
                   </View>
                 )}
-                <View style={[styles.activityTypePill, { backgroundColor: meta.color + '20' }]}>
-                  <ThemedText style={[styles.activityTypeText, { color: meta.color }]}>{meta.label}</ThemedText>
+                <View style={[styles.activityTypePill, { backgroundColor: metaColor + '20', marginLeft: 'auto' as any }]}>
+                  <ThemedText style={[styles.activityTypeText, { color: metaColor }]}>{metaLabel}</ThemedText>
                 </View>
               </View>
             </View>

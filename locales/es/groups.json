@@ -1,4 +1,11 @@
 {
+  "activity": {
+    "ride": "Ciclismo",
+    "walk": "Caminata",
+    "run": "Carrera",
+    "distance": "Distancia",
+    "duration": "Duración"
+  },
   "title": "Grupos",
   "tabs": {
     "feed": "Feed",
