@@ -157,7 +157,7 @@ export default function ClubDetailScreen() {
         [
           { text: t('common:buttons.cancel', 'Cancel'), style: 'cancel' },
           {
-            text: 'Remove',
+            text: t('common:buttons.remove', 'Remove'),
             style: 'destructive',
             onPress: async () => {
               try {
@@ -530,14 +530,14 @@ export default function ClubDetailScreen() {
         onRequestClose={() => setPhotoViewer(null)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}
+          style={styles.photoViewerOverlay}
           activeOpacity={1}
           onPress={() => setPhotoViewer(null)}
         >
           {photoViewer && (
             <Image
               source={{ uri: photoViewer.photos[photoViewer.index] }}
-              style={{ width: '100%', height: '70%' }}
+              style={styles.photoViewerImage}
               resizeMode="contain"
             />
           )}
@@ -702,5 +702,15 @@ const styles = StyleSheet.create({
   pendingRowText: {
     fontSize: FontSizes.sm,
     fontWeight: '600',
+  },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoViewerImage: {
+    width: '100%',
+    height: '70%',
   },
 });

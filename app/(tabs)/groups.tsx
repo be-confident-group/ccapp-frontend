@@ -203,14 +203,14 @@ export default function FeedScreen() {
         onRequestClose={() => setPhotoViewer(null)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}
+          style={styles.photoViewerOverlay}
           activeOpacity={1}
           onPress={() => setPhotoViewer(null)}
         >
           {photoViewer && (
             <Image
               source={{ uri: photoViewer.photos[photoViewer.index] }}
-              style={{ width: '100%', height: '70%' }}
+              style={styles.photoViewerImage}
               resizeMode="contain"
             />
           )}
@@ -254,5 +254,15 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
+  },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoViewerImage: {
+    width: '100%',
+    height: '70%',
   },
 });

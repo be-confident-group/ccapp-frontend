@@ -15,7 +15,8 @@
     "search": "Search",
     "filter": "Filter",
     "share": "Share",
-    "retry": "Retry"
+    "retry": "Retry",
+    "remove": "Remove"
   },
   "navigation": {
     "home": "Home",
@@ -69,6 +70,9 @@
     "sixMonths": "6 Months",
     "year": "Year",
     "allTime": "All Time"
+  },
+  "profile": {
+    "unknownUser": "User"
   },
   "permissions": {
     "title": "A couple of permissions",

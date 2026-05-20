@@ -11,10 +11,10 @@ import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 
 export default function UserProfileScreen() {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const params = useLocalSearchParams<{ id: string; name?: string; avatar?: string }>();
 
-  const displayName = params.name ?? 'User';
+  const displayName = params.name ?? t('profile.unknownUser');
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
