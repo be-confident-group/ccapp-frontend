@@ -29,8 +29,10 @@ export interface TrackingConfig {
   falseStartGpsDisplacementM: number;
   detectingMinPedometerSteps: number;
 
-  // GPS quality
-  locationAccuracyThresholdM: number;
+  // GPS quality — strict during detecting (cold-start fixes corrupt displacement),
+  // relaxed during recording (urban-canyon walks sit at 20–50 m and would otherwise be starved).
+  detectingAccuracyThresholdM: number;
+  recordingAccuracyThresholdM: number;
 
   // Trip lifecycle
   cooldownEnterSec: number;
@@ -61,7 +63,8 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
   detectingMinDisplacementM: 30,
   falseStartGpsDisplacementM: 15,
   detectingMinPedometerSteps: 40,
-  locationAccuracyThresholdM: 20,
+  detectingAccuracyThresholdM: 20,
+  recordingAccuracyThresholdM: 65,
   cooldownEnterSec: 30,
   cooldownEndSec: 180,
   maxSpeedWalkKmh: 12,
@@ -94,7 +97,12 @@ function fromServerResponse(data: Record<string, unknown>): TrackingConfig {
     detectingMinDisplacementM:  (data['detecting_min_displacement_m']   as number) ?? DEFAULT_TRACKING_CONFIG.detectingMinDisplacementM,
     falseStartGpsDisplacementM: (data['false_start_gps_displacement_m'] as number) ?? DEFAULT_TRACKING_CONFIG.falseStartGpsDisplacementM,
     detectingMinPedometerSteps: (data['detecting_min_pedometer_steps']  as number) ?? DEFAULT_TRACKING_CONFIG.detectingMinPedometerSteps,
-    locationAccuracyThresholdM: (data['location_accuracy_threshold_m']  as number) ?? DEFAULT_TRACKING_CONFIG.locationAccuracyThresholdM,
+    // Back-compat: if the server still sends the legacy single key, apply it to detecting only.
+    detectingAccuracyThresholdM: (data['detecting_accuracy_threshold_m'] as number)
+      ?? (data['location_accuracy_threshold_m'] as number)
+      ?? DEFAULT_TRACKING_CONFIG.detectingAccuracyThresholdM,
+    recordingAccuracyThresholdM: (data['recording_accuracy_threshold_m'] as number)
+      ?? DEFAULT_TRACKING_CONFIG.recordingAccuracyThresholdM,
     cooldownEnterSec:           (data['cooldown_enter_sec']             as number) ?? DEFAULT_TRACKING_CONFIG.cooldownEnterSec,
     cooldownEndSec:             (data['cooldown_end_sec']               as number) ?? DEFAULT_TRACKING_CONFIG.cooldownEndSec,
     maxSpeedWalkKmh:            (data['max_speed_walk_kmh']             as number) ?? DEFAULT_TRACKING_CONFIG.maxSpeedWalkKmh,
@@ -119,7 +127,8 @@ export function toNativeConfig(config: TrackingConfig): Record<string, unknown> 
     detectingMinDisplacementMeters: config.detectingMinDisplacementM,
     falseStartGpsDisplacementMeters: config.falseStartGpsDisplacementM,
     detectingMinPedometerSteps:     config.detectingMinPedometerSteps,
-    locationAccuracyThresholdM:     config.locationAccuracyThresholdM,
+    detectingAccuracyThresholdM:    config.detectingAccuracyThresholdM,
+    recordingAccuracyThresholdM:    config.recordingAccuracyThresholdM,
     cooldownEnterSeconds:           config.cooldownEnterSec,
     cooldownEndSeconds:             config.cooldownEndSec,
     multiWindowVoteSec:             config.multiWindowVoteSec,

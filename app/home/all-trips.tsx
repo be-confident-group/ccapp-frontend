@@ -101,6 +101,13 @@ export default function AllTripsScreen() {
     }, [loadLocalData])
   );
 
+  // Belt-and-suspenders guard: a non-manual trip with effectively zero distance is junk data
+  // (synthesized trip that slipped past the pedometer guard, recording starved of GPS, etc.).
+  // 50 m sits well below every per-type minimum so this never hides a legitimate trip.
+  const VISIBLE_MIN_DISTANCE_M = 50;
+  const isVisibleByDistance = (t: DisplayTrip) =>
+    t.isManual || t.distance >= VISIBLE_MIN_DISTANCE_M;
+
   const allDisplayTrips: DisplayTrip[] = useMemo(() => {
     // Use live data when online, fall back to AsyncStorage cache when offline
     const resolvedBackendTrips = backendTrips ?? cachedBackendTrips ?? null;
@@ -137,7 +144,7 @@ export default function AllTripsScreen() {
     if (!resolvedBackendTrips) {
       return localTrips
         .map(localToDisplay)
-        .filter((t) => isVisibleTripType(t.type))
+        .filter((t) => isVisibleTripType(t.type) && isVisibleByDistance(t))
         .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     }
 
@@ -150,7 +157,7 @@ export default function AllTripsScreen() {
       ...resolvedBackendTrips.map(backendToDisplay),
       ...unsyncedLocalTrips.map(localToDisplay),
     ]
-      .filter((t) => isVisibleTripType(t.type))
+      .filter((t) => isVisibleTripType(t.type) && isVisibleByDistance(t))
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
   }, [backendTrips, cachedBackendTrips, localTrips]);
 

@@ -753,22 +753,22 @@ const styles = StyleSheet.create({
   headlineRow: {
     flexDirection: 'row',
     borderRadius: 12,
-    padding: Spacing.md,
+    padding: Spacing.sm,
     alignItems: 'stretch',
   },
   headlineStat: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    minHeight: 96,
+    paddingVertical: 0,
+    minHeight: 64,
   },
   headlineLabel: {
     fontSize: 12,
-    marginBottom: 6,
+    marginBottom: 10,
   },
   headlineValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
   },
   headlineDivider: {

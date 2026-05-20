@@ -1,6 +1,31 @@
 import { database } from '../database';
 import { calculateDistance, type Coordinate } from '../utils/geoCalculations';
 
+/**
+ * Cancel a trip that came out of finalization with insufficient distance.
+ * Runs on both happy and error paths so a trip whose GPS got starved (every fix
+ * dropped by the accuracy gate, native crash, segmentation aborted, etc.) never
+ * lingers in the user-visible list as a 0-distance "completed" walk.
+ */
+async function safetyCancelIfBelowMinimum(tripId: string): Promise<void> {
+  try {
+    const t = await database.getTripById(tripId);
+    if (!t || t.status !== 'completed') return;
+    const dist = t.distance ?? 0;
+    const minDist = t.type === 'cycle' ? 1000 : 400;
+    if (dist < minDist) {
+      await database.updateTrip(tripId, {
+        status: 'cancelled',
+        notes: `Cancelled: ${dist}m < ${minDist}m minimum`,
+        updated_at: Date.now(),
+      });
+      console.warn(`[TripFinalizationPipeline] safety-cancelled trip ${tripId} (${dist}m)`);
+    }
+  } catch (err) {
+    console.warn(`[TripFinalizationPipeline] safety-cancel failed: ${String(err)}`);
+  }
+}
+
 export class TripFinalizationPipeline {
   static async finalize(tripId: string): Promise<void> {
     console.log('[TripFinalizationPipeline] starting for', tripId);
@@ -134,27 +159,14 @@ export class TripFinalizationPipeline {
         if (val.isValid) {
           await syncService.syncSingleTrip(tripId);
         }
+
+        // Happy-path safety net: GPS may have been starved by the accuracy gate even though
+        // segmentation completed without throwing. A 0 m "completed" trip should never reach the list.
+        await safetyCancelIfBelowMinimum(tripId);
       }
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] segmentation/validation failed: ${String(err)}`);
-      // Safety net: if an error left the trip as 'completed' with insufficient distance, cancel it.
-      try {
-        const t = await database.getTripById(tripId);
-        if (t && t.status === 'completed') {
-          const dist = t.distance ?? 0;
-          const minDist = t.type === 'cycle' ? 1000 : 400;
-          if (dist < minDist) {
-            await database.updateTrip(tripId, {
-              status: 'cancelled',
-              notes: `Cancelled: ${dist}m < ${minDist}m minimum (pipeline error)`,
-              updated_at: Date.now(),
-            });
-            console.warn(`[TripFinalizationPipeline] safety-cancelled trip ${tripId} (${dist}m)`);
-          }
-        }
-      } catch (safetyErr) {
-        console.warn(`[TripFinalizationPipeline] safety-cancel failed: ${String(safetyErr)}`);
-      }
+      await safetyCancelIfBelowMinimum(tripId);
     }
 
     // Run shadow classifier (best-effort)

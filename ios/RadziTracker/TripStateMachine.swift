@@ -24,7 +24,8 @@ final class TripStateMachine {
     var detectingMinDurationSeconds: TimeInterval = 60  // minimum detecting duration before promoting
     var detectingMinDisplacementMeters: Double = 30     // GPS displacement required to confirm real movement
     var falseStartGpsDisplacementMeters: Double = 15    // abort detecting if below this after minDuration
-    var locationAccuracyThresholdM: Double = 20         // drop GPS fixes with accuracy worse than this (m)
+    var detectingAccuracyThresholdM: Double = 20        // strict — cold-start GPS at ±100–500 m corrupts displacement math
+    var recordingAccuracyThresholdM: Double = 65        // relaxed — urban-canyon pedestrian fixes naturally sit 20–50 m
     var detectingMinPedometerSteps: Int = 40            // pedometer fallback for urban-canyon promotion
     var cooldownEnterSeconds: TimeInterval = 30
     var cooldownEndSeconds: TimeInterval = 180
@@ -185,7 +186,7 @@ final class TripStateMachine {
       return
     case .detecting:
       // B.3: Drop low-accuracy fixes — cold-start GPS at ±100–500 m corrupts displacement maths.
-      guard accuracy <= config.locationAccuracyThresholdM else {
+      guard accuracy <= config.detectingAccuracyThresholdM else {
         TrackingLogger.shared.log(.info, "TripStateMachine: detecting — dropped low-accuracy fix (\(Int(accuracy))m)")
         return
       }
@@ -196,8 +197,9 @@ final class TripStateMachine {
       )
       checkDetectingPromotion()
     case .recording:
-      // B.3: Drop low-accuracy fixes during recording too.
-      guard accuracy <= config.locationAccuracyThresholdM else {
+      // Relaxed gate during recording — once we know we're moving, noisy 20–50 m fixes
+      // still aggregate into useful displacement and shouldn't starve walking trips.
+      guard accuracy <= config.recordingAccuracyThresholdM else {
         TrackingLogger.shared.log(.info, "TripStateMachine: recording — dropped low-accuracy fix (\(Int(accuracy))m)")
         return
       }

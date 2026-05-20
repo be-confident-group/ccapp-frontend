@@ -24,7 +24,8 @@ export interface TrackerConfig {
   detectingMinDurationSeconds: number;
   detectingMinDisplacementMeters: number;
   falseStartGpsDisplacementMeters: number;
-  locationAccuracyThresholdM: number;
+  detectingAccuracyThresholdM: number;
+  recordingAccuracyThresholdM: number;
   detectingMinPedometerSteps: number;
   cooldownEnterSeconds: number;
   cooldownEndSeconds: number;

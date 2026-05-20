@@ -36,11 +36,15 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
       let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: now)) ?? []
       let synthesized = self.stateMachine.reconcilerBackfill(now: now, covered: covered)
       for syn in synthesized {
+        guard let dist = syn.distanceM, dist > 0 else {
+          TrackingLogger.shared.log(.info, "RadziTracker: skipping 0-distance synthesized trip (pedometer nil)")
+          continue
+        }
         let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
         try? TrackingDatabase.shared.insertSynthesizedTrip(
           id: id, start: syn.start, end: syn.end,
           type: syn.activity == .walking ? "walk" : "cycle",
-          distanceM: syn.distanceM,
+          distanceM: dist,
           classificationSource: "apple_motion"
         )
       }
@@ -54,11 +58,15 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
         let covered = (try? TrackingDatabase.shared.recentTripWindows(within: 35 * 60, of: now)) ?? []
         let synthesized = self.stateMachine.reconcilerBackfill(now: now, covered: covered)
         for syn in synthesized {
+          guard let dist = syn.distanceM, dist > 0 else {
+            TrackingLogger.shared.log(.info, "RadziTracker: skipping 0-distance synthesized trip (pedometer nil)")
+            continue
+          }
           let id = "syn_\(Int(syn.start.timeIntervalSince1970))"
           try? TrackingDatabase.shared.insertSynthesizedTrip(
             id: id, start: syn.start, end: syn.end,
             type: syn.activity == .walking ? "walk" : "cycle",
-            distanceM: syn.distanceM,
+            distanceM: dist,
             classificationSource: "apple_motion"
           )
         }
@@ -160,7 +168,11 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
     if let v = config["detectingMinDurationSeconds"] as? Double, v > 0 && v < 300 { stateMachine.config.detectingMinDurationSeconds = v }
     if let v = config["detectingMinDisplacementMeters"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingMinDisplacementMeters = v }
     if let v = config["falseStartGpsDisplacementMeters"] as? Double, v > 0 && v < 200 { stateMachine.config.falseStartGpsDisplacementMeters = v }
-    if let v = config["locationAccuracyThresholdM"] as? Double, v > 0 && v < 500 { stateMachine.config.locationAccuracyThresholdM = v }
+    if let v = config["detectingAccuracyThresholdM"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingAccuracyThresholdM = v }
+    if let v = config["recordingAccuracyThresholdM"] as? Double, v > 0 && v < 500 { stateMachine.config.recordingAccuracyThresholdM = v }
+    // Back-compat: if server still pushes the legacy single key, apply it to detecting only
+    // so existing prod config doesn't accidentally re-tighten the recording-phase gate.
+    if let v = config["locationAccuracyThresholdM"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingAccuracyThresholdM = v }
     if let v = config["detectingMinPedometerSteps"] as? Double, v > 0 && v < 500 { stateMachine.config.detectingMinPedometerSteps = Int(v) }
     if let v = config["cooldownEnterSeconds"] as? Double, v > 0 && v < 600 { stateMachine.config.cooldownEnterSeconds = v }
     if let v = config["cooldownEndSeconds"] as? Double, v > 0 && v < 1800 { stateMachine.config.cooldownEndSeconds = v }
@@ -182,7 +194,8 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
       "detectingMinDurationSeconds":      stateMachine.config.detectingMinDurationSeconds,
       "detectingMinDisplacementMeters":   stateMachine.config.detectingMinDisplacementMeters,
       "falseStartGpsDisplacementMeters":  stateMachine.config.falseStartGpsDisplacementMeters,
-      "locationAccuracyThresholdM":       stateMachine.config.locationAccuracyThresholdM,
+      "detectingAccuracyThresholdM":      stateMachine.config.detectingAccuracyThresholdM,
+      "recordingAccuracyThresholdM":      stateMachine.config.recordingAccuracyThresholdM,
       "detectingMinPedometerSteps":       stateMachine.config.detectingMinPedometerSteps,
       "cooldownEnterSeconds":             stateMachine.config.cooldownEnterSeconds,
       "cooldownEndSeconds":               stateMachine.config.cooldownEndSeconds,

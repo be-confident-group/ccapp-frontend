@@ -8,7 +8,7 @@
  */
 
 import {
-  View, Text, ScrollView, StyleSheet, Pressable, Alert, RefreshControl,
+  View, Text, ScrollView, StyleSheet, Pressable, Alert, RefreshControl, Share,
 } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
@@ -359,6 +359,20 @@ function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRe
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${d.getMilliseconds().toString().padStart(3, '0')}`;
   }
 
+  async function handleShare() {
+    try {
+      const header = `BeActive debug log — ${new Date().toISOString()} — filter: ${filter}`;
+      const divider = '────────────────────────────────────────';
+      const lines = filtered.map(
+        (e) => `${fmtTime(e.timestamp)} [${e.src === 'native' ? 'SW' : 'JS'}] ${e.level.toUpperCase()} ${e.message}`,
+      );
+      const body = [header, divider, ...lines].join('\n');
+      await Share.share({ message: body });
+    } catch (err) {
+      console.warn('[debug-tracking] share logs failed:', err);
+    }
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <View style={[s.logToolbar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -373,6 +387,9 @@ function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRe
         ))}
         <Pressable style={[s.filterBtn, { backgroundColor: colors.primary }]} onPress={onRefresh}>
           <Text style={[s.filterText, { color: '#fff' }]}>↻</Text>
+        </Pressable>
+        <Pressable style={[s.filterBtn, { backgroundColor: colors.primary }]} onPress={handleShare}>
+          <Text style={[s.filterText, { color: '#fff' }]}>share</Text>
         </Pressable>
         <Pressable style={[s.filterBtn, { backgroundColor: '#6B7280' }]} onPress={() => clearTrackingLogBuffer()}>
           <Text style={[s.filterText, { color: '#fff' }]}>clear</Text>
@@ -426,7 +443,8 @@ function ConfigTab({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }
     ['Allow low-conf walking', config.allowLowConfidenceWalking ? 'yes' : 'no'],
     ['', ''],
     ['— GPS quality —', ''],
-    ['Accuracy threshold (m)', String(config.locationAccuracyThresholdM)],
+    ['Detecting accuracy (m)', String(config.detectingAccuracyThresholdM)],
+    ['Recording accuracy (m)', String(config.recordingAccuracyThresholdM)],
     ['', ''],
     ['— Trip lifecycle —', ''],
     ['Cooldown enter (s)', String(config.cooldownEnterSec)],
@@ -452,7 +470,8 @@ function ConfigTab({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }
     ['Min displacement (m)', String(nativeConfig['detectingMinDisplacementMeters'] ?? '—')],
     ['False-start (m)', String(nativeConfig['falseStartGpsDisplacementMeters'] ?? '—')],
     ['Min pedometer steps', String(nativeConfig['detectingMinPedometerSteps'] ?? '—')],
-    ['Accuracy threshold (m)', String(nativeConfig['locationAccuracyThresholdM'] ?? '—')],
+    ['Detecting accuracy (m)', String(nativeConfig['detectingAccuracyThresholdM'] ?? '—')],
+    ['Recording accuracy (m)', String(nativeConfig['recordingAccuracyThresholdM'] ?? '—')],
     ['Cooldown enter (s)', String(nativeConfig['cooldownEnterSeconds'] ?? '—')],
     ['Cooldown end (s)', String(nativeConfig['cooldownEndSeconds'] ?? '—')],
     ['Multi-window vote (s)', String(nativeConfig['multiWindowVoteSec'] ?? '—')],
