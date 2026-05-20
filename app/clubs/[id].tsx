@@ -11,6 +11,7 @@ import {
   FlatList,
   Share,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -214,11 +215,16 @@ export default function ClubDetailScreen() {
   }, []);
 
   const handleUserPress = useCallback((userId: string) => {
-    console.log('View user profile:', userId);
-  }, []);
+    const post = sortedPosts.find((p) => p.author.name === userId);
+    const name = post ? `${post.author.name} ${post.author.last_name}`.trim() : userId;
+    const avatar = post?.author.profile_picture ?? undefined;
+    router.push({ pathname: '/profile/[id]', params: { id: userId, name, avatar } });
+  }, [sortedPosts]);
+
+  const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
 
   const handlePhotoPress = useCallback((photos: string[], index: number) => {
-    console.log('View photo:', index, 'of', photos.length);
+    setPhotoViewer({ photos, index });
   }, []);
 
   const renderPost = useCallback(
@@ -517,6 +523,26 @@ export default function ClubDetailScreen() {
           }
         />
       </ThemedView>
+      <Modal
+        visible={photoViewer != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewer(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}
+          activeOpacity={1}
+          onPress={() => setPhotoViewer(null)}
+        >
+          {photoViewer && (
+            <Image
+              source={{ uri: photoViewer.photos[photoViewer.index] }}
+              style={{ width: '100%', height: '70%' }}
+              resizeMode="contain"
+            />
+          )}
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }

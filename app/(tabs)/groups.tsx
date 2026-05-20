@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { FlatList, StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, View, RefreshControl, ActivityIndicator, Modal, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -98,13 +98,16 @@ export default function FeedScreen() {
   }, []);
 
   const handleUserPress = useCallback((userId: string) => {
-    // TODO: Navigate to user profile
-    console.log('View user profile:', userId);
-  }, []);
+    const post = backendPosts.find((p) => p.author.name === userId);
+    const name = post ? `${post.author.name} ${post.author.last_name}`.trim() : userId;
+    const avatar = post?.author.profile_picture ?? undefined;
+    router.push({ pathname: '/profile/[id]', params: { id: userId, name, avatar } });
+  }, [backendPosts]);
+
+  const [photoViewer, setPhotoViewer] = useState<{ photos: string[]; index: number } | null>(null);
 
   const handlePhotoPress = useCallback((photos: string[], index: number) => {
-    // TODO: Open full-screen photo viewer
-    console.log('View photo:', index, 'of', photos.length);
+    setPhotoViewer({ photos, index });
   }, []);
 
   const renderPost = useCallback(
@@ -193,6 +196,26 @@ export default function FeedScreen() {
           ListEmptyComponent={renderEmptyState}
         />
       </ThemedView>
+      <Modal
+        visible={photoViewer != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewer(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}
+          activeOpacity={1}
+          onPress={() => setPhotoViewer(null)}
+        >
+          {photoViewer && (
+            <Image
+              source={{ uri: photoViewer.photos[photoViewer.index] }}
+              style={{ width: '100%', height: '70%' }}
+              resizeMode="contain"
+            />
+          )}
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
