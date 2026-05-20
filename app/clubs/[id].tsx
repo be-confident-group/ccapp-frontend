@@ -39,6 +39,7 @@ import {
   ArrowLeftStartOnRectangleIcon,
   PencilSquareIcon,
   ShareIcon,
+  UserPlusIcon,
   LockClosedIcon,
   ClockIcon,
 } from 'react-native-heroicons/outline';
@@ -333,24 +334,24 @@ export default function ClubDetailScreen() {
 
             {isMember && (
               <TouchableOpacity
-                style={[styles.pillButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.pillButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
                 onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
                 activeOpacity={0.8}
               >
-                <ShareIcon size={15} color={colors.text} />
-                <ThemedText style={[styles.pillButtonText, { color: colors.text }]}>
+                <ShareIcon size={15} color={colors.primary} />
+                <ThemedText style={[styles.pillButtonText, { color: colors.primary }]}>
                   {t('clubs.shareTrip', 'Share Trip')}
                 </ThemedText>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={[styles.pillButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={[styles.pillButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
               onPress={handleShareClub}
               activeOpacity={0.8}
             >
-              <ShareIcon size={15} color={colors.text} />
-              <ThemedText style={[styles.pillButtonText, { color: colors.text }]}>
+              <UserPlusIcon size={15} color={colors.primary} />
+              <ThemedText style={[styles.pillButtonText, { color: colors.primary }]}>
                 {t('clubs.share', 'Invite')}
               </ThemedText>
             </TouchableOpacity>
@@ -611,7 +612,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.xl,
     gap: Spacing.xs,
     minHeight: 48,
   },
@@ -622,11 +623,12 @@ const styles = StyleSheet.create({
   secondaryActions: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    flexWrap: 'wrap',
   },
   pillButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.full,
@@ -696,7 +698,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: 10,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   pendingRowText: {

@@ -19,7 +19,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { useClub, useUpdateClub, useDeleteClub, useTransferOwnership } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
 import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
@@ -343,16 +343,16 @@ export default function EditClubScreen() {
             </View>
 
             {/* Danger Zone */}
-            <View style={styles.dangerZone}>
-              <View style={[styles.dangerZoneHeader, { borderBottomColor: colors.border }]}>
+            <View style={[styles.dangerZone, { borderColor: colors.error + '40' }]}>
+              <View style={[styles.dangerZoneHeader, { backgroundColor: colors.error + '08', borderBottomColor: colors.error + '25' }]}>
                 <ThemedText style={[styles.dangerZoneTitle, { color: colors.error }]}>
                   {t('clubs.dangerZone', 'Danger Zone')}
                 </ThemedText>
               </View>
-              <View style={[styles.dangerZoneContent, { backgroundColor: colors.card }]}>
-                {/* Transfer Ownership row */}
-                <View style={[styles.dangerZoneTextContainer, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: Spacing.md, marginBottom: Spacing.md }]}>
-                  <View style={{ flex: 1 }}>
+              <View style={{ backgroundColor: colors.card }}>
+                {/* Transfer Ownership */}
+                <View style={[styles.dangerZoneRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+                  <View style={styles.dangerZoneRowText}>
                     <ThemedText style={styles.dangerZoneLabel}>
                       {t('clubs.transferOwnership', 'Transfer Ownership')}
                     </ThemedText>
@@ -361,7 +361,7 @@ export default function EditClubScreen() {
                     </ThemedText>
                   </View>
                   <TouchableOpacity
-                    style={[styles.deleteButton, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.error }]}
+                    style={[styles.dangerButton, { borderWidth: 1, borderColor: colors.error }]}
                     onPress={handleTransferOwnership}
                     disabled={transferOwnershipMutation.isPending}
                     activeOpacity={0.8}
@@ -369,34 +369,37 @@ export default function EditClubScreen() {
                     {transferOwnershipMutation.isPending ? (
                       <ActivityIndicator size="small" color={colors.error} />
                     ) : (
-                      <ThemedText style={[styles.deleteButtonText, { color: colors.error }]}>
+                      <ThemedText style={[styles.dangerButtonText, { color: colors.error }]}>
                         {t('clubs.transfer', 'Transfer')}
                       </ThemedText>
                     )}
                   </TouchableOpacity>
                 </View>
-                <View style={styles.dangerZoneTextContainer}>
-                  <ThemedText style={styles.dangerZoneLabel}>
-                    {t('clubs.deleteClub', 'Delete Group')}
-                  </ThemedText>
-                  <ThemedText style={[styles.dangerZoneDescription, { color: colors.textMuted }]}>
-                    {t('clubs.deleteWarning', 'Once you delete a group, there is no going back. Please be certain.')}
-                  </ThemedText>
-                </View>
-                <TouchableOpacity
-                  style={[styles.deleteButton, { backgroundColor: colors.error }]}
-                  onPress={handleDelete}
-                  disabled={deleteClubMutation.isPending}
-                  activeOpacity={0.8}
-                >
-                  {deleteClubMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <ThemedText style={[styles.deleteButtonText, { color: '#fff' }]}>
-                      {t('clubs.delete', 'Delete')}
+                {/* Delete Group */}
+                <View style={styles.dangerZoneRow}>
+                  <View style={styles.dangerZoneRowText}>
+                    <ThemedText style={styles.dangerZoneLabel}>
+                      {t('clubs.deleteClub', 'Delete Group')}
                     </ThemedText>
-                  )}
-                </TouchableOpacity>
+                    <ThemedText style={[styles.dangerZoneDescription, { color: colors.textMuted }]}>
+                      {t('clubs.deleteWarning', 'Once you delete a group, there is no going back. Please be certain.')}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.dangerButton, { backgroundColor: colors.error }]}
+                    onPress={handleDelete}
+                    disabled={deleteClubMutation.isPending}
+                    activeOpacity={0.8}
+                  >
+                    {deleteClubMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <ThemedText style={[styles.dangerButtonText, { color: '#fff' }]}>
+                        {t('clubs.delete', 'Delete')}
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </ThemedView>
@@ -454,7 +457,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   label: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   photoContainer: {
@@ -465,7 +468,7 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
   },
   removePhotoButton: {
     position: 'absolute',
@@ -488,7 +491,7 @@ const styles = StyleSheet.create({
     right: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -496,13 +499,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   changePhotoText: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     fontWeight: '600',
   },
   photoPlaceholder: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
@@ -510,25 +513,25 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   photoPlaceholderText: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
   },
   input: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    fontSize: 16,
+    fontSize: FontSizes.md,
   },
   textArea: {
     minHeight: 100,
     paddingTop: Spacing.md,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     marginTop: -Spacing.xs,
   },
   characterCount: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     textAlign: 'right',
     marginTop: -Spacing.xs,
   },
@@ -538,7 +541,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     paddingVertical: Spacing.md,
-    borderRadius: 8,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
@@ -547,7 +550,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   saveButtonText: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   toggleRow: {
@@ -556,7 +559,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   toggleLabel: {
@@ -566,18 +569,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleTitle: {
-    fontSize: 15,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   toggleSubtitle: {
-    fontSize: 12,
+    fontSize: FontSizes.xs,
     marginTop: 2,
   },
   dangerZone: {
     marginTop: Spacing.xl,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
     overflow: 'hidden',
   },
   dangerZoneHeader: {
@@ -586,40 +588,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   dangerZoneTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  dangerZoneContent: {
-    padding: Spacing.md,
+  dangerZoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
     gap: Spacing.md,
   },
-  dangerZoneTextContainer: {
+  dangerZoneRowText: {
     flex: 1,
     gap: 4,
   },
   dangerZoneLabel: {
-    fontSize: 15,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   dangerZoneDescription: {
-    fontSize: 13,
+    fontSize: FontSizes.sm,
     lineHeight: 18,
   },
-  deleteButton: {
+  dangerButton: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: 6,
-    minWidth: 80,
+    borderRadius: BorderRadius.sm,
+    minWidth: 86,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButtonText: {
-    fontSize: 14,
+  dangerButtonText: {
+    fontSize: FontSizes.sm,
     fontWeight: '600',
   },
 });
