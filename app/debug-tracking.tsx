@@ -398,11 +398,22 @@ function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRe
 
 function ConfigTab({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }) {
   const config = useTrackingConfig();
+  const [nativeConfig, setNativeConfig] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    RadziTrackerNative.getConfig()
+      .then(c => setNativeConfig(c as unknown as Record<string, unknown>))
+      .catch(() => setNativeConfig(null));
+  }, []);
+
   const fetchedAt = config.fetchedAt > 0
     ? new Date(config.fetchedAt).toLocaleString()
     : 'never (using defaults)';
 
-  const rows: [string, string][] = [
+  const jsRows: [string, string][] = [
+    ['Classification engine', 'CMMA (Apple Motion) — primary'],
+    ['ML/XGBoost stack', 'dormant (data collection only)'],
+    ['', ''],
     ['Version', config.configVersion],
     ['Fetched at', fetchedAt],
     ['', ''],
@@ -433,6 +444,26 @@ function ConfigTab({ colors }: { colors: ReturnType<typeof useTheme>['colors'] }
     ['Min location count', String(config.minTripLocationCount)],
     ['Min pedometer steps', String(config.minTripPedometerSteps)],
   ];
+
+  const nativeRows: [string, string][] = nativeConfig ? [
+    ['', ''],
+    ['— Native config (live) —', ''],
+    ['Min duration (s)', String(nativeConfig['detectingMinDurationSeconds'] ?? '—')],
+    ['Min displacement (m)', String(nativeConfig['detectingMinDisplacementMeters'] ?? '—')],
+    ['False-start (m)', String(nativeConfig['falseStartGpsDisplacementMeters'] ?? '—')],
+    ['Min pedometer steps', String(nativeConfig['detectingMinPedometerSteps'] ?? '—')],
+    ['Accuracy threshold (m)', String(nativeConfig['locationAccuracyThresholdM'] ?? '—')],
+    ['Cooldown enter (s)', String(nativeConfig['cooldownEnterSeconds'] ?? '—')],
+    ['Cooldown end (s)', String(nativeConfig['cooldownEndSeconds'] ?? '—')],
+    ['Multi-window vote (s)', String(nativeConfig['multiWindowVoteSec'] ?? '—')],
+    ['Allow low-conf walking', nativeConfig['allowLowConfidenceWalking'] ? 'yes' : 'no'],
+  ] : [
+    ['', ''],
+    ['— Native config —', ''],
+    ['Status', 'unavailable (not on iOS or bridge error)'],
+  ];
+
+  const rows = [...jsRows, ...nativeRows];
 
   return (
     <ScrollView style={s.tabScroll} contentContainerStyle={s.tabContent}>

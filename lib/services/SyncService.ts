@@ -110,7 +110,7 @@ class SyncService {
       if (!trip.is_manual) {
         const cfg = getTrackingConfig();
         const locationCount = (trip as any).location_count ?? 0;
-        const distanceM = (trip.distance ?? 0) * 1000;
+        const distanceM = trip.distance ?? 0; // already in meters
         if (distanceM < cfg.minTripDistanceM && locationCount < cfg.minTripLocationCount) {
           console.log(`[SyncService] Cancelling trivially short trip ${tripId} (dist=${distanceM}m, locs=${locationCount})`);
           await database.updateTrip(tripId, { status: 'cancelled' });
@@ -391,8 +391,9 @@ class SyncService {
       const completedTrips = await database.getAllTrips({ status: 'completed', synced: false });
       let cleaned = 0;
 
-      const MIN_WALK_DISTANCE = 400;
-      const MIN_RIDE_DISTANCE = 1000;
+      const cfg = getTrackingConfig();
+      const minWalkM = cfg.minDistanceWalkKm * 1000;
+      const minCycleM = cfg.minDistanceCycleKm * 1000;
 
       for (const trip of completedTrips) {
         let cancelReason: string | null = null;
@@ -401,10 +402,10 @@ class SyncService {
         // run, drive); the backend is responsible for `is_valid` on run/drive.
         // Frontend still skips very short walk/cycle trips because the UI
         // shows these and they're usually drift.
-        if (trip.type === 'walk' && trip.distance < MIN_WALK_DISTANCE) {
-          cancelReason = `Walk too short (${trip.distance.toFixed(0)}m < ${MIN_WALK_DISTANCE}m)`;
-        } else if (trip.type === 'cycle' && trip.distance < MIN_RIDE_DISTANCE) {
-          cancelReason = `Cycle too short (${trip.distance.toFixed(0)}m < ${MIN_RIDE_DISTANCE}m)`;
+        if (trip.type === 'walk' && trip.distance < minWalkM) {
+          cancelReason = `Walk too short (${trip.distance.toFixed(0)}m < ${minWalkM}m)`;
+        } else if (trip.type === 'cycle' && trip.distance < minCycleM) {
+          cancelReason = `Cycle too short (${trip.distance.toFixed(0)}m < ${minCycleM}m)`;
         }
 
         // Check 2: GPS drift detection (spatial validation)

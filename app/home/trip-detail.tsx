@@ -429,7 +429,7 @@ export default function TripDetailScreen() {
                     Trip type updated automatically
                   </ThemedText>
                   <ThemedText style={[styles.reclassifyBody, { color: colors.textSecondary }]}>
-                    Changed from {getTripTypeName(trip.auto_reclassified_from as any)} to {getTripTypeName(trip.type as any)} based on speed — does that match what you remember?
+                    Changed from {getTripTypeName(trip.auto_reclassified_from as TripType)} to {getTripTypeName(trip.type as TripType)} based on speed — does that match what you remember?
                   </ThemedText>
                 </View>
               </View>

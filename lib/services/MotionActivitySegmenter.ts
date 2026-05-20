@@ -250,7 +250,9 @@ function mergeAdjacentSameType(segments: TripSegment[]): TripSegment[] {
         type: current.type,
         distance: current.distance + next.distance,
         duration: current.duration + next.duration,
-        avgSpeed: (current.avgSpeed + next.avgSpeed) / 2,
+        avgSpeed: (current.duration + next.duration) > 0
+          ? ((current.distance + next.distance) / 1000) / ((current.duration + next.duration) / 3600)
+          : 0,
         maxSpeed: Math.max(current.maxSpeed, next.maxSpeed),
         confidence: Math.round((current.confidence + next.confidence) / 2),
       };
