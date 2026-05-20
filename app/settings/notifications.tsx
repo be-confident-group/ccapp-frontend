@@ -68,7 +68,7 @@ export default function NotificationPreferencesScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <Header title="Notification Preferences" showBack />
+      <Header title={t('groups:notificationPreferences.title')} showBack />
       <ThemedView style={styles.container}>
         {isLoading ? (
           <View style={styles.center}>
