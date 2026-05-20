@@ -73,6 +73,13 @@ function RootLayoutNav() {
         router.replace(`/home/trip-detail?id=${data.tripId}`);
       } else if (data?.type === 'rate_trip' && data?.tripId) {
         router.replace(`/home/rate-route?tripId=${data.tripId}`);
+      } else if (
+        (data?.type === 'post_liked' || data?.type === 'post_commented' || data?.type === 'club_new_post') &&
+        data?.postId
+      ) {
+        router.push(`/feed/post-detail?id=${data.postId}`);
+      } else if (data?.type === 'join_request_accepted' && data?.clubId) {
+        router.push(`/clubs/${data.clubId}`);
       }
     });
     return () => subscription.remove();
