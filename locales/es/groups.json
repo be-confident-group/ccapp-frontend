@@ -102,5 +102,24 @@
     "share": "Compartir al grupo",
     "noGroups": "Únete a un grupo primero para compartir actividades",
     "selectClub": "Por favor selecciona al menos un grupo"
+  },
+  "notificationPreferences": {
+    "title": "Preferencias de notificaciones",
+    "likes": {
+      "label": "Me gusta",
+      "subtitle": "Cuando alguien le da me gusta a tu publicación"
+    },
+    "comments": {
+      "label": "Comentarios",
+      "subtitle": "Cuando alguien comenta tu publicación"
+    },
+    "club_activity": {
+      "label": "Actividad del grupo",
+      "subtitle": "Nuevas publicaciones en tus grupos"
+    },
+    "join_requests": {
+      "label": "Solicitudes de unirse",
+      "subtitle": "Cuando alguien solicita unirse a tu grupo"
+    }
   }
 }

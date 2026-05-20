@@ -213,5 +213,24 @@
     "empty": {
       "noData": "No data for this period"
     }
+  },
+  "notificationPreferences": {
+    "title": "Notification Preferences",
+    "likes": {
+      "label": "Likes",
+      "subtitle": "When someone likes your post"
+    },
+    "comments": {
+      "label": "Comments",
+      "subtitle": "When someone comments on your post"
+    },
+    "club_activity": {
+      "label": "Club Activity",
+      "subtitle": "New posts in your clubs"
+    },
+    "join_requests": {
+      "label": "Join Requests",
+      "subtitle": "When someone requests to join your group"
+    }
   }
 }

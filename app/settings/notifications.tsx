@@ -16,39 +16,33 @@ import {
 
 type PrefKey = keyof NotificationPreferences;
 
-interface PrefRow {
-  key: PrefKey;
-  label: string;
-  subtitle: string;
-}
-
-const PREF_ROWS: PrefRow[] = [
-  {
-    key: 'likes',
-    label: 'Likes',
-    subtitle: 'When someone likes your post',
-  },
-  {
-    key: 'comments',
-    label: 'Comments',
-    subtitle: 'When someone comments on your post',
-  },
-  {
-    key: 'club_activity',
-    label: 'Club Activity',
-    subtitle: 'New posts in your clubs',
-  },
-  {
-    key: 'join_requests',
-    label: 'Join Requests',
-    subtitle: 'When someone requests to join your group',
-  },
-];
-
 export default function NotificationPreferencesScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
+
+  const prefRows = [
+    {
+      key: 'likes' as PrefKey,
+      label: t('groups:notificationPreferences.likes.label'),
+      subtitle: t('groups:notificationPreferences.likes.subtitle'),
+    },
+    {
+      key: 'comments' as PrefKey,
+      label: t('groups:notificationPreferences.comments.label'),
+      subtitle: t('groups:notificationPreferences.comments.subtitle'),
+    },
+    {
+      key: 'club_activity' as PrefKey,
+      label: t('groups:notificationPreferences.club_activity.label'),
+      subtitle: t('groups:notificationPreferences.club_activity.subtitle'),
+    },
+    {
+      key: 'join_requests' as PrefKey,
+      label: t('groups:notificationPreferences.join_requests.label'),
+      subtitle: t('groups:notificationPreferences.join_requests.subtitle'),
+    },
+  ];
 
   const { data: prefs, isLoading } = useQuery<NotificationPreferences>({
     queryKey: ['notification-preferences'],
@@ -86,7 +80,7 @@ export default function NotificationPreferencesScreen() {
               Choose which notifications you want to receive
             </ThemedText>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {PREF_ROWS.map((row, index) => (
+              {prefRows.map((row, index) => (
                 <View key={row.key}>
                   {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
                   <View style={styles.row}>
