@@ -82,7 +82,16 @@
     "privateHint": "Los miembros deben solicitar unirse",
     "transferOwnership": "Transferir propiedad",
     "transferOwnershipDesc": "Pasa la propiedad de este grupo a otro miembro.",
-    "transfer": "Transferir"
+    "transfer": "Transferir",
+    "removeMemberTitle": "Eliminar miembro",
+    "removeMemberMessage": "¿Eliminar a {{name}} de este grupo?",
+    "removeMemberError": "No se pudo eliminar al miembro",
+    "requestAlreadyPendingTitle": "Solicitud pendiente",
+    "requestAlreadyPendingMessage": "Ya has solicitado unirte a este grupo.",
+    "pendingRequests_one": "{{count}} solicitud pendiente",
+    "pendingRequests_other": "{{count}} solicitudes pendientes",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros"
   },
   "trips": {
     "shareToGroup": "Compartir al grupo",

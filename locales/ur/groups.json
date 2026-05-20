@@ -82,7 +82,16 @@
     "privateHint": "Members must request to join",
     "transferOwnership": "Transfer Ownership",
     "transferOwnershipDesc": "Pass ownership of this group to another member.",
-    "transfer": "Transfer"
+    "transfer": "Transfer",
+    "removeMemberTitle": "Remove Member",
+    "removeMemberMessage": "Remove {{name}} from this group?",
+    "removeMemberError": "Failed to remove member",
+    "requestAlreadyPendingTitle": "Request Pending",
+    "requestAlreadyPendingMessage": "You have already requested to join this group.",
+    "pendingRequests_one": "{{count}} pending join request",
+    "pendingRequests_other": "{{count}} pending join requests",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members"
   },
   "trips": {
     "shareToGroup": "Share to Group",

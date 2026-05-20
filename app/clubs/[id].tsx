@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   FlatList,
-  Alert,
   Share,
   Platform,
 } from 'react-native';
@@ -19,7 +18,8 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
+import { showAlert, showConfirmAlert } from '@/lib/utils/alert';
 import {
   useClub,
   useJoinClub,
@@ -139,33 +139,29 @@ export default function ClubDetailScreen() {
       // 400 means the user already submitted a request
       if (msg.includes('400') || msg.toLowerCase().includes('already')) {
         setJoinRequestPending(true);
-        Alert.alert('Request Pending', 'You have already requested to join this group.');
+        showAlert('groups:clubs.requestAlreadyPendingTitle', 'groups:clubs.requestAlreadyPendingMessage');
       } else {
         console.error('Failed to join/leave club:', error);
-        alert(msg || 'Failed to update membership');
+        showAlert('alerts:error.title', 'alerts:error.message');
       }
     }
   }, [club, isMember, joinClubMutation, leaveClubMutation, requestJoinMutation]);
 
   const handleRemoveMember = useCallback(
     (memberName: string, userId: number) => {
-      Alert.alert(
-        'Remove Member',
-        `Remove ${memberName} from this group?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await removeMemberMutation.mutateAsync(userId);
-              } catch {
-                Alert.alert('Error', 'Failed to remove member');
-              }
-            },
-          },
-        ]
+      showConfirmAlert(
+        'groups:clubs.removeMemberTitle',
+        'groups:clubs.removeMemberMessage',
+        async () => {
+          try {
+            await removeMemberMutation.mutateAsync(userId);
+          } catch {
+            showAlert('alerts:error.title', 'groups:clubs.removeMemberError');
+          }
+        },
+        'common:buttons.confirm',
+        'common:buttons.cancel',
+        'destructive'
       );
     },
     [removeMemberMutation]
@@ -359,7 +355,7 @@ export default function ClubDetailScreen() {
           >
             <ClockIcon size={18} color={colors.primary} />
             <ThemedText style={[styles.pendingRowText, { color: colors.primary }]}>
-              {joinRequests!.length} pending join {joinRequests!.length === 1 ? 'request' : 'requests'}
+              {t('clubs.pendingRequests', { count: joinRequests!.length })}
             </ThemedText>
           </TouchableOpacity>
         )}
@@ -372,7 +368,7 @@ export default function ClubDetailScreen() {
                 {t('clubs.members', 'Members')}
               </ThemedText>
               <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-                {club.members.length} {club.members.length === 1 ? 'member' : 'members'}
+                {t('clubs.memberCount', { count: club.members.length })}
               </ThemedText>
             </View>
             <ScrollView
@@ -560,11 +556,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   clubName: {
-    fontSize: 24,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
   },
   clubDescription: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     lineHeight: 24,
   },
   clubMeta: {
@@ -573,7 +569,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   memberCount: {
-    fontSize: 13,
+    fontSize: FontSizes.xs,
     fontWeight: '500',
   },
   actionsContainer: {
@@ -584,12 +580,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.md,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     gap: Spacing.xs,
     minHeight: 48,
   },
   primaryActionText: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   secondaryActions: {
@@ -602,12 +598,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: 20,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
     gap: 5,
   },
   pillButtonText: {
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     fontWeight: '500',
   },
   membersSection: {
@@ -619,7 +615,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     fontWeight: '600',
   },
   membersList: {
@@ -643,7 +639,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   memberInitial: {
-    fontSize: 18,
+    fontSize: FontSizes.lg,
     fontWeight: '600',
   },
   memberName: {
