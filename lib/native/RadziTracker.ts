@@ -90,7 +90,7 @@ interface RadziTrackerNativeModule {
 
 const Native = NativeModules.RadziTracker as RadziTrackerNativeModule | undefined;
 
-if (!Native && Platform.OS === 'ios') {
+if (!Native && (Platform.OS === 'ios' || Platform.OS === 'android')) {
   console.warn('[RadziTracker] Native module not linked. Did you rebuild after adding the module?');
 }
 

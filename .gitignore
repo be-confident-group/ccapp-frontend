@@ -40,8 +40,9 @@ yarn-error.*
 app-example
 
 # generated native folders
-/android
 /docs
+# android is tracked — contains our custom native module
+# /android
 
 # iOS — track source, exclude generated artifacts
 /ios/Pods
