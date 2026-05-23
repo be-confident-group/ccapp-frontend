@@ -11,7 +11,9 @@
     "modeLabel": "آپ کی پسندیدہ سرگرمی",
     "walk": "پیدل چلنا",
     "cycle": "سائیکلنگ",
-    "continue": "جاری رکھیں"
+    "continue": "جاری رکھیں",
+    "photoPermissionTitle": "Permission Required",
+    "photoPermissionBody": "Photo library access was denied. You can continue without a profile photo."
   },
   "goals": {
     "title": "اپنے ہفتہ وار اہداف مقرر کریں",

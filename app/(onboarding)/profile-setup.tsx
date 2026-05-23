@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,8 +20,11 @@ import { TextInput } from '@/components/ui';
 import { UserCircleIcon, CameraIcon } from 'react-native-heroicons/outline';
 import { saveLocalPreferences } from '@/lib/onboarding/state';
 import { authApi } from '@/lib/api/auth';
+import { showAlert } from '@/lib/utils/alert';
+import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/theme';
 
 const AVATAR_SIZE = 100;
+const WHITE = '#FFFFFF'; // contrast against primary brand red — does not vary with theme
 
 export default function ProfileSetupScreen() {
   const { colors } = useTheme();
@@ -40,13 +42,7 @@ export default function ProfileSetupScreen() {
   async function handlePickAvatar() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        t('profile.photoPermissionTitle', { defaultValue: 'Permission Required' }),
-        t('profile.photoPermissionBody', {
-          defaultValue:
-            'Photo library access was denied. You can continue without a profile photo.',
-        }),
-      );
+      showAlert('onboarding:profile.photoPermissionTitle', 'onboarding:profile.photoPermissionBody');
       return;
     }
 
@@ -128,7 +124,7 @@ export default function ProfileSetupScreen() {
 
               {/* Camera overlay badge */}
               <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
-                <CameraIcon size={14} color="#fff" />
+                <CameraIcon size={14} color={WHITE} />
               </View>
             </TouchableOpacity>
 
@@ -169,7 +165,7 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'walk' ? '#fff' : colors.primary },
+                  { color: defaultMode === 'walk' ? WHITE : colors.primary },
                 ]}
               >
                 {t('profile.walk')}
@@ -192,7 +188,7 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'cycle' ? '#fff' : colors.primary },
+                  { color: defaultMode === 'cycle' ? WHITE : colors.primary },
                 ]}
               >
                 {t('profile.cycle')}
@@ -225,18 +221,18 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 32,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 32,
+    fontSize: FontSizes.xxl,
+    fontWeight: FontWeights.bold,
+    marginBottom: Spacing.xl,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
   },
   avatarWrapper: {
     position: 'relative',
@@ -273,25 +269,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   modeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
     marginBottom: 12,
   },
   modeRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
   },
   modePill: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     borderWidth: 2,
   },
   modePillText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
   },
   continueButton: {
     marginTop: 8,

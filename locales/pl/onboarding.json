@@ -11,7 +11,9 @@
     "modeLabel": "Twoja ulubiona aktywność",
     "walk": "Spacer",
     "cycle": "Jazda na rowerze",
-    "continue": "Kontynuuj"
+    "continue": "Kontynuuj",
+    "photoPermissionTitle": "Wymagane uprawnienie",
+    "photoPermissionBody": "Odmówiono dostępu do biblioteki zdjęć. Możesz kontynuować bez zdjęcia profilowego."
   },
   "goals": {
     "title": "Ustaw tygodniowe cele",

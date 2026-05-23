@@ -11,7 +11,9 @@
     "modeLabel": "Your go-to activity",
     "walk": "Walk",
     "cycle": "Cycle",
-    "continue": "Continue"
+    "continue": "Continue",
+    "photoPermissionTitle": "Permission Required",
+    "photoPermissionBody": "Photo library access was denied. You can continue without a profile photo."
   },
   "goals": {
     "title": "Set Your Weekly Goals",

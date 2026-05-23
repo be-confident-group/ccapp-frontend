@@ -11,7 +11,9 @@
     "modeLabel": "Tu actividad principal",
     "walk": "Caminar",
     "cycle": "Ciclismo",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "photoPermissionTitle": "Permiso requerido",
+    "photoPermissionBody": "Se denegó el acceso a la biblioteca de fotos. Puedes continuar sin foto de perfil."
   },
   "goals": {
     "title": "Establece tus metas semanales",
