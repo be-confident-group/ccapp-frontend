@@ -15,6 +15,10 @@ const queryClient = new QueryClient({
   },
 });
 
+export function clearQueryCache() {
+  queryClient.clear();
+}
+
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>

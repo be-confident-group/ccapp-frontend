@@ -5,6 +5,8 @@ import { apiClient } from '@/lib/api/client';
 import type { User } from '@/lib/api/auth';
 import PushNotificationService from '@/lib/services/PushNotificationService';
 import * as onboardingState from '@/lib/onboarding/state';
+import { clearQueryCache } from '@/providers/QueryProvider';
+import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -46,8 +48,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Stop native GPS tracking before clearing any other state
+    try {
+      await TrackingCoordinator.stop();
+    } catch (err) {
+      console.warn('[Auth] TrackingCoordinator.stop() failed during sign-out:', err);
+    }
     await PushNotificationService.unregister();
     await authApi.logout();
+    // Clear all cached server data so the next user cannot see previous user's data
+    clearQueryCache();
     setIsAuthenticated(false);
     setHasCompletedOnboarding(null);
     setCurrentUserId(null);
