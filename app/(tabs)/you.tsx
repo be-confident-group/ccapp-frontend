@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,7 +35,8 @@ import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
-import { authApi, User } from '@/lib/api/auth';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
 import * as Location from 'expo-location';
 
@@ -50,73 +51,33 @@ export default function YouScreen() {
   const { unitSystem, setUnitSystem } = useUnits();
   const { isTracking, toggleTracking, hasPermissions } = useTracking();
   const [loading, setLoading] = useState(false);
-  const [fetchingProfile, setFetchingProfile] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
-  const [userProfile, setUserProfile] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    dateOfBirth: '1990-05-15',
-    gender: 'M' as 'M' | 'F' | 'O' | '',
-    profilePicture: undefined as string | undefined,
-    joinedDate: 'Sep 2025',
+  const queryClient = useQueryClient();
+
+  const { data: profileData, isLoading: fetchingProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => authApi.getProfile(),
+    staleTime: 1000 * 60 * 10, // 10 minutes — show cached, refresh in background
+    gcTime: 1000 * 60 * 30,    // keep in memory 30 minutes
   });
 
-  // Fetch user profile on mount
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      setFetchingProfile(true);
-      const user = await authApi.getProfile();
-
-      console.log('[YouScreen] Fetched user profile:', {
-        name: user.name,
-        profile_picture: user.profile_picture,
-        hasProfile: !!user.profile,
-      });
-
-      // Map API response to local state
-      // Backend returns: name, last_name, email, date_of_birth, gender, profile_picture (all at root level)
-      const profilePicture = user.profile_picture || user.profile?.avatar;
-      
-      console.log('[YouScreen] Setting profile picture to:', profilePicture);
-
-      // Format joined date from backend's joined_at field
-      let joinedDateDisplay = 'Date not found';
-      if (user.joined_at) {
-        const joinedDate = new Date(user.joined_at);
-        joinedDateDisplay = joinedDate.toLocaleDateString('en-US', {
-          month: 'short',
-          year: 'numeric'
-        });
-      }
-
-      setUserProfile({
-        firstName: user.name || user.first_name || 'User',
-        lastName: user.last_name || '',
-        email: user.email || '',
-        dateOfBirth: user.date_of_birth || user.profile?.date_of_birth || '',
-        gender: user.gender || user.profile?.gender || '',
-        profilePicture: profilePicture,
-        joinedDate: joinedDateDisplay,
-      });
-    } catch (error) {
-      console.error('[YouScreen] Failed to fetch profile:', error);
-      setUserProfile(prev => ({
-        ...prev,
-        firstName: 'Profile load failed',
-        lastName: '',
-        email: String(error),
-      }));
-    } finally {
-      setFetchingProfile(false);
-    }
+  // Map API response to local profile shape
+  const profilePicture = profileData?.profile_picture ?? profileData?.profile?.avatar;
+  let joinedDateDisplay = '';
+  if (profileData?.joined_at) {
+    joinedDateDisplay = new Date(profileData.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+  const userProfile = {
+    firstName: profileData?.name ?? profileData?.first_name ?? 'User',
+    lastName: profileData?.last_name ?? '',
+    email: profileData?.email ?? '',
+    dateOfBirth: profileData?.date_of_birth ?? profileData?.profile?.date_of_birth ?? '',
+    gender: (profileData?.gender ?? profileData?.profile?.gender ?? '') as 'M' | 'F' | 'O' | '',
+    profilePicture,
+    joinedDate: joinedDateDisplay,
   };
 
   const handleLogout = async () => {
@@ -185,9 +146,9 @@ export default function YouScreen() {
       // Call API to update profile
       await authApi.updateProfile(updateData);
 
-      // Refetch the profile to get the updated profile picture URL from S3
+      // Invalidate cached profile to refetch the updated data from S3
       // (ProfileUpdateSerializer has write_only=True for profile_picture, so it's not returned in update response)
-      await fetchUserProfile();
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
 
       showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
     } catch (error: any) {
