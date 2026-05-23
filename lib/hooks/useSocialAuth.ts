@@ -108,7 +108,7 @@ export function useSocialAuth() {
             );
             break;
           case statusCodes.DEVELOPER_ERROR:
-            console.error('[GoogleSignIn] DEVELOPER_ERROR — verify SHA-1 and package in Google Cloud + google-services.json is bundled.');
+            console.error('[GoogleSignIn] DEVELOPER_ERROR:', error, '— verify SHA-1 and package in Google Cloud + google-services.json is bundled.');
             Alert.alert(
               'Configuration Error',
               'Google Sign-In is misconfigured for this build. Please contact support.',
