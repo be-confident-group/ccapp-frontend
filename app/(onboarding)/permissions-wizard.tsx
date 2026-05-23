@@ -171,8 +171,9 @@ export default function PermissionsWizardScreen() {
           icon: <MapIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.bgLocation.title'),
           body: t('permissions.bgLocation.body'),
-          // Android shows "Open Settings"; iOS shows system prompt via requestLocationBackground
-          buttonLabel: t('permissions.bgLocation.openSettings'),
+          buttonLabel: Platform.OS === 'android'
+            ? t('permissions.bgLocation.openSettings')
+            : t('permissions.bgLocation.allow'),
           showSkip: false,
         };
       case 'motion':
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   body: {
     fontSize: FontSizes.md,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: Spacing.lg,
   },
   actions: {
     paddingHorizontal: Spacing.lg,

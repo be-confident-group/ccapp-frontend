@@ -32,6 +32,7 @@
     "bgLocation": {
       "title": "Background Location",
       "body": "Allow Radzi to track your route even when the app is in the background.",
+      "allow": "Allow Background Location",
       "openSettings": "Open Settings"
     },
     "motion": {

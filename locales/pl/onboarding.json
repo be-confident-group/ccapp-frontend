@@ -32,6 +32,7 @@
     "bgLocation": {
       "title": "Lokalizacja w tle",
       "body": "Pozwól Radzi śledzić Twoją trasę nawet gdy aplikacja działa w tle.",
+      "allow": "Zezwól na lokalizację w tle",
       "openSettings": "Otwórz ustawienia"
     },
     "motion": {

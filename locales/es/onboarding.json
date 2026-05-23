@@ -32,6 +32,7 @@
     "bgLocation": {
       "title": "Ubicación en segundo plano",
       "body": "Permite que Radzi siga tu ruta incluso cuando la app está en segundo plano.",
+      "allow": "Permitir ubicación en segundo plano",
       "openSettings": "Abrir ajustes"
     },
     "motion": {
