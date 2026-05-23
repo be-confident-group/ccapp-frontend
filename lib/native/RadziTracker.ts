@@ -105,7 +105,7 @@ export const RadziTrackerNative: RadziTrackerNativeModule = Native ?? {
   setConfig: unavailable,
   getConfig: unavailable,
   recoverStaleTrip: unavailable,
-  notifyFinalizationComplete: () => Promise.resolve(),
+  notifyFinalizationComplete: unavailable,
   getLogs: () => Promise.resolve([]),
 };
 

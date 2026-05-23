@@ -93,6 +93,11 @@ export class TripFinalizationPipeline {
             continue;
           }
           
+          if (!segment.locations?.length) {
+            console.warn(`[TripFinalizationPipeline] Segment ${i} has no locations — skipping sync`);
+            continue;
+          }
+
           const segmentRouteForSync = segment.locations.map(loc => ({
             lat: Number(loc.latitude.toFixed(6)),
             lng: Number(loc.longitude.toFixed(6)),

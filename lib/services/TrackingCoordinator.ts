@@ -77,7 +77,9 @@ class CoordinatorImpl {
             console.warn(`[TrackingCoordinator] Permissions degraded: ${JSON.stringify(perms)}`);
             this.permissionListeners.forEach(cb => cb(perms));
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[TrackingCoordinator] Permission re-check failed:', err);
+        }
       }
     });
     this.subs.push(() => appStateSub.remove());
