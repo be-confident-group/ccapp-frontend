@@ -10,9 +10,14 @@ export default function OnboardingLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_right',
+        gestureEnabled: false,
       }}
     >
-      <Stack.Screen name="permissions-explainer" />
+      <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+      <Stack.Screen name="profile-setup" />
+      <Stack.Screen name="goals" />
+      <Stack.Screen name="permissions-wizard" />
+      <Stack.Screen name="all-set" />
     </Stack>
   );
 }
