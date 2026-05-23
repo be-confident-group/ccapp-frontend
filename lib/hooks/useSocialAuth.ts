@@ -64,6 +64,9 @@ export function useSocialAuth() {
       // Check for Google Play Services (Android)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
+      // Clear any stale sign-in state before attempting a fresh sign-in
+      try { await GoogleSignin.signOut(); } catch {}
+
       // Trigger the native Google sign-in UI
       const response = await GoogleSignin.signIn();
 
@@ -96,13 +99,23 @@ export function useSocialAuth() {
             // User cancelled, no alert needed
             break;
           case statusCodes.IN_PROGRESS:
-            // Sign-in already in progress
+            // Sign-in already in progress, silently ignore
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
             Alert.alert(
               'Google Play Services',
               'Google Play Services is not available on this device.',
             );
+            break;
+          case statusCodes.DEVELOPER_ERROR:
+            console.error('[GoogleSignIn] DEVELOPER_ERROR — verify SHA-1 and package in Google Cloud + google-services.json is bundled.');
+            Alert.alert(
+              'Configuration Error',
+              'Google Sign-In is misconfigured for this build. Please contact support.',
+            );
+            break;
+          case statusCodes.SIGN_IN_REQUIRED:
+            Alert.alert('Sign In Required', 'Please sign in again to continue.');
             break;
           default:
             console.error('Google Sign-In error:', error);
