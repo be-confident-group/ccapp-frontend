@@ -11,7 +11,7 @@ export default function TabLayout() {
   const { colors } = useTheme();
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <TrackingPermissionBanner />
       <Tabs
       screenOptions={{
@@ -82,6 +82,9 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   plusButton: {
     marginTop: -10,
   },

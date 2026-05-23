@@ -8,8 +8,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { getSkippedPermissions } from '@/lib/onboarding/state';
 import { openAppSettings } from '@/lib/permissions/wizard';
+import { Spacing, FontSizes, FontWeights } from '@/constants/theme';
 
-const WHITE = '#FFFFFF';
+const WHITE = '#FFFFFF'; // contrast against error background — does not vary with theme
 
 export function TrackingPermissionBanner() {
   const { colors } = useTheme();
@@ -54,11 +55,8 @@ export function TrackingPermissionBanner() {
       <ExclamationCircleIcon size={20} color={WHITE} />
       <Text style={styles.text}>{t('banner.permissionMissing')}</Text>
       <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation();
-          setDismissed(true);
-        }}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        onPress={() => setDismissed(true)}
+        hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       >
         <XMarkIcon size={20} color={WHITE} />
       </TouchableOpacity>
@@ -70,14 +68,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
   },
   text: {
     flex: 1,
     color: WHITE,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.medium,
   },
 });
