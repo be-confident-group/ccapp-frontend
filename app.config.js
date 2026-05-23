@@ -49,6 +49,7 @@ export default {
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
         "com.google.android.gms.permission.ACTIVITY_RECOGNITION",
+        "android.permission.ACTIVITY_RECOGNITION",
         "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "POST_NOTIFICATIONS",
       ],

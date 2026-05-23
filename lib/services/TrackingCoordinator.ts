@@ -39,6 +39,8 @@ class CoordinatorImpl {
   };
   private initPromise: Promise<void> | null = null;
   private permissionListeners = new Set<(p: PermissionStatus) => void>();
+  private permissionWarningListeners: Array<(permission: string) => void> = [];
+  private lastPermissionWarning: string | null = null;
   private activeTripId: string | null = null;
   private activeTripNotificationId: string | null = null;
 
@@ -57,6 +59,11 @@ class CoordinatorImpl {
     this.manualOnly = storedManual === 'true';
 
     this.attachNativeSubscriptions();
+
+    this.subs.push(RadziTrackerEvents.onPermissionMissing((e) => {
+      this.notifyPermissionWarning(e.permission);
+    }));
+
     try {
       const result = await RadziTrackerNative.recoverStaleTrip();
       if (result.recovered) {
@@ -114,11 +121,6 @@ class CoordinatorImpl {
     return RadziTrackerNative.getStatus();
   }
 
-  async requestPermissions(): Promise<PermissionStatus> {
-    await this.init();
-    return RadziTrackerNative.requestPermissions();
-  }
-
   async checkPermissions(): Promise<PermissionStatus> {
     await this.init();
     return RadziTrackerNative.checkPermissions();
@@ -148,6 +150,21 @@ class CoordinatorImpl {
   onPermissionDowngrade(cb: (p: PermissionStatus) => void): () => void {
     this.permissionListeners.add(cb);
     return () => this.permissionListeners.delete(cb);
+  }
+
+  subscribeToPermissionWarnings(listener: (permission: string) => void): () => void {
+    this.permissionWarningListeners.push(listener);
+    if (this.lastPermissionWarning) {
+      listener(this.lastPermissionWarning);
+    }
+    return () => {
+      this.permissionWarningListeners = this.permissionWarningListeners.filter(l => l !== listener);
+    };
+  }
+
+  private notifyPermissionWarning(permission: string): void {
+    this.lastPermissionWarning = permission;
+    this.permissionWarningListeners.forEach(l => l(permission));
   }
 
   private attachNativeSubscriptions(): void {

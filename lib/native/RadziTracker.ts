@@ -79,7 +79,6 @@ interface RadziTrackerNativeModule {
   getStatus(): Promise<TrackingStatus>;
   forceStartTrip(): Promise<{ tripId: string }>;
   forceStopTrip(): Promise<void>;
-  requestPermissions(): Promise<PermissionStatus>;
   checkPermissions(): Promise<PermissionStatus>;
   setConfig(config: Partial<TrackerConfig>): Promise<void>;
   getConfig(): Promise<TrackerConfig>;
@@ -102,7 +101,6 @@ export const RadziTrackerNative: RadziTrackerNativeModule = Native ?? {
   getStatus: unavailable,
   forceStartTrip: unavailable,
   forceStopTrip: unavailable,
-  requestPermissions: unavailable,
   checkPermissions: unavailable,
   setConfig: unavailable,
   getConfig: unavailable,
@@ -133,5 +131,9 @@ export const RadziTrackerEvents = {
   onLocationStored(cb: (e: LocationStoredEvent) => void): () => void {
     const sub = emitter?.addListener('locationStored', cb);
     return () => sub?.remove();
+  },
+  onPermissionMissing(cb: (e: { permission: string }) => void): () => void {
+    const sub = emitter?.addListener('trackingPermissionMissing', cb);
+    return () => { sub?.remove(); };
   },
 };

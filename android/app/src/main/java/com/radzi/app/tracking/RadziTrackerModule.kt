@@ -113,6 +113,13 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
         stateMachine.onSustainedMotion(activity)
     }
 
+    override fun onPermissionMissing(permission: String) {
+        val params = Arguments.createMap().apply {
+            putString("permission", permission)
+        }
+        emit("trackingPermissionMissing", params)
+    }
+
     // MARK: - LocationSessionDelegate
 
     override fun onLocationReceived(loc: Location, mode: LocationSession.AccuracyMode) {
@@ -233,16 +240,6 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
         } catch (e: Exception) {
             promise.reject("force_stop_failed", e.message, e)
         }
-    }
-
-    @ReactMethod
-    fun requestPermissions(promise: Promise) {
-        // Android permission requests must go through PermissionAwareActivity.
-        // On React Native, the JS layer (expo-location, PermissionsAndroid) handles this
-        // from the UI thread. We expose checkPermissions only and let the JS
-        // permission request flow handle actual prompting (consistent with how
-        // expo-location works). This resolves immediately with current state.
-        checkPermissions(promise)
     }
 
     @ReactMethod

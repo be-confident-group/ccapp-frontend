@@ -22,7 +22,6 @@ const mockNative = {
   getStatus: jest.fn().mockResolvedValue({ state: 'idle', activity: 'unknown', tripId: null, stagingId: null, gpsAccuracyMode: 'off', lastLocationTimestamp: null }),
   forceStartTrip: jest.fn().mockResolvedValue({ tripId: 'trip_1' }),
   forceStopTrip: jest.fn().mockResolvedValue(undefined),
-  requestPermissions: jest.fn().mockResolvedValue({ location: 'granted', motion: 'granted' }),
   checkPermissions: jest.fn().mockResolvedValue({ location: 'granted', motion: 'granted' }),
   setConfig: jest.fn().mockResolvedValue(undefined),
   getConfig: jest.fn().mockResolvedValue({}),
@@ -35,6 +34,7 @@ const mockEvents = {
   onTripStarted: jest.fn().mockReturnValue(() => {}),
   onTripEnded: jest.fn().mockReturnValue(() => {}),
   onLocationStored: jest.fn().mockReturnValue(() => {}),
+  onPermissionMissing: jest.fn().mockReturnValue(() => {}),
 };
 
 jest.mock('../../native/RadziTracker', () => ({

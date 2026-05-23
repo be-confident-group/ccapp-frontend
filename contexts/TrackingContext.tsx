@@ -132,7 +132,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
               {
                 text: 'Grant Permission',
                 onPress: async () => {
-                  const perms = await TrackingCoordinator.requestPermissions();
+                  const perms = await TrackingCoordinator.checkPermissions();
                   if (perms.location === 'granted') {
                     setHasPermissions(true);
                     await startTracking();

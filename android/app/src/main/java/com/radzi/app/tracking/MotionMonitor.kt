@@ -1,10 +1,13 @@
 package com.radzi.app.tracking
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.ActivityRecognition
 import com.google.android.gms.location.ActivityRecognitionResult
 import com.google.android.gms.location.ActivityTransition
@@ -15,6 +18,7 @@ import com.google.android.gms.location.DetectedActivity
 interface MotionMonitorDelegate {
     fun onActivityChanged(activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence, timestampMs: Long)
     fun onSustainedActivity(activity: MotionMonitor.Activity, forSeconds: Double)
+    fun onPermissionMissing(permission: String)
 }
 
 class MotionMonitor(private val ctx: Context) {
@@ -184,6 +188,12 @@ class MotionMonitor(private val ctx: Context) {
 
     @Suppress("MissingPermission")
     private fun registerActivityRecognition() {
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            TrackingLogger.shared.log(TrackingLogger.Level.warn, "MotionMonitor: ACTIVITY_RECOGNITION not granted — skipping AR setup")
+            delegate?.onPermissionMissing("activity_recognition")
+            return
+        }
+
         val arIntent = Intent(ctx, ActivityRecognitionReceiver::class.java)
         arPendingIntent = PendingIntent.getBroadcast(
             ctx, 0, arIntent,
