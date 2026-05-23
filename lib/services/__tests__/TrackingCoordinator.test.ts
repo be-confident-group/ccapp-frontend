@@ -46,6 +46,12 @@ jest.mock('../TripFinalizationPipeline', () => ({
   TripFinalizationPipeline: { finalize: jest.fn().mockResolvedValue(undefined) },
 }));
 
+jest.mock('../../database', () => ({
+  database: {
+    init: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 import { TrackingCoordinator } from '../TrackingCoordinator';
 
 beforeEach(() => {
@@ -86,5 +92,28 @@ describe('TrackingCoordinator', () => {
     );
     await TrackingCoordinator.start();
     expect(mockNative.start).not.toHaveBeenCalled();
+  });
+
+  it('replays lastPermissionWarning to late subscribers', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+    // Capture the callback registered with onPermissionMissing during init
+    let permissionMissingCallback: ((e: { permission: string }) => void) | null = null;
+    mockEvents.onPermissionMissing.mockImplementation((cb: (e: { permission: string }) => void) => {
+      permissionMissingCallback = cb;
+      return () => {};
+    });
+
+    await TrackingCoordinator.start();
+
+    // Simulate a native permission-missing event firing before any listener is attached
+    expect(permissionMissingCallback).not.toBeNull();
+    permissionMissingCallback!({ permission: 'activity_recognition' });
+
+    // Subscribe after the event has already fired — should receive the replay
+    const listener = jest.fn();
+    const unsub = TrackingCoordinator.subscribeToPermissionWarnings(listener);
+    expect(listener).toHaveBeenCalledWith('activity_recognition');
+    unsub();
   });
 });

@@ -60,10 +60,6 @@ class CoordinatorImpl {
 
     this.attachNativeSubscriptions();
 
-    this.subs.push(RadziTrackerEvents.onPermissionMissing((e) => {
-      this.notifyPermissionWarning(e.permission);
-    }));
-
     try {
       const result = await RadziTrackerNative.recoverStaleTrip();
       if (result.recovered) {
@@ -169,6 +165,9 @@ class CoordinatorImpl {
 
   private attachNativeSubscriptions(): void {
     this.detachAll();
+    this.subs.push(RadziTrackerEvents.onPermissionMissing((e) => {
+      this.notifyPermissionWarning(e.permission);
+    }));
     this.subs.push(RadziTrackerEvents.onStateChanged(e => this.listeners.state.forEach(cb => cb(e))));
     this.subs.push(RadziTrackerEvents.onActivityChanged(async e => {
       // Forward to listeners only — native GRDB already writes motion segments.
