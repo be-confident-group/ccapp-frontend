@@ -58,7 +58,6 @@ export default function AllSetScreen() {
           fullWidth
           loading={loading}
           disabled={loading}
-          style={styles.primaryButton}
         />
         <Button
           title={t('allSet.goHome')}
@@ -93,14 +92,11 @@ const styles = StyleSheet.create({
   body: {
     fontSize: FontSizes.md,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: FontSizes.md * 1.5,
     paddingHorizontal: Spacing.md,
   },
   footer: {
     paddingBottom: Spacing.lg,
     gap: Spacing.md,
-  },
-  primaryButton: {
-    // intentionally empty — reserved for future spacing overrides
   },
 });
