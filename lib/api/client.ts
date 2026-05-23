@@ -78,10 +78,14 @@ class ApiClient {
       }
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
     try {
       const response = await fetch(url, {
         ...restConfig,
         headers: requestHeaders,
+        signal: controller.signal,
       });
 
       // Handle non-2xx responses
@@ -98,13 +102,13 @@ class ApiClient {
         }
 
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
+
         try {
           const text = await response.text();
-          
+
           if (text) {
             const errorData = JSON.parse(text);
-            
+
             // Handle different error response formats
             if (errorData.message) {
               errorMessage = errorData.message;
@@ -131,7 +135,7 @@ class ApiClient {
           // If JSON parsing fails, use status text
           errorMessage = response.statusText || errorMessage;
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -144,6 +148,9 @@ class ApiClient {
       return await response.json();
     } catch (error) {
       if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        }
         // Check if it's a network error
         if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
           throw new Error('Network error: Unable to reach the server. Please check your connection.');
@@ -151,6 +158,8 @@ class ApiClient {
         throw error;
       }
       throw new Error('An unexpected error occurred');
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -227,12 +236,16 @@ class ApiClient {
       }
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
     try {
       const response = await fetch(url, {
         ...restConfig,
         method: 'POST',
         headers: requestHeaders,
         body: formData,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -263,12 +276,17 @@ class ApiClient {
       return await response.json();
     } catch (error) {
       if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        }
         if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
           throw new Error('Network error: Unable to reach the server. Please check your connection.');
         }
         throw error;
       }
       throw new Error('An unexpected error occurred');
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 }
