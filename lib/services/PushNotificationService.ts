@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 import { registerPushToken, deletePushToken } from '@/lib/api/notifications';
 
 const PUSH_TOKEN_KEY = '@push_token';
+const PUSH_REGISTRATION_SUCCESS_KEY = '@radzi/push_registration_success';
 const EAS_PROJECT_ID = '377c486d-066c-4fa6-a11f-98195f1b848e';
 
 async function getOrRequestToken(): Promise<string | null> {
@@ -59,14 +60,23 @@ const PushNotificationService = {
       const token = await getOrRequestToken();
       if (!token) return;
 
-      const cached = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
-      if (cached === token) {
-        // Token unchanged — skip re-registration
+      const [cachedToken, cachedSuccess] = await AsyncStorage.multiGet([
+        PUSH_TOKEN_KEY,
+        PUSH_REGISTRATION_SUCCESS_KEY,
+      ]);
+      const storedToken = cachedToken[1];
+      const registrationSucceeded = cachedSuccess[1];
+
+      if (storedToken === token && registrationSucceeded === 'true') {
+        // Token unchanged and last registration succeeded — skip re-registration
         return;
       }
 
       await registerPushToken(token);
-      await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+      await AsyncStorage.multiSet([
+        [PUSH_TOKEN_KEY, token],
+        [PUSH_REGISTRATION_SUCCESS_KEY, 'true'],
+      ]);
       console.log('[Push] Registered push token with backend');
     } catch (err) {
       // Non-fatal: push notifications are a nice-to-have
@@ -84,7 +94,7 @@ const PushNotificationService = {
       if (!token) return;
 
       await deletePushToken(token);
-      await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+      await AsyncStorage.multiRemove([PUSH_TOKEN_KEY, PUSH_REGISTRATION_SUCCESS_KEY]);
       console.log('[Push] Unregistered push token');
     } catch (err) {
       console.warn('[Push] unregister failed:', err);

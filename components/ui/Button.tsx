@@ -56,19 +56,19 @@ export default function Button({
       case 'primary':
         return {
           ...baseStyle,
-          backgroundColor: disabled ? '#ccc' : colors.primary,
+          backgroundColor: disabled ? colors.border : colors.primary,
         };
       case 'secondary':
         return {
           ...baseStyle,
-          backgroundColor: disabled ? '#e0e0e0' : colors.secondary,
+          backgroundColor: disabled ? colors.border : colors.secondary,
         };
       case 'outline':
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
           borderWidth: 2,
-          borderColor: disabled ? '#ccc' : colors.primary,
+          borderColor: disabled ? colors.border : colors.primary,
         };
       case 'text':
         return {
@@ -79,7 +79,7 @@ export default function Button({
       case 'danger':
         return {
           ...baseStyle,
-          backgroundColor: disabled ? '#ccc' : '#F44336',
+          backgroundColor: disabled ? colors.border : '#F44336',
         };
       default:
         return baseStyle;
@@ -98,17 +98,17 @@ export default function Button({
       case 'danger':
         return {
           ...baseTextStyle,
-          color: disabled ? '#888' : '#fff',
+          color: disabled ? colors.textSecondary : '#fff',
         };
       case 'outline':
         return {
           ...baseTextStyle,
-          color: disabled ? '#ccc' : colors.primary,
+          color: disabled ? colors.textSecondary : colors.primary,
         };
       case 'text':
         return {
           ...baseTextStyle,
-          color: disabled ? '#ccc' : colors.primary,
+          color: disabled ? colors.textSecondary : colors.primary,
         };
       default:
         return baseTextStyle;
