@@ -1,0 +1,57 @@
+{
+  "welcome": {
+    "title": "Bienvenido a Radzi",
+    "tagline": "Registra tus caminatas y rutas. Cada trayecto cuenta.",
+    "cta": "Empezar"
+  },
+  "profile": {
+    "title": "Configura tu perfil",
+    "nameLabel": "Nombre visible",
+    "avatarHint": "Añade una foto de perfil (opcional)",
+    "modeLabel": "Tu actividad principal",
+    "walk": "Caminar",
+    "cycle": "Ciclismo",
+    "continue": "Continuar"
+  },
+  "goals": {
+    "title": "Establece tus metas semanales",
+    "weeklyDistance": "Distancia semanal",
+    "activeDays": "Días activos por semana",
+    "skip": "Omitir por ahora",
+    "continue": "Continuar"
+  },
+  "permissions": {
+    "fgLocation": {
+      "title": "Acceso a la ubicación",
+      "body": "Radzi necesita tu ubicación para trazar tus rutas y calcular la distancia.",
+      "allow": "Permitir ubicación",
+      "skip": "Omitir por ahora"
+    },
+    "bgLocation": {
+      "title": "Ubicación en segundo plano",
+      "body": "Permite que Radzi siga tu ruta incluso cuando la app está en segundo plano.",
+      "openSettings": "Abrir ajustes"
+    },
+    "motion": {
+      "title": "Movimiento y actividad",
+      "body": "Radzi usa datos de movimiento para detectar automáticamente cuándo empiezas a caminar o pedalear.",
+      "allow": "Permitir movimiento",
+      "skip": "Omitir por ahora"
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "body": "Recibe resúmenes de tus rutas, alertas de logros y recordatorios de metas semanales.",
+      "allow": "Permitir notificaciones",
+      "skip": "Omitir por ahora"
+    }
+  },
+  "allSet": {
+    "title": "¡Todo listo!",
+    "body": "¿Listo para iniciar tu primera actividad?",
+    "startWalk": "Iniciar una caminata rápida",
+    "goHome": "Ir a la aplicación"
+  },
+  "banner": {
+    "permissionMissing": "Faltan algunos permisos. Toca para corregirlo en Ajustes."
+  }
+}

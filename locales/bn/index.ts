@@ -7,6 +7,7 @@ import groups from './groups.json';
 import feedback from './feedback.json';
 import validation from './validation.json';
 import alerts from './alerts.json';
+import onboarding from './onboarding.json';
 
 export default {
   common,
@@ -18,4 +19,5 @@ export default {
   feedback,
   validation,
   alerts,
+  onboarding,
 };

@@ -1,0 +1,57 @@
+{
+  "welcome": {
+    "title": "Witaj w Radzi",
+    "tagline": "Śledź swoje spacery i przejażdżki. Każda podróż ma znaczenie.",
+    "cta": "Zaczynajmy"
+  },
+  "profile": {
+    "title": "Skonfiguruj swój profil",
+    "nameLabel": "Nazwa wyświetlana",
+    "avatarHint": "Dodaj zdjęcie profilowe (opcjonalnie)",
+    "modeLabel": "Twoja ulubiona aktywność",
+    "walk": "Spacer",
+    "cycle": "Jazda na rowerze",
+    "continue": "Kontynuuj"
+  },
+  "goals": {
+    "title": "Ustaw tygodniowe cele",
+    "weeklyDistance": "Tygodniowy dystans",
+    "activeDays": "Aktywne dni w tygodniu",
+    "skip": "Pomiń na razie",
+    "continue": "Kontynuuj"
+  },
+  "permissions": {
+    "fgLocation": {
+      "title": "Dostęp do lokalizacji",
+      "body": "Radzi potrzebuje Twojej lokalizacji, aby mapować trasy i obliczać dystans.",
+      "allow": "Zezwól na lokalizację",
+      "skip": "Pomiń na razie"
+    },
+    "bgLocation": {
+      "title": "Lokalizacja w tle",
+      "body": "Pozwól Radzi śledzić Twoją trasę nawet gdy aplikacja działa w tle.",
+      "openSettings": "Otwórz ustawienia"
+    },
+    "motion": {
+      "title": "Ruch i aktywność",
+      "body": "Radzi wykorzystuje dane ruchu, aby automatycznie wykrywać, kiedy zaczynasz spacer lub jazdę na rowerze.",
+      "allow": "Zezwól na ruch",
+      "skip": "Pomiń na razie"
+    },
+    "notifications": {
+      "title": "Powiadomienia",
+      "body": "Otrzymuj podsumowania tras, powiadomienia o osiągnięciach i przypomnienia o tygodniowych celach.",
+      "allow": "Zezwól na powiadomienia",
+      "skip": "Pomiń na razie"
+    }
+  },
+  "allSet": {
+    "title": "Wszystko gotowe!",
+    "body": "Gotowy na pierwszą aktywność?",
+    "startWalk": "Zacznij szybki spacer",
+    "goHome": "Przejdź do aplikacji"
+  },
+  "banner": {
+    "permissionMissing": "Brakuje niektórych uprawnień. Dotknij, aby naprawić w Ustawieniach."
+  }
+}

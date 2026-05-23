@@ -60,7 +60,7 @@ i18n
     },
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'home', 'profile', 'maps', 'groups', 'feedback', 'validation', 'alerts'],
+    ns: ['common', 'auth', 'home', 'profile', 'maps', 'groups', 'feedback', 'validation', 'alerts', 'onboarding'],
 
     interpolation: {
       escapeValue: false, // React already escapes values

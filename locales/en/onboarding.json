@@ -1,0 +1,57 @@
+{
+  "welcome": {
+    "title": "Welcome to Radzi",
+    "tagline": "Track your walks and rides. Every journey counts.",
+    "cta": "Get Started"
+  },
+  "profile": {
+    "title": "Set Up Your Profile",
+    "nameLabel": "Display Name",
+    "avatarHint": "Add a profile photo (optional)",
+    "modeLabel": "Your go-to activity",
+    "walk": "Walk",
+    "cycle": "Cycle",
+    "continue": "Continue"
+  },
+  "goals": {
+    "title": "Set Your Weekly Goals",
+    "weeklyDistance": "Weekly distance",
+    "activeDays": "Active days per week",
+    "skip": "Skip for now",
+    "continue": "Continue"
+  },
+  "permissions": {
+    "fgLocation": {
+      "title": "Location Access",
+      "body": "Radzi needs your location to map your routes and calculate distance.",
+      "allow": "Allow Location",
+      "skip": "Skip for now"
+    },
+    "bgLocation": {
+      "title": "Background Location",
+      "body": "Allow Radzi to track your route even when the app is in the background.",
+      "openSettings": "Open Settings"
+    },
+    "motion": {
+      "title": "Motion & Activity",
+      "body": "Radzi uses motion data to automatically detect when you start walking or cycling.",
+      "allow": "Allow Motion",
+      "skip": "Skip for now"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "body": "Get ride summaries, achievement alerts, and weekly goal reminders.",
+      "allow": "Allow Notifications",
+      "skip": "Skip for now"
+    }
+  },
+  "allSet": {
+    "title": "You're all set!",
+    "body": "Ready to start your first activity?",
+    "startWalk": "Start a quick walk",
+    "goHome": "Take me to the app"
+  },
+  "banner": {
+    "permissionMissing": "Some permissions are missing. Tap to fix in Settings."
+  }
+}
