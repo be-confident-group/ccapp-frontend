@@ -76,7 +76,7 @@
   },
   "permissions": {
     "title": "Un par de permisos",
-    "subtitle": "BeActive los necesita para registrar tus viajes con precisión en segundo plano.",
+    "subtitle": "Radzi los necesita para registrar tus viajes con precisión en segundo plano.",
     "location_title": "Ubicación siempre activa",
     "location_body": "Registramos tu ruta mientras te mueves, incluso cuando la aplicación está en segundo plano. El acceso «Siempre» nos permite detectar el inicio de viajes y recuperarse tras un cierre forzoso.",
     "motion_title": "Movimiento y Fitness",

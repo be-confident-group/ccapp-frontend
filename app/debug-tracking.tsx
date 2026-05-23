@@ -361,7 +361,7 @@ function LogsTab({ logs, nativeLogs, filter, onFilterChange, onRefresh, scrollRe
 
   async function handleShare() {
     try {
-      const header = `BeActive debug log — ${new Date().toISOString()} — filter: ${filter}`;
+      const header = `Radzi debug log — ${new Date().toISOString()} — filter: ${filter}`;
       const divider = '────────────────────────────────────────';
       const lines = filtered.map(
         (e) => `${fmtTime(e.timestamp)} [${e.src === 'native' ? 'SW' : 'JS'}] ${e.level.toUpperCase()} ${e.message}`,
