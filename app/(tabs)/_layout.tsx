@@ -4,13 +4,16 @@ import { StyleSheet, View } from 'react-native';
 import { HomeIcon, MapIcon, PlusCircleIcon, UserGroupIcon, UserIcon } from 'react-native-heroicons/solid';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { TrackingPermissionBanner } from '@/components/onboarding/TrackingPermissionBanner';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabLayout() {
   const { colors } = useTheme();
 
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <TrackingPermissionBanner />
+      <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.tint,
         headerShown: false,
@@ -74,6 +77,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }
 
