@@ -169,7 +169,7 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'walk' ? '#fff' : colors.text },
+                  { color: defaultMode === 'walk' ? '#fff' : colors.primary },
                 ]}
               >
                 {t('profile.walk')}
@@ -192,7 +192,7 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'cycle' ? '#fff' : colors.text },
+                  { color: defaultMode === 'cycle' ? '#fff' : colors.primary },
                 ]}
               >
                 {t('profile.cycle')}
