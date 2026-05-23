@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(() => {
     setIsAuthenticated(true);
+    setHasCompletedOnboarding(null);
     // Register push token after login (best-effort, non-blocking)
     PushNotificationService.registerForUser();
     // Fetch profile to derive user ID, then load onboarding flag
@@ -108,8 +109,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const markOnboardingComplete = useCallback(async () => {
     if (currentUserId !== null) {
       await onboardingState.markOnboardingComplete(currentUserId);
+      setHasCompletedOnboarding(true);
+    } else {
+      console.warn('[AuthContext] markOnboardingComplete called before currentUserId is set — ignoring');
     }
-    setHasCompletedOnboarding(true);
   }, [currentUserId]);
 
   return (

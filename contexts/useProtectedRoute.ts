@@ -15,7 +15,7 @@ export function useProtectedRoute() {
     if (isLoading) return;
 
     const inAuthGroup = rootSegment === '(auth)';
-    const inOnboardingGroup = segments[0] === '(onboarding)';
+    const inOnboardingGroup = rootSegment === '(onboarding)';
 
     // If the user is not authenticated and is not in the auth group,
     // redirect them to the welcome screen.
@@ -56,5 +56,5 @@ export function useProtectedRoute() {
       }
       return;
     }
-  }, [isAuthenticated, isLoading, hasCompletedOnboarding, rootSegment, router, segments]);
+  }, [isAuthenticated, isLoading, hasCompletedOnboarding, rootSegment, router]);
 }
