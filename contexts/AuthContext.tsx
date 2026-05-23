@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '@/lib/api';
 import { apiClient } from '@/lib/api/client';
+import type { User } from '@/lib/api/auth';
 import PushNotificationService from '@/lib/services/PushNotificationService';
 import * as onboardingState from '@/lib/onboarding/state';
 
@@ -10,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   hasCompletedOnboarding: boolean | null;
   currentUserId: string | number | null;
+  user: User | null;
   signIn: () => void;
   signOut: () => void;
   markOnboardingComplete: () => Promise<void>;
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   /**
    * Load and cache the onboarding completion flag for a given user.
@@ -48,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     setHasCompletedOnboarding(null);
     setCurrentUserId(null);
+    setUser(null);
   }, []);
 
   // Register the 401 handler so the API client can trigger sign-out
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Fetch profile to derive user ID, then load onboarding flag
           try {
             const user = await authApi.getProfile();
+            setUser(user);
             const uid = user.id ?? user.email;
             await loadOnboardingState(uid);
           } catch (profileError) {
@@ -97,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     PushNotificationService.registerForUser();
     // Fetch profile to derive user ID, then load onboarding flag
     authApi.getProfile().then((user) => {
+      setUser(user);
       const uid = user.id ?? user.email;
       loadOnboardingState(uid);
     }).catch((profileError) => {
@@ -122,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         hasCompletedOnboarding,
         currentUserId,
+        user,
         signIn,
         signOut,
         markOnboardingComplete,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -28,26 +28,14 @@ export default function ProfileSetupScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
   const router = useRouter();
-  const { currentUserId } = useAuth();
+  const { currentUserId, user } = useAuth();
 
-  const [displayName, setDisplayName] = useState('');
+  const [displayName, setDisplayName] = useState(
+    () => [user?.first_name ?? user?.name ?? '', user?.last_name ?? ''].filter(Boolean).join(' '),
+  );
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [defaultMode, setDefaultMode] = useState<'walk' | 'cycle'>('walk');
   const [loading, setLoading] = useState(false);
-
-  // Prefill display name from user profile
-  useEffect(() => {
-    authApi.getProfile().then((user) => {
-      const name = [user.first_name ?? user.name ?? '', user.last_name ?? '']
-        .join(' ')
-        .trim();
-      if (name) {
-        setDisplayName(name);
-      }
-    }).catch((e) => {
-      console.warn('[ProfileSetup] Could not load profile for prefill:', e);
-    });
-  }, []);
 
   async function handlePickAvatar() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -134,7 +122,7 @@ export default function ProfileSetupScreen() {
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surface }]}>
-                  <UserCircleIcon size={64} color={colors.textSecondary} />
+                  <UserCircleIcon size={100} color={colors.textSecondary} />
                 </View>
               )}
 
@@ -170,7 +158,7 @@ export default function ProfileSetupScreen() {
                 styles.modePill,
                 {
                   backgroundColor:
-                    defaultMode === 'walk' ? colors.primary : colors.surface,
+                    defaultMode === 'walk' ? colors.primary : colors.card,
                   borderColor:
                     defaultMode === 'walk' ? colors.primary : colors.border,
                 },
@@ -193,7 +181,7 @@ export default function ProfileSetupScreen() {
                 styles.modePill,
                 {
                   backgroundColor:
-                    defaultMode === 'cycle' ? colors.primary : colors.surface,
+                    defaultMode === 'cycle' ? colors.primary : colors.card,
                   borderColor:
                     defaultMode === 'cycle' ? colors.primary : colors.border,
                 },
