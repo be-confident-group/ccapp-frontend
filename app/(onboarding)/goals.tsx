@@ -184,16 +184,16 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: Spacing.sm,
     marginBottom: Spacing.xl,
   },
   chip: {
-    paddingVertical: 10,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 2,
@@ -205,6 +205,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.semibold,
   },
   continueButton: {
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
 });
