@@ -38,14 +38,41 @@
     "delete": "Eliminar",
     "share": "Compartir"
   },
+  "tripTypes": {
+    "walk": "Caminata",
+    "cycle": "Ciclismo"
+  },
   "manualEntry": {
-    "title": "Registrar Viaje Manualmente",
+    "title": "Agregar Viaje Manual",
     "rideType": "Tipo de Viaje",
     "distance": "Distancia (km)",
     "duration": "Duración (min)",
     "date": "Fecha",
     "notes": "Notas (opcional)",
-    "submit": "Registrar Viaje"
+    "submit": "Registrar Viaje",
+    "activityType": "Tipo de Actividad",
+    "route": "Ruta (Opcional)",
+    "hideMap": "Ocultar Mapa",
+    "drawRoute": "Dibujar Ruta",
+    "mapHint": "Toca el mapa para dibujar tu ruta. La distancia se calculará automáticamente.",
+    "distanceLabel": "Distancia ({{unit}})",
+    "distanceLabelAuto": "Distancia ({{unit}}) (Calculada automáticamente)",
+    "distancePlaceholder": "Ingresa distancia en {{unit}} o dibuja una ruta",
+    "durationLabel": "Duración",
+    "hours": "horas",
+    "minutes": "minutos",
+    "notesLabel": "Notas (Opcional)",
+    "notesPlaceholder": "Agrega notas sobre tu viaje",
+    "saveTrip": "Guardar Viaje",
+    "invalidDistance": "Distancia Inválida",
+    "invalidDistanceMessage": "Por favor ingresa una distancia o dibuja una ruta en el mapa",
+    "invalidDuration": "Duración Inválida",
+    "invalidDurationMessage": "Por favor ingresa una duración válida",
+    "success": "Éxito",
+    "successMessage": "Viaje agregado exitosamente",
+    "error": "Error",
+    "errorMessage": "No se pudo guardar el viaje. Por favor intenta de nuevo.",
+    "ok": "Aceptar"
   },
   "empty": {
     "noHistory": "Aún no hay viajes",

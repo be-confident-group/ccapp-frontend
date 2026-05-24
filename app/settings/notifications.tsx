@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, View, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
+import { showErrorAlert } from '@/lib/utils/alert';
 import {
   getNotificationPreferences,
   updateNotificationPreferences,
@@ -20,6 +21,7 @@ export default function NotificationPreferencesScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
+  const [optimisticOverrides, setOptimisticOverrides] = useState<Partial<NotificationPreferences>>({});
 
   const prefRows = [
     {
@@ -55,12 +57,26 @@ export default function NotificationPreferencesScreen() {
       updateNotificationPreferences(updated),
     onSuccess: (data) => {
       queryClient.setQueryData<NotificationPreferences>(['notification-preferences'], data);
+      setOptimisticOverrides({});
+    },
+    onError: (_err, variables) => {
+      // Revert the optimistic toggle by clearing overrides for changed keys
+      setOptimisticOverrides((prev) => {
+        const reverted = { ...prev };
+        for (const key of Object.keys(variables) as PrefKey[]) {
+          delete reverted[key];
+        }
+        return reverted;
+      });
+      showErrorAlert('generic');
     },
   });
 
   const handleToggle = useCallback(
     (key: PrefKey, value: boolean) => {
       if (!prefs) return;
+      // Apply optimistic override immediately
+      setOptimisticOverrides((prev) => ({ ...prev, [key]: value }));
       mutation.mutate({ ...prefs, [key]: value });
     },
     [prefs, mutation]
@@ -77,7 +93,7 @@ export default function NotificationPreferencesScreen() {
         ) : (
           <View style={styles.content}>
             <ThemedText style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              Choose which notifications you want to receive
+              {t('profile:notifications.subtitle')}
             </ThemedText>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {prefRows.map((row, index) => (
@@ -91,11 +107,11 @@ export default function NotificationPreferencesScreen() {
                       </ThemedText>
                     </View>
                     <Switch
-                      value={prefs?.[row.key] ?? false}
+                      value={row.key in optimisticOverrides ? (optimisticOverrides[row.key] ?? false) : (prefs?.[row.key] ?? false)}
                       onValueChange={(val) => handleToggle(row.key, val)}
                       disabled={mutation.isPending}
                       trackColor={{ false: colors.border, true: colors.primary + '80' }}
-                      thumbColor={prefs?.[row.key] ? colors.primary : colors.textMuted}
+                      thumbColor={(row.key in optimisticOverrides ? optimisticOverrides[row.key] : prefs?.[row.key]) ? colors.primary : colors.textMuted}
                     />
                   </View>
                 </View>

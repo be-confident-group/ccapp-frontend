@@ -99,9 +99,23 @@
     "caption": "Descripción",
     "optional": "(Opcional)",
     "captionPlaceholder": "Comparte tu experiencia...",
+    "captionPlaceholderDistance": "¡Acabo de recorrer {{distance}} km!",
     "share": "Compartir al grupo",
+    "shareToCount": "Compartir a {{count}} grupos",
     "noGroups": "Únete a un grupo primero para compartir actividades",
-    "selectClub": "Por favor selecciona al menos un grupo"
+    "selectClub": "Por favor selecciona al menos un grupo",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
+    "shareResult": {
+      "title": "Resultado del compartido",
+      "shared_one": "Compartido a {{count}} grupo",
+      "shared_other": "Compartido a {{count}} grupos",
+      "alreadyShared_one": "Ya compartido a {{count}}",
+      "alreadyShared_other": "Ya compartido a {{count}}",
+      "failed_one": "Falló para {{count}}",
+      "failed_other": "Falló para {{count}}",
+      "shareFailed": "No se pudo compartir el viaje"
+    }
   },
   "notificationPreferences": {
     "title": "Preferencias de notificaciones",

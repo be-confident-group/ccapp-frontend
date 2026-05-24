@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
 import { EnvelopeIcon } from 'react-native-heroicons/outline';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function AuthMethodsScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { handleGoogleSignIn, handleAppleSignIn, loading: socialLoading, appleAuthAvailable } = useSocialAuth();
 
@@ -24,9 +26,9 @@ export default function AuthMethodsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Let's get started</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('auth:welcome.title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Sign in to get things done - your rides, stats, and achievements all in one place.
+            {t('auth:welcome.termsPrefix')}
           </Text>
         </View>
 
@@ -40,7 +42,7 @@ export default function AuthMethodsScreen() {
             <View style={styles.socialButtonContent}>
               <Text style={[styles.socialButtonIcon, { color: colors.text }]}>G</Text>
               <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                Continue with Google
+                {t('auth:welcome.continueWithGoogle')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -55,7 +57,7 @@ export default function AuthMethodsScreen() {
               <View style={styles.socialButtonContent}>
                 <Text style={[styles.socialButtonIcon, { color: '#FFFFFF' }]}></Text>
                 <Text style={[styles.socialButtonText, { color: '#FFFFFF' }]}>
-                  Continue with Apple
+                  {t('auth:welcome.continueWithApple')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -69,7 +71,7 @@ export default function AuthMethodsScreen() {
             <View style={styles.socialButtonContent}>
               <EnvelopeIcon color={colors.text} size={24} />
               <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                Continue with email
+                {t('auth:welcome.continueWithEmail')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -77,12 +79,12 @@ export default function AuthMethodsScreen() {
 
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Don't have an account?{' '}
+            {t('auth:signup.haveAccount')}
             <Text
               style={[styles.footerLink, { color: colors.primary }]}
               onPress={handleEmailSignUp}
             >
-              Sign up
+              {t('auth:signup.signIn')}
             </Text>
           </Text>
         </View>

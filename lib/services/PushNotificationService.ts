@@ -18,6 +18,8 @@ const PUSH_TOKEN_KEY = '@push_token';
 const PUSH_REGISTRATION_SUCCESS_KEY = '@radzi/push_registration_success';
 const EAS_PROJECT_ID = '377c486d-066c-4fa6-a11f-98195f1b848e';
 
+const RETRY_DELAYS_MS = [1000, 4000, 16000];
+
 async function getOrRequestToken(): Promise<string | null> {
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -51,11 +53,19 @@ async function getOrRequestToken(): Promise<string | null> {
 
 const PushNotificationService = {
   /**
+   * Current registration status. Starts as 'pending', becomes 'registered'
+   * on success or 'failed' after all retry attempts are exhausted.
+   */
+  registrationStatus: 'pending' as 'pending' | 'registered' | 'failed',
+
+  /**
    * Call after a successful login / session restore.
    * Requests notification permission, retrieves the Expo push token, and
    * registers it with the backend (skipping if unchanged).
+   * Retries the backend call up to 3 times with exponential backoff (1s / 4s / 16s).
    */
   async registerForUser(): Promise<void> {
+    this.registrationStatus = 'pending';
     try {
       const token = await getOrRequestToken();
       if (!token) return;
@@ -69,17 +79,37 @@ const PushNotificationService = {
 
       if (storedToken === token && registrationSucceeded === 'true') {
         // Token unchanged and last registration succeeded — skip re-registration
+        this.registrationStatus = 'registered';
         return;
       }
 
-      await registerPushToken(token);
-      await AsyncStorage.multiSet([
-        [PUSH_TOKEN_KEY, token],
-        [PUSH_REGISTRATION_SUCCESS_KEY, 'true'],
-      ]);
-      console.log('[Push] Registered push token with backend');
+      let lastError: unknown;
+      for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+        try {
+          await registerPushToken(token);
+          await AsyncStorage.multiSet([
+            [PUSH_TOKEN_KEY, token],
+            [PUSH_REGISTRATION_SUCCESS_KEY, 'true'],
+          ]);
+          this.registrationStatus = 'registered';
+          console.log('[Push] Registered push token with backend');
+          return;
+        } catch (err) {
+          lastError = err;
+          if (attempt < RETRY_DELAYS_MS.length - 1) {
+            const delay = RETRY_DELAYS_MS[attempt];
+            console.warn(`[Push] Registration attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err);
+            await new Promise<void>((resolve) => setTimeout(resolve, delay));
+          }
+        }
+      }
+
+      // All retries exhausted
+      this.registrationStatus = 'failed';
+      console.warn('[Push] registerForUser failed after all retries:', lastError);
     } catch (err) {
       // Non-fatal: push notifications are a nice-to-have
+      this.registrationStatus = 'failed';
       console.warn('[Push] registerForUser failed:', err);
     }
   },

@@ -26,6 +26,8 @@ import {
 } from 'react-native-heroicons/outline';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { authApi } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
+import { showAlert } from '@/lib/utils/alert';
 
 type SignupStep = 'email' | 'password' | 'name' | 'dob' | 'gender' | 'verify';
 
@@ -44,6 +46,7 @@ interface SignupData {
 
 export default function SignupScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const { signIn } = useAuth();
@@ -106,12 +109,12 @@ export default function SignupScreen() {
 
   const validateEmail = () => {
     if (!formData.email.trim()) {
-      setErrors((prev) => ({ ...prev, email: 'Email is required' }));
+      setErrors((prev) => ({ ...prev, email: t('auth:signup.emailRequired') }));
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email.trim())) {
-      setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
+      setErrors((prev) => ({ ...prev, email: t('auth:signup.emailInvalid') }));
       return false;
     }
     setErrors((prev) => ({ ...prev, email: '' }));
@@ -123,21 +126,21 @@ export default function SignupScreen() {
     let valid = true;
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('auth:signup.passwordRequired');
       valid = false;
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('auth:signup.passwordMin8');
       valid = false;
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and numbers';
+      newErrors.password = t('auth:signup.passwordComplexity');
       valid = false;
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = t('auth:signup.confirmPasswordRequired');
       valid = false;
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('auth:signup.passwordsMismatch');
       valid = false;
     }
 
@@ -150,24 +153,24 @@ export default function SignupScreen() {
     let valid = true;
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('auth:signup.firstNameRequired');
       valid = false;
     } else if (formData.firstName.trim().length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters';
+      newErrors.firstName = t('auth:signup.firstNameTooShort');
       valid = false;
     } else if (!/^[a-zA-Z\s'-]+$/.test(formData.firstName.trim())) {
-      newErrors.firstName = 'First name contains invalid characters';
+      newErrors.firstName = t('auth:signup.firstNameInvalidChars');
       valid = false;
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = t('auth:signup.lastNameRequired');
       valid = false;
     } else if (formData.lastName.trim().length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters';
+      newErrors.lastName = t('auth:signup.lastNameTooShort');
       valid = false;
     } else if (!/^[a-zA-Z\s'-]+$/.test(formData.lastName.trim())) {
-      newErrors.lastName = 'Last name contains invalid characters';
+      newErrors.lastName = t('auth:signup.lastNameInvalidChars');
       valid = false;
     }
 
@@ -186,7 +189,7 @@ export default function SignupScreen() {
     }
 
     if (age < 18) {
-      Alert.alert('Age Requirement', 'You must be at least 18 years old to create an account');
+      showAlert('auth:signup.ageRequirementTitle', 'auth:signup.ageRequirementMessage');
       return false;
     }
 
@@ -195,7 +198,7 @@ export default function SignupScreen() {
 
   const validateGender = () => {
     if (!formData.gender) {
-      Alert.alert('Selection Required', 'Please select your gender identity');
+      showAlert('auth:signup.selectionRequiredTitle', 'auth:signup.genderSelectionMessage');
       return false;
     }
     return true;
@@ -275,16 +278,16 @@ export default function SignupScreen() {
 
         // Other known patterns
         if (msg.includes('email') && msg.includes('already')) {
-          Alert.alert('Signup Failed', 'This email is already registered. Please try logging in instead.');
+          showAlert('auth:signup.errorTitle', 'auth:signup.emailAlreadyRegistered');
         } else if (msg.includes('password') && msg.includes('least')) {
-          Alert.alert('Signup Failed', 'Password must be at least 8 characters long.');
+          showAlert('auth:signup.errorTitle', 'auth:signup.passwordTooShortMessage');
         } else if (msg.includes('age') || msg.includes('18')) {
-          Alert.alert('Signup Failed', 'You must be at least 18 years old to create an account.');
+          showAlert('auth:signup.errorTitle', 'auth:signup.ageRestrictionMessage');
         } else {
-          Alert.alert('Signup Failed', error.message || 'Failed to create account. Please try again.');
+          Alert.alert(t('auth:signup.errorTitle'), error.message || t('auth:signup.genericSignupError'));
         }
       } else {
-        Alert.alert('Signup Failed', 'Failed to create account. Please try again.');
+        showAlert('auth:signup.errorTitle', 'auth:signup.genericSignupError');
       }
     }
   };
@@ -311,8 +314,8 @@ export default function SignupScreen() {
       const message =
         error instanceof Error
           ? error.message
-          : 'Verification failed. Please check the code and try again.';
-      Alert.alert('Verification Failed', message);
+          : t('auth:signup.verificationFailedDefault');
+      Alert.alert(t('auth:signup.verificationFailedTitle'), message);
 
       // Clear code inputs so user can retry
       setVerificationCode(Array(CODE_LENGTH).fill(''));
@@ -326,11 +329,11 @@ export default function SignupScreen() {
     try {
       await authApi.resendVerificationCode(formData.email.trim());
       setResendCooldown(60);
-      Alert.alert('Code Sent', 'A new verification code has been sent to your email.');
+      showAlert('auth:signup.codeSentTitle', 'auth:signup.codeSentMessage');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Failed to resend code. Please try again.';
-      Alert.alert('Error', message);
+        error instanceof Error ? error.message : t('auth:signup.resendFailedMessage');
+      Alert.alert(t('auth:signup.resendErrorTitle'), message);
     }
   };
 
@@ -404,14 +407,14 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Enter your email</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.emailStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                We'll use this to create your account
+                {t('auth:signup.emailStepSubtitle')}
               </Text>
             </View>
             <TextInput
-              label="Email address"
-              placeholder="your.email@example.com"
+              label={t('auth:signup.emailLabel')}
+              placeholder={t('auth:signup.emailPlaceholder')}
               value={formData.email}
               onChangeText={(text) => {
                 setFormData({ ...formData, email: text });
@@ -431,14 +434,14 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Create a password</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.passwordStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Choose a strong password to secure your account
+                {t('auth:signup.passwordStepSubtitle')}
               </Text>
             </View>
             <TextInput
-              label="Password"
-              placeholder="Min 8 chars, uppercase, lowercase, numbers"
+              label={t('auth:signup.passwordLabel')}
+              placeholder={t('auth:signup.passwordPlaceholder')}
               value={formData.password}
               onChangeText={(text) => {
                 setFormData({ ...formData, password: text });
@@ -451,8 +454,8 @@ export default function SignupScreen() {
               leftIcon={<LockClosedIcon color={colors.textSecondary} size={20} />}
             />
             <TextInput
-              label="Confirm password"
-              placeholder="Re-enter your password"
+              label={t('auth:signup.confirmPasswordLabel')}
+              placeholder={t('auth:signup.confirmPasswordPlaceholder')}
               value={formData.confirmPassword}
               onChangeText={(text) => {
                 setFormData({ ...formData, confirmPassword: text });
@@ -470,14 +473,14 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>What's your name?</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.nameStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                This is how you'll appear in the community
+                {t('auth:signup.nameStepSubtitle')}
               </Text>
             </View>
             <TextInput
-              label="First name"
-              placeholder="John"
+              label={t('auth:signup.firstNameLabel')}
+              placeholder={t('auth:signup.firstNamePlaceholder')}
               value={formData.firstName}
               onChangeText={(text) => {
                 setFormData({ ...formData, firstName: text });
@@ -490,8 +493,8 @@ export default function SignupScreen() {
               leftIcon={<UserIcon color={colors.textSecondary} size={20} />}
             />
             <TextInput
-              label="Last name"
-              placeholder="Doe"
+              label={t('auth:signup.lastNameLabel')}
+              placeholder={t('auth:signup.lastNamePlaceholder')}
               value={formData.lastName}
               onChangeText={(text) => {
                 setFormData({ ...formData, lastName: text });
@@ -509,9 +512,9 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>When's your birthday?</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.dobStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                We use this to personalize your experience
+                {t('auth:signup.dobStepSubtitle')}
               </Text>
             </View>
             <TouchableOpacity
@@ -551,17 +554,17 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>How do you identify?</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.genderStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                This helps us provide a personalized experience
+                {t('auth:signup.genderStepSubtitle')}
               </Text>
             </View>
             <View style={styles.genderOptions}>
               {[
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-                { value: 'other', label: 'Other' },
-                { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+                { value: 'male', label: t('auth:signup.genderMale') },
+                { value: 'female', label: t('auth:signup.genderFemale') },
+                { value: 'other', label: t('auth:signup.genderOther') },
+                { value: 'prefer_not_to_say', label: t('auth:signup.genderPreferNotToSay') },
               ].map((option) => (
                 <TouchableOpacity
                   key={option.value}
@@ -602,9 +605,9 @@ export default function SignupScreen() {
         return (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Verify your email</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{t('auth:signup.verifyStepTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                We sent a 6-digit code to{' '}
+                {t('auth:signup.verifyStepSubtitle')}{' '}
                 <Text style={{ color: colors.text, fontWeight: '600' }}>
                   {formData.email.trim()}
                 </Text>
@@ -641,7 +644,7 @@ export default function SignupScreen() {
               <View style={styles.verifyingContainer}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={[styles.verifyingText, { color: colors.textSecondary }]}>
-                  Verifying...
+                  {t('auth:signup.verifyingText')}
                 </Text>
               </View>
             )}
@@ -649,16 +652,16 @@ export default function SignupScreen() {
             {/* Resend code */}
             <View style={styles.resendContainer}>
               <Text style={[styles.resendLabel, { color: colors.textSecondary }]}>
-                Didn't receive the code?
+                {t('auth:signup.didntReceiveCode')}
               </Text>
               {resendCooldown > 0 ? (
                 <Text style={[styles.resendCooldown, { color: colors.textSecondary }]}>
-                  Resend in {resendCooldown}s
+                  {t('auth:signup.resendIn', { seconds: resendCooldown })}
                 </Text>
               ) : (
                 <TouchableOpacity onPress={handleResendCode}>
                   <Text style={[styles.resendButton, { color: colors.primary }]}>
-                    Resend code
+                    {t('auth:signup.resendCode')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -701,7 +704,7 @@ export default function SignupScreen() {
           {/* Show Continue / Create Account button only for form steps (not verify) */}
           {currentStep !== 'verify' && (
             <Button
-              title={currentStep === 'gender' ? 'Create Account' : 'Continue'}
+              title={currentStep === 'gender' ? t('auth:signup.createAccountButton') : t('auth:signup.continueButton')}
               onPress={handleNext}
               variant="primary"
               size="large"

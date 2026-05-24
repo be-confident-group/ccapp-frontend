@@ -33,6 +33,7 @@ class SyncService {
   private isSyncing = false;
   private lastSyncTime: number | null = null;
   private retryDelays = [1000, 2000, 4000, 8000]; // Exponential backoff
+  private readonly inflightSyncs = new Map<string, Promise<boolean>>();
 
   /**
    * Check if device has network connectivity
@@ -73,9 +74,26 @@ class SyncService {
   }
 
   /**
-   * Sync a single trip by ID
+   * Sync a single trip by ID.
+   * Uses a per-trip in-flight map to prevent concurrent duplicate POSTs for
+   * the same tripId — concurrent callers share the single in-flight promise.
    */
   async syncSingleTrip(tripId: string, retryCount = 0): Promise<boolean> {
+    const existing = this.inflightSyncs.get(tripId);
+    if (existing) {
+      return existing;
+    }
+    const promise = this._doSyncSingleTrip(tripId, retryCount).finally(() =>
+      this.inflightSyncs.delete(tripId)
+    );
+    this.inflightSyncs.set(tripId, promise);
+    return promise;
+  }
+
+  /**
+   * Internal implementation for syncSingleTrip — do not call directly.
+   */
+  private async _doSyncSingleTrip(tripId: string, retryCount = 0): Promise<boolean> {
     try {
       console.log(`[SyncService] Syncing trip ${tripId}...`);
 
@@ -165,7 +183,7 @@ class SyncService {
             const delay = this.retryDelays[retryCount];
             console.log(`[SyncService] Network error, retrying in ${delay}ms (attempt ${retryCount + 1})`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            return await this.syncSingleTrip(tripId, retryCount + 1);
+            return await this._doSyncSingleTrip(tripId, retryCount + 1);
           }
         }
       }

@@ -38,11 +38,11 @@ export function useTrips(filters?: TripFilters) {
 /**
  * Hook to fetch a specific trip
  */
-export function useTrip(id: number) {
+export function useTrip(id: number, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: tripKeys.detail(id),
     queryFn: () => tripAPI.getTrip(id),
-    enabled: !!id,
+    enabled: (options?.enabled ?? true) && !!id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

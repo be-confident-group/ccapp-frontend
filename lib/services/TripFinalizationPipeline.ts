@@ -14,6 +14,12 @@ async function safetyCancelIfBelowMinimum(tripId: string): Promise<void> {
     const dist = t.distance ?? 0;
     const minDist = t.type === 'cycle' ? 1000 : 400;
     if (dist < minDist) {
+      // Re-read immediately before writing to avoid clobbering a concurrent manual edit.
+      // Note: this narrows but does not eliminate the TOCTOU window — SQLite on React Native
+      // has no compare-and-swap, so a concurrent write between this read and the updateTrip
+      // below can still be silently overwritten.
+      const current = await database.getTripById(tripId);
+      if (!current || current.status !== 'completed') return;
       await database.updateTrip(tripId, {
         status: 'cancelled',
         notes: `Cancelled: ${dist}m < ${minDist}m minimum`,
@@ -37,11 +43,23 @@ export class TripFinalizationPipeline {
       return;
     }
 
-    // Small delay so the WAL checkpoint from the native endTrip() write has time
-    // to propagate to expo-sqlite's reader before we query.
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const freshTrip = await database.getTripById(tripId) || trip;
+    // Poll until the WAL checkpoint from native endTrip() propagates to expo-sqlite's reader.
+    let freshTrip = trip;
+    const walDeadline = Date.now() + 2000;
+    while (Date.now() < walDeadline) {
+      const polled = await database.getTripById(tripId);
+      if (polled && ((polled.distance ?? 0) > 0 || (polled.end_time ?? 0) > 0)) {
+        freshTrip = polled;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    // Assumes getTripById always returns a new object reference (no in-memory cache), so
+    // identity equality here reliably signals that no polled result replaced the original read.
+    if (freshTrip === trip) {
+      // Timed out — fall through with whatever is available.
+      freshTrip = await database.getTripById(tripId) || trip;
+    }
     let fallbackDistance = freshTrip.distance ?? 0;
 
     if (fallbackDistance <= 0) {
@@ -87,66 +105,72 @@ export class TripFinalizationPipeline {
           const segment = seg.segments[i];
           const subTripId = `${tripId}_segment${i}`;
           const minDist = MIN_SEGMENT_DIST[segment.type] ?? 400;
-          
+
           if (segment.distance < minDist) {
             console.log(`[TripFinalizationPipeline] Skipping segment ${i} (${segment.type}): ${segment.distance.toFixed(0)}m < ${minDist}m`);
             continue;
           }
-          
-          if (!segment.locations?.length) {
-            console.warn(`[TripFinalizationPipeline] Segment ${i} has no locations — skipping sync`);
-            continue;
-          }
 
-          const segmentRouteForSync = segment.locations.map(loc => ({
-            lat: Number(loc.latitude.toFixed(6)),
-            lng: Number(loc.longitude.toFixed(6)),
-            timestamp: new Date(loc.timestamp).toISOString(),
-          }));
-          
-          const segmentStartTime = segment.locations[0].timestamp;
-          const segmentEndTime = segment.locations[segment.locations.length - 1].timestamp;
-          const method = seg.classificationMethod === 'cmma' ? 'cmma' : 'speed';
+          try {
+            if (!segment.locations?.length) {
+              throw new Error(`Segment ${i} has no locations`);
+            }
 
-          await database.createTrip({
-            id: subTripId,
-            user_id: freshTrip.user_id || 'current_user',
-            type: segment.type,
-            status: 'completed',
-            is_manual: 0,
-            start_time: segmentStartTime,
-            end_time: segmentEndTime,
-            distance: segment.distance,
-            duration: segment.duration,
-            avg_speed: segment.avgSpeed,
-            max_speed: segment.maxSpeed,
-            elevation_gain: 0,
-            calories: 0,
-            co2_saved: 0,
-            notes: `Segment ${i + 1} of ${seg.segments.length} (multi-modal trip)`,
-            route_data: JSON.stringify(segmentRouteForSync),
-            created_at: Date.now(),
-            updated_at: Date.now(),
-            synced: 0,
-          });
-          // Set classification fields (not in createTrip's INSERT)
-          await database.updateTrip(subTripId, {
-            classification_method: method,
-            ml_activity_type: method === 'cmma' ? segment.type : null,
-            ml_confidence: method === 'cmma' ? segment.confidence / 100 : null,
-          });
-          
-          console.log(`[TripFinalizationPipeline] Validating sub-trip ${subTripId}...`);
-          const val = await TripValidationService.validateAndFinalizeTrip(subTripId, segmentEndTime);
-          if (val.isValid) {
-            await syncService.syncSingleTrip(subTripId);
+            const sortedLocations = [...segment.locations].sort((a, b) => a.timestamp - b.timestamp);
+
+            const segmentRouteForSync = sortedLocations.map(loc => ({
+              lat: Number(loc.latitude.toFixed(6)),
+              lng: Number(loc.longitude.toFixed(6)),
+              timestamp: new Date(loc.timestamp).toISOString(),
+            }));
+
+            const segmentStartTime = sortedLocations[0].timestamp;
+            const segmentEndTime = sortedLocations[sortedLocations.length - 1].timestamp;
+            const method = seg.classificationMethod === 'cmma' ? 'cmma' : 'speed';
+
+            await database.createTrip({
+              id: subTripId,
+              user_id: freshTrip.user_id || 'current_user',
+              type: segment.type,
+              status: 'completed',
+              is_manual: 0,
+              start_time: segmentStartTime,
+              end_time: segmentEndTime,
+              distance: segment.distance,
+              duration: segment.duration,
+              avg_speed: segment.avgSpeed,
+              max_speed: segment.maxSpeed,
+              elevation_gain: 0,
+              calories: 0,
+              co2_saved: 0,
+              notes: `Segment ${i + 1} of ${seg.segments.length} (multi-modal trip)`,
+              route_data: JSON.stringify(segmentRouteForSync),
+              created_at: Date.now(),
+              updated_at: Date.now(),
+              synced: 0,
+            });
+            // Set classification fields (not in createTrip's INSERT)
+            await database.updateTrip(subTripId, {
+              classification_method: method,
+              ml_activity_type: method === 'cmma' ? segment.type : null,
+              ml_confidence: method === 'cmma' ? segment.confidence / 100 : null,
+            });
+
+            console.log(`[TripFinalizationPipeline] Validating sub-trip ${subTripId}...`);
+            const val = await TripValidationService.validateAndFinalizeTrip(subTripId, segmentEndTime);
+            if (val.isValid) {
+              await syncService.syncSingleTrip(subTripId);
+            }
+          } catch (segErr) {
+            console.warn(`[TripFinalizationPipeline] segment ${i} (${subTripId}) failed: ${String(segErr)}`);
           }
         }
         
         // Cancel the original parent trip
         await database.updateTrip(tripId, {
           status: 'cancelled',
-          notes: `Multi-modal trip split into segments`
+          notes: `Multi-modal trip split into segments`,
+          updated_at: Date.now(),
         });
         
       } else {

@@ -7,10 +7,12 @@ import { Button, TextInput } from '@/components/ui';
 import { EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { useRouter } from 'expo-router';
 import { authApi } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
   const { signIn } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,18 +24,18 @@ export default function LoginScreen() {
     const newErrors = { email: '', password: '' };
 
     if (!email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('auth:login.emailRequired');
       valid = false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('auth:login.emailInvalid');
       valid = false;
     }
 
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('auth:login.passwordRequired');
       valid = false;
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('auth:login.passwordTooShort');
       valid = false;
     }
 
@@ -59,13 +61,9 @@ export default function LoginScreen() {
 
       const errorMessage = error instanceof Error
         ? error.message
-        : 'An unexpected error occurred. Please try again.';
+        : t('auth:login.unexpectedError');
 
-      Alert.alert(
-        'Login Failed',
-        errorMessage,
-        [{ text: 'OK' }]
-      );
+      Alert.alert(t('auth:login.errorTitle'), errorMessage);
     }
   };
 
@@ -81,16 +79,16 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Welcome back</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('auth:login.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Sign in to continue tracking your rides
+              {t('auth:login.subtitle')}
             </Text>
           </View>
 
           <View style={styles.form}>
             <TextInput
-              label="Email address"
-              placeholder="Enter your email"
+              label={t('auth:common.emailAddressLabel')}
+              placeholder={t('auth:common.emailPlaceholder')}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -104,8 +102,8 @@ export default function LoginScreen() {
             />
 
             <TextInput
-              label="Password"
-              placeholder="Enter your password"
+              label={t('auth:common.passwordLabel')}
+              placeholder={t('auth:common.passwordPlaceholder')}
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -122,11 +120,11 @@ export default function LoginScreen() {
               style={[styles.forgotPassword, { color: colors.primary }]}
               onPress={() => router.push('/(auth)/forgot-password')}
             >
-              Forgot password?
+              {t('auth:login.forgotPassword')}
             </Text>
 
             <Button
-              title="Sign In"
+              title={t('auth:login.signInButton')}
               onPress={handleLogin}
               variant="primary"
               size="large"

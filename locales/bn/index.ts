@@ -8,6 +8,7 @@ import feedback from './feedback.json';
 import validation from './validation.json';
 import alerts from './alerts.json';
 import onboarding from './onboarding.json';
+import feed from './feed.json';
 
 export default {
   common,
@@ -20,4 +21,5 @@ export default {
   validation,
   alerts,
   onboarding,
+  feed,
 };

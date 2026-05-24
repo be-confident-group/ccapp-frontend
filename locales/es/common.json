@@ -71,6 +71,9 @@
     "year": "Año",
     "allTime": "Todo el Tiempo"
   },
+  "loading": {
+    "profile": "Cargando perfil..."
+  },
   "profile": {
     "unknownUser": "Usuario"
   },

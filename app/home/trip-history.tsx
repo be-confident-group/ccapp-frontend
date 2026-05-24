@@ -46,7 +46,7 @@ export default function TripHistoryScreen() {
   const { unitSystem, formatWeight } = useUnits();
 
   // Fetch trips from backend API
-  const { data: backendTrips, isLoading, refetch, isRefetching } = useTrips({ status: 'completed' });
+  const { data: backendTrips, isLoading, refetch, isRefetching, isFetched, isError: backendError } = useTrips({ status: 'completed' });
 
   const [syncing, setSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
@@ -146,9 +146,9 @@ export default function TripHistoryScreen() {
       };
     }
 
-    if (!isOnline || !backendTrips) {
-      // Offline: show all local completed trips (filtered to the v1 visible
-      // trip types — running and drive trips are stored but hidden).
+    if (!isFetched || (backendError && !backendTrips)) {
+      // Still loading, or errored with no cached data: show all local completed trips
+      // (filtered to the v1 visible trip types — running and drive trips are stored but hidden).
       return localTrips
         .map(localToDisplay)
         .filter((trip) => isVisibleTripType(trip.type));
@@ -168,7 +168,7 @@ export default function TripHistoryScreen() {
     ]
       .filter((trip) => isVisibleTripType(trip.type))
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-  }, [isOnline, backendTrips, localTrips]);
+  }, [backendTrips, backendError, localTrips, isFetched]);
 
   async function onRefresh() {
     await Promise.all([
@@ -372,7 +372,7 @@ export default function TripHistoryScreen() {
         </View>
 
       {/* Offline Banner */}
-      {(!isOnline || (!backendTrips && !isLoading)) && (
+      {isFetched && (!isOnline || (backendError && !backendTrips)) && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.border }]}>
           <CloudIcon size={16} color={colors.textSecondary} />
           <ThemedText style={[styles.offlineText, { color: colors.textSecondary }]}>

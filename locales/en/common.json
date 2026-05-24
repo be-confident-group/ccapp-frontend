@@ -85,6 +85,9 @@
     "month_one": "1 month ago",
     "month_other": "{{count}} months ago"
   },
+  "loading": {
+    "profile": "Loading profile..."
+  },
   "profile": {
     "unknownUser": "User"
   },

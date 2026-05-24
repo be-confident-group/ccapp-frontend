@@ -33,12 +33,38 @@ import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-import { showConfirmAlert, showInfoAlert, showComingSoonAlert } from '@/lib/utils/alert';
+import { showAlert, showConfirmAlert, showInfoAlert, showComingSoonAlert, showErrorAlert } from '@/lib/utils/alert';
+import i18n from '@/lib/i18n';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
+import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME } from '@/config/env';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
 import * as Location from 'expo-location';
+
+// ---------------------------------------------------------------------------
+// Local types
+// ---------------------------------------------------------------------------
+
+/** Shape of the profile object passed into/from EditProfileModal */
+interface LocalProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  dateOfBirth?: string; // YYYY-MM-DD or empty string
+  gender?: 'M' | 'F' | 'O' | '';
+  profilePicture?: string;
+  joinedDate?: string;
+}
+
+/** Shape sent to authApi.updateProfile */
+interface UpdateProfilePayload {
+  name: string;
+  last_name: string;
+  date_of_birth?: string;
+  gender: 'M' | 'F' | 'O' | '';
+  profile_picture?: string;
+}
 
 // Build-time constant — true for dev and EAS preview builds, false for production
 const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
@@ -65,7 +91,7 @@ export default function YouScreen() {
   });
 
   // Map API response to local profile shape
-  const profilePicture = profileData?.profile_picture ?? profileData?.profile?.avatar;
+  const profilePicture = profileData?.profile_picture;
   let joinedDateDisplay = '';
   if (profileData?.joined_at) {
     joinedDateDisplay = new Date(profileData.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -105,7 +131,8 @@ export default function YouScreen() {
           signOut();
         } catch (error) {
           console.error('Failed to delete account:', error);
-          Alert.alert(t('alerts:error.title'), t('alerts:error.generic'));
+          showErrorAlert('generic');
+        } finally {
           setLoading(false);
         }
       },
@@ -115,21 +142,25 @@ export default function YouScreen() {
     );
   };
 
-  const handleSaveProfile = async (profile: any) => {
+  const handleSaveProfile = async (profile: LocalProfile) => {
     try {
       setLoading(true);
 
+      // Validate date format — abort and show error instead of silently using a fallback
+      const DOB_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+      if (profile.dateOfBirth && !DOB_REGEX.test(profile.dateOfBirth)) {
+        showAlert('alerts:error.title', 'alerts:error.invalidDateFormat');
+        return;
+      }
+
       // Map local profile format to API format
       // Backend requires: name, last_name, date_of_birth, gender (all required)
-      const updateData: any = {
+      const updateData: UpdateProfilePayload = {
         name: profile.firstName,  // Backend uses 'name' not 'first_name'
         last_name: profile.lastName,
-        // Backend requires date_of_birth - use current value or a default
-        date_of_birth: profile.dateOfBirth && profile.dateOfBirth.match(/^\d{4}-\d{2}-\d{2}$/)
-          ? profile.dateOfBirth
-          : '2000-01-01',  // Default date if not set
+        date_of_birth: profile.dateOfBirth || undefined,
         // Backend requires gender - use current value or default to 'O'
-        gender: profile.gender || 'O',
+        gender: (profile.gender || 'O') as 'M' | 'F' | 'O',
       };
 
       // Handle profile picture if it was changed
@@ -151,10 +182,16 @@ export default function YouScreen() {
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
 
       showInfoAlert('alerts:profileUpdated.title', 'alerts:profileUpdated.message');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update profile:', error);
-      const errorMessage = error?.response?.data?.message || 'Failed to update profile';
-      Alert.alert('Error', errorMessage);
+      const apiMessage =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (apiMessage) {
+        // API returned a specific error message — show it directly
+        Alert.alert(t('alerts:error.title'), apiMessage);
+      } else {
+        showErrorAlert('generic');
+      }
     } finally {
       setLoading(false);
     }
@@ -174,21 +211,19 @@ export default function YouScreen() {
 
         if (!hasFullPermissions) {
           // Show permission explanation
-          Alert.alert(
-            'Background Tracking Permission',
-            Platform.OS === 'ios'
-              ? 'To track your activities automatically, Radzi needs "Always Allow" location access.\n\n' +
-                '1. Tap "Settings" below\n' +
-                '2. Go to Location\n' +
-                '3. Select "Always"\n\n' +
-                'This allows the app to track your walks and rides even when you\'re not actively using it.'
-              : 'To track your activities automatically, Radzi needs location access all the time.\n\n' +
-                'Please grant "Allow all the time" permission in the next screen.\n\n' +
-                'This allows the app to track your walks and rides in the background.',
+          const permissionMessageKey = Platform.OS === 'ios'
+            ? 'alerts:backgroundPermission.iosMessage'
+            : 'alerts:backgroundPermission.androidMessage';
+          const actionButtonKey = Platform.OS === 'ios'
+            ? 'alerts:backgroundPermission.openSettings'
+            : 'alerts:backgroundPermission.grantPermission';
+          showAlert(
+            'alerts:backgroundPermission.title',
+            permissionMessageKey,
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: i18n.t('alerts:backgroundPermission.cancel'), style: 'cancel' },
               {
-                text: Platform.OS === 'ios' ? 'Open Settings' : 'Grant Permission',
+                text: i18n.t(actionButtonKey),
                 onPress: async () => {
                   if (Platform.OS === 'ios') {
                     // On iOS, open app settings
@@ -212,19 +247,15 @@ export default function YouScreen() {
       }
     } else {
       // Turning OFF - confirm first
-      Alert.alert(
-        'Stop Background Tracking?',
-        'Your activities will no longer be tracked automatically. You can still log trips manually.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Stop Tracking',
-            style: 'destructive',
-            onPress: async () => {
-              await toggleTracking();
-            },
-          },
-        ]
+      showConfirmAlert(
+        'alerts:tracking.stopConfirmTitle',
+        'alerts:tracking.stopConfirmMessage',
+        async () => {
+          await toggleTracking();
+        },
+        'alerts:tracking.stopConfirmButton',
+        'common:buttons.cancel',
+        'destructive'
       );
     }
   };
@@ -232,8 +263,8 @@ export default function YouScreen() {
   const handleRateApp = () => {
     const storeUrl =
       Platform.OS === 'ios'
-        ? 'https://apps.apple.com/app/id123456789' // Replace with actual App Store ID
-        : 'https://play.google.com/store/apps/details?id=com.ccapp'; // Replace with actual package name
+        ? `https://apps.apple.com/app/id${IOS_APP_STORE_ID}`
+        : `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}`;
 
     Linking.openURL(storeUrl).catch(() =>
       showInfoAlert('alerts:error.title', 'alerts:error.appStore')
@@ -247,7 +278,7 @@ export default function YouScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Loading profile...
+              {t('common:loading.profile')}
             </ThemedText>
           </View>
         ) : (
@@ -401,11 +432,7 @@ export default function YouScreen() {
                   title={t('profile:privacy.privacy')}
                   subtitle={t('profile:privacy.privacySubtitle')}
                   onPress={() => {
-                    Alert.alert(
-                      'Coming Soon',
-                      'Privacy settings will come soon!',
-                      [{ text: 'OK', style: 'default' }]
-                    );
+                    showComingSoonAlert('privacySettings');
                   }}
                   isFirst
                 />

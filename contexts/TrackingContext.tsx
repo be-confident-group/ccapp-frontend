@@ -17,11 +17,14 @@ import {
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { database } from '@/lib/database';
 import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
+import { showAlert, showConfirmAlert } from '@/lib/utils/alert';
+import i18n from '@/lib/i18n';
 
 interface TrackingContextType {
   isTracking: boolean;
   hasPermissions: boolean;
   isLoading: boolean;
+  error: string | null;
   liveActivity: LiveActivityState | null;
   toggleTracking: () => Promise<void>;
   checkStatus: () => Promise<void>;
@@ -33,6 +36,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [isTracking, setIsTracking] = useState(false);
   const [hasPermissions, setHasPermissions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [liveActivity, setLiveActivity] = useState<LiveActivityState | null>(null);
 
   // Initialize AppState listener and check initial status
@@ -44,13 +48,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     setOnPermissionDowngraded(() => {
       console.warn('[TrackingContext] Background permission was downgraded');
       setHasPermissions(false);
-      Alert.alert(
-        'Permission Changed',
-        'Background location permission has been changed. Tracking may not work when the app is in the background. Please enable "Always" location access in Settings for continuous tracking.',
-        [
-          { text: 'OK', style: 'default' },
-        ]
-      );
+      showAlert('alerts:permission.changedTitle', 'alerts:permission.changedMessage');
       // Re-check status
       checkStatus();
     });
@@ -70,6 +68,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function checkStatus() {
+    setError(null);
     try {
       const status = await TrackingCoordinator.getStatus();
       const tracking = 'state' in status ? status.state !== 'idle' : false;
@@ -106,6 +105,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('[TrackingContext] Error checking status:', error);
+      setError(i18n.t('alerts:tracking.statusError'));
     }
   }
 
@@ -124,27 +124,19 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       } else {
         // Check permissions first
         if (!hasPermissions) {
-          Alert.alert(
-            'Permissions Required',
-            'Background location tracking requires "Always" location permission. Would you like to grant it?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Grant Permission',
-                onPress: async () => {
-                  const perms = await TrackingCoordinator.checkPermissions();
-                  if (perms.location === 'granted') {
-                    setHasPermissions(true);
-                    await startTracking();
-                  } else {
-                    Alert.alert(
-                      'Permission Denied',
-                      'Background tracking requires "Always" location access. Please enable it in Settings.'
-                    );
-                  }
-                },
-              },
-            ]
+          showConfirmAlert(
+            'alerts:permission.requiredTitle',
+            'alerts:permission.requiredMessage',
+            async () => {
+              const perms = await TrackingCoordinator.checkPermissions();
+              if (perms.location === 'granted') {
+                setHasPermissions(true);
+                await startTracking();
+              } else {
+                showAlert('alerts:permission.deniedTitle', 'alerts:permission.deniedMessage');
+              }
+            },
+            'alerts:permission.grantButton'
           );
           setIsLoading(false);
           return;
@@ -154,8 +146,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('[TrackingContext] Error toggling tracking:', error);
-      const message = error instanceof Error ? error.message : 'Failed to toggle tracking. Please try again.';
-      Alert.alert('Tracking Error', message);
+      const message = error instanceof Error ? error.message : i18n.t('alerts:tracking.toggleError');
+      Alert.alert(i18n.t('alerts:tracking.errorTitle'), message);
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +155,13 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
   async function startTracking() {
     try {
+      // Re-check permissions to guard against stale state
+      const perms = await TrackingCoordinator.checkPermissions();
+      if (perms.location !== 'granted') {
+        setHasPermissions(false);
+        throw new Error('Location permission not granted');
+      }
+
       // Initialize database
       await database.init();
 
@@ -194,6 +193,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         isTracking,
         hasPermissions,
         isLoading,
+        error,
         liveActivity,
         toggleTracking,
         checkStatus,

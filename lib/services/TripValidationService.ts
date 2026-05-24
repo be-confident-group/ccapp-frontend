@@ -285,8 +285,11 @@ export class TripValidationService {
     }
 
     // Check 3: Unsupported type
-    if (!reason && (tripType === 'run' || tripType === 'drive')) {
-      reason = `Trip type '${tripType}' not supported (only walk/cycle allowed)`;
+    // 'drive' is accepted by the backend (Trip.type enum includes it) and marked
+    // is_valid=false server-side to exclude from leaderboards — let it through.
+    // 'run' is not in the backend Trip.type enum, so reject it here.
+    if (!reason && tripType === 'run') {
+      reason = `Trip type 'run' is not yet supported`;
     }
 
     // Check 4: GPS drift detection

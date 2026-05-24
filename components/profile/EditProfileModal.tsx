@@ -11,9 +11,10 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { XMarkIcon, ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { TextInput } from '@/components/ui';
 import { ProfileAvatar } from './ProfileAvatar';
 
@@ -33,12 +34,9 @@ interface EditProfileModalProps {
   onSave: (profile: UserProfile) => Promise<void>;
 }
 
-const GENDER_OPTIONS = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'O', label: 'Other' },
-  { value: '', label: 'Prefer not to say' },
-];
+type GenderValue = 'M' | 'F' | 'O' | '';
+
+const VALID_GENDER_VALUES: GenderValue[] = ['M', 'F', 'O', ''];
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   visible,
@@ -47,6 +45,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave,
 }) => {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation('profile');
+
+  const GENDER_OPTIONS: { value: GenderValue; label: string }[] = [
+    { value: 'M', label: t('edit.genderMale') },
+    { value: 'F', label: t('edit.genderFemale') },
+    { value: 'O', label: t('edit.genderOther') },
+    { value: '', label: t('edit.genderPreferNotToSay') },
+  ];
+
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -69,13 +76,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const newErrors: Partial<Record<keyof UserProfile, string>> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('edit.firstNameRequired');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('edit.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('edit.emailInvalid');
     }
 
     setErrors(newErrors);
@@ -100,7 +107,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     setFormData({ ...formData, profilePicture: uri });
   };
 
-  const handleDateChange = (event: any, date?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
@@ -123,11 +130,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   };
 
   const getGenderLabel = (value?: string) => {
-    return GENDER_OPTIONS.find((opt) => opt.value === value)?.label || 'Select gender';
+    return GENDER_OPTIONS.find((opt) => opt.value === value)?.label || t('edit.selectGender');
   };
 
   const handleGenderSelect = (value: string) => {
-    setFormData({ ...formData, gender: value as any });
+    if (!VALID_GENDER_VALUES.includes(value as GenderValue)) {
+      console.warn(`EditProfileModal: invalid gender value received: "${value}"`);
+      return;
+    }
+    setFormData({ ...formData, gender: value as GenderValue });
     setShowGenderPicker(false);
   };
 
@@ -145,12 +156,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose} style={styles.cancelButton} disabled={saving}>
-            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>{t('edit.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('edit.title')}</Text>
           <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
             <Text style={[styles.saveText, { color: saving ? colors.textSecondary : colors.primary }]}>
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('edit.saving') : t('edit.save')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -172,41 +183,41 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               editable={true}
             />
             <Text style={[styles.avatarHint, { color: colors.textSecondary }]}>
-              Tap to change photo
+              {t('edit.tapToChangePhoto')}
             </Text>
           </View>
 
           {/* Form Fields */}
           <View style={styles.formSection}>
             <TextInput
-              label="First Name"
+              label={t('edit.firstNameLabel')}
               value={formData.firstName}
               onChangeText={(text) => setFormData({ ...formData, firstName: text })}
               error={errors.firstName}
-              placeholder="Enter your first name"
+              placeholder={t('edit.firstNamePlaceholder')}
             />
 
             <TextInput
-              label="Last Name"
+              label={t('edit.lastNameLabel')}
               value={formData.lastName}
               onChangeText={(text) => setFormData({ ...formData, lastName: text })}
               error={errors.lastName}
-              placeholder="Enter your last name"
+              placeholder={t('edit.lastNamePlaceholder')}
             />
 
             <TextInput
-              label="Email"
+              label={t('edit.emailLabel')}
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               error={errors.email}
-              placeholder="email@example.com"
+              placeholder={t('edit.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
             />
 
             {/* Date of Birth Picker */}
             <View>
-              <Text style={[styles.label, { color: colors.text }]}>Date of Birth</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('edit.dateOfBirthLabel')}</Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 style={[
@@ -221,14 +232,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     { color: formData.dateOfBirth ? colors.text : colors.textSecondary },
                   ]}
                 >
-                  {formatDate(formData.dateOfBirth) || 'Select date of birth'}
+                  {formatDate(formData.dateOfBirth) || t('edit.selectDateOfBirth')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Gender Picker */}
             <View>
-              <Text style={[styles.label, { color: colors.text }]}>Gender</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('edit.genderLabel')}</Text>
               <TouchableOpacity
                 onPress={() => setShowGenderPicker(true)}
                 style={[
@@ -261,7 +272,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             <View style={[styles.pickerModal, { backgroundColor: colors.background }]}>
               <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={[styles.pickerDone, { color: colors.primary }]}>Done</Text>
+                  <Text style={[styles.pickerDone, { color: colors.primary }]}>{t('edit.done')}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -299,9 +310,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             />
             <View style={[styles.pickerModal, { backgroundColor: colors.background }]}>
             <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.pickerTitle, { color: colors.text }]}>Select Gender</Text>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('edit.selectGenderTitle')}</Text>
               <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
-                <Text style={[styles.pickerDone, { color: colors.primary }]}>Done</Text>
+                <Text style={[styles.pickerDone, { color: colors.primary }]}>{t('edit.done')}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>

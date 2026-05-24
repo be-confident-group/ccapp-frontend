@@ -22,12 +22,48 @@
     "title": "Error",
     "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "network": "Error de red. Por favor, verifica tu conexión.",
-    "appStore": "No se puede abrir la tienda de aplicaciones"
+    "appStore": "No se puede abrir la tienda de aplicaciones",
+    "invalidDateFormat": "La fecha de nacimiento debe estar en formato AAAA-MM-DD."
   },
   "deleteConfirm": {
     "title": "Eliminar",
     "message": "¿Estás seguro de que quieres eliminar esto?",
     "confirmButton": "Eliminar",
     "cancelButton": "Cancelar"
+  },
+  "deleteAccount": {
+    "title": "Eliminar Cuenta",
+    "message": "Esto eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.",
+    "confirmButton": "Eliminar Cuenta",
+    "cancelButton": "Cancelar"
+  },
+  "permission": {
+    "changedTitle": "Permiso Cambiado",
+    "changedMessage": "El permiso de ubicación en segundo plano ha cambiado. Habilita el acceso \"Siempre\" en Ajustes para el seguimiento continuo.",
+    "requiredTitle": "Permiso Requerido",
+    "requiredMessage": "El seguimiento en segundo plano requiere el permiso \"Siempre\" de ubicación. ¿Deseas concederlo?",
+    "grantButton": "Conceder Permiso",
+    "deniedTitle": "Permiso Denegado",
+    "deniedMessage": "El seguimiento en segundo plano requiere acceso \"Siempre\" a la ubicación. Habilítalo en Ajustes."
+  },
+  "tracking": {
+    "errorTitle": "Error de Seguimiento",
+    "statusError": "No se pudo verificar el estado del seguimiento. Por favor, inténtalo de nuevo.",
+    "toggleError": "No se pudo cambiar el seguimiento. Por favor, inténtalo de nuevo.",
+    "stopConfirmTitle": "¿Detener el seguimiento en segundo plano?",
+    "stopConfirmMessage": "Tus actividades ya no se registrarán automáticamente. Aún puedes registrar viajes manualmente.",
+    "stopConfirmButton": "Detener seguimiento"
+  },
+  "auth": {
+    "profileLoadFailedTitle": "Perfil no disponible",
+    "profileLoadFailedMessage": "No se pudo cargar tu perfil. Algunas funciones pueden estar limitadas."
+  },
+  "backgroundPermission": {
+    "title": "Permiso de seguimiento en segundo plano",
+    "iosMessage": "Para registrar tus actividades automáticamente, Radzi necesita acceso de ubicación «Siempre permitir».\n\n1. Toca «Configuración» abajo\n2. Ve a Ubicación\n3. Selecciona «Siempre»\n\nEsto permite que la app registre tus caminatas y paseos incluso cuando no la estés usando activamente.",
+    "androidMessage": "Para registrar tus actividades automáticamente, Radzi necesita acceso de ubicación en todo momento.\n\nOtorga el permiso «Permitir siempre» en la siguiente pantalla.\n\nEsto permite que la app registre tus caminatas y paseos en segundo plano.",
+    "openSettings": "Abrir configuración",
+    "grantPermission": "Conceder permiso",
+    "cancel": "Cancelar"
   }
 }

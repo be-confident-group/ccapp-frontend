@@ -153,9 +153,23 @@
     "caption": "Caption",
     "optional": "(Optional)",
     "captionPlaceholder": "Share your experience...",
+    "captionPlaceholderDistance": "Just rode {{distance}} km!",
     "share": "Share to Group",
+    "shareToCount": "Share to {{count}} Groups",
     "noGroups": "Join a group first to share your activities",
-    "selectClub": "Please select at least one group"
+    "selectClub": "Please select at least one group",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "shareResult": {
+      "title": "Share Result",
+      "shared_one": "Shared to {{count}} club",
+      "shared_other": "Shared to {{count}} clubs",
+      "alreadyShared_one": "Already shared to {{count}}",
+      "alreadyShared_other": "Already shared to {{count}}",
+      "failed_one": "Failed for {{count}}",
+      "failed_other": "Failed for {{count}}",
+      "shareFailed": "Failed to share trip"
+    }
   },
   "createGroup": {
     "title": "Create Group",

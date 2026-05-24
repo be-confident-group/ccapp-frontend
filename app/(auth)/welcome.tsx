@@ -25,6 +25,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDownIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { authApi } from '@/lib/api';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -37,6 +39,7 @@ const carouselData = [
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const { signIn } = useAuth();
@@ -143,13 +146,13 @@ export default function WelcomeScreen() {
 
   const handleEmailSubmit = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), i18n.t('auth:resetPassword.emailRequired'));
       return;
     }
 
     const emailRegex = /\S+@\S+\.\S+/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), i18n.t('auth:resetPassword.emailInvalid'));
       return;
     }
 
@@ -170,7 +173,7 @@ export default function WelcomeScreen() {
       }
     } catch (error) {
       console.error('Email check error:', error);
-      Alert.alert('Error', 'Failed to verify email. Please try again.');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), i18n.t('auth:resetPassword.failedToSendCode'));
     } finally {
       setLoading(false);
     }
@@ -178,7 +181,7 @@ export default function WelcomeScreen() {
 
   const handlePasswordSubmit = async () => {
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), i18n.t('auth:login.passwordRequired'));
       return;
     }
 
@@ -201,8 +204,8 @@ export default function WelcomeScreen() {
 
       const errorMessage = error instanceof Error
         ? error.message
-        : 'Login failed. Please check your credentials.';
-      Alert.alert('Login Failed', errorMessage);
+        : i18n.t('auth:login.unexpectedError');
+      Alert.alert(i18n.t('auth:login.errorTitle'), errorMessage);
     }
   };
 
@@ -382,7 +385,7 @@ export default function WelcomeScreen() {
                 onPress={handleSignUpPress}
               >
                 <UserIcon color={colors.text} size={24} />
-                <Text style={[styles.signUpButtonText, { color: colors.text }]}>Sign Up / Sign In</Text>
+                <Text style={[styles.signUpButtonText, { color: colors.text }]}>{t('auth:welcome.subtitle')}</Text>
               </TouchableOpacity>
             </Animated.View>
 
@@ -401,9 +404,9 @@ export default function WelcomeScreen() {
             >
               {!showEmailInput ? (
                 <>
-                  <Text style={[styles.authTitle, { color: colors.text }]}>Let's get started</Text>
+                  <Text style={[styles.authTitle, { color: colors.text }]}>{t('auth:welcome.title')}</Text>
                   <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
-                    Sign in to track your walks and rides, provide feedbacks on the infrastructure and help local authorities improve the it.
+                    {t('auth:welcome.termsPrefix')}
                   </Text>
 
                   <View style={styles.authButtons}>
@@ -415,7 +418,7 @@ export default function WelcomeScreen() {
                     >
                       <View style={styles.authButtonContent}>
                         <FontAwesome name="google" size={20} color={colors.text} />
-                        <Text style={[styles.authButtonText, { color: colors.text }]}>Continue with Google</Text>
+                        <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithGoogle')}</Text>
                       </View>
                     </TouchableOpacity>
 
@@ -428,7 +431,7 @@ export default function WelcomeScreen() {
                       >
                         <View style={styles.authButtonContent}>
                           <FontAwesome name="apple" size={20} color={colors.text} />
-                          <Text style={[styles.authButtonText, { color: colors.text }]}>Continue with Apple</Text>
+                          <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithApple')}</Text>
                         </View>
                       </TouchableOpacity>
                     )}
@@ -440,20 +443,20 @@ export default function WelcomeScreen() {
                     >
                       <View style={styles.authButtonContent}>
                         <EnvelopeIcon color={colors.text} size={20} />
-                        <Text style={[styles.authButtonText, { color: colors.text }]}>Continue with email</Text>
+                        <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithEmail')}</Text>
                       </View>
                     </TouchableOpacity>
                   </View>
                 </>
               ) : !showPasswordInput ? (
                 <>
-                  <Text style={[styles.authTitle, { color: colors.text }]}>Enter your email address</Text>
+                  <Text style={[styles.authTitle, { color: colors.text }]}>{t('auth:common.emailAddressLabel')}</Text>
 
                   <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <EnvelopeIcon color={colors.textSecondary} size={20} />
                     <TextInput
                       style={[styles.textInput, { color: colors.text }]}
-                      placeholder="Type your email"
+                      placeholder={t('auth:common.emailPlaceholder')}
                       placeholderTextColor={colors.textSecondary}
                       value={email}
                       onChangeText={setEmail}
@@ -475,19 +478,19 @@ export default function WelcomeScreen() {
                     {loading ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.sendButtonText}>Continue</Text>
+                      <Text style={styles.sendButtonText}>{t('auth:signup.continueButton')}</Text>
                     )}
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.authTitle, { color: colors.text }]}>Enter your password</Text>
+                  <Text style={[styles.authTitle, { color: colors.text }]}>{t('auth:common.passwordLabel')}</Text>
 
                   <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <LockClosedIcon color={colors.textSecondary} size={20} />
                     <TextInput
                       style={[styles.textInput, { color: colors.text }]}
-                      placeholder="Type your password"
+                      placeholder={t('auth:common.passwordPlaceholder')}
                       placeholderTextColor={colors.textSecondary}
                       value={password}
                       onChangeText={setPassword}
@@ -509,7 +512,7 @@ export default function WelcomeScreen() {
                     {loading ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.sendButtonText}>Sign In</Text>
+                      <Text style={styles.sendButtonText}>{t('auth:login.signInButton')}</Text>
                     )}
                   </TouchableOpacity>
 
@@ -518,7 +521,7 @@ export default function WelcomeScreen() {
                     onPress={() => router.push('/(auth)/forgot-password')}
                   >
                     <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
-                      Forgot password?
+                      {t('auth:login.forgotPassword')}
                     </Text>
                   </TouchableOpacity>
                 </>

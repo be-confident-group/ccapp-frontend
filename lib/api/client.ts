@@ -20,6 +20,7 @@ type UnauthorizedListener = () => void;
 class ApiClient {
   private baseURL: string;
   private onUnauthorized: UnauthorizedListener | null = null;
+  private isLoggingOut = false;
 
   constructor(baseURL: string | undefined) {
     this.baseURL = baseURL || '';
@@ -31,6 +32,14 @@ class ApiClient {
    */
   setOnUnauthorized(listener: UnauthorizedListener | null) {
     this.onUnauthorized = listener;
+  }
+
+  /**
+   * Reset the logout guard after a successful re-login.
+   * Call this from AuthContext once a new session is established.
+   */
+  resetLogoutState() {
+    this.isLoggingOut = false;
   }
 
   private checkConfiguration(): boolean {
@@ -61,6 +70,11 @@ class ApiClient {
 
     const { requiresAuth = true, headers = {}, ...restConfig } = config;
 
+    // Guard: drop authenticated requests that arrive while a logout is in progress
+    if (this.isLoggingOut && requiresAuth) {
+      throw new Error('Session expired. Please sign in again.');
+    }
+
     const url = `${this.baseURL}${endpoint}`;
 
     const requestHeaders: Record<string, string> = {
@@ -73,8 +87,8 @@ class ApiClient {
       const token = await this.getAuthToken();
       if (token) {
         requestHeaders['Authorization'] = `Bearer ${token}`;
-      } else {
-        // no token available
+      } else if (__DEV__) {
+        console.warn('[API] requiresAuth=true but no auth token found for:', endpoint);
       }
     }
 
@@ -95,6 +109,7 @@ class ApiClient {
           console.warn('[API] 401 Unauthorized — clearing invalid token');
           await AsyncStorage.removeItem('authToken');
           await AsyncStorage.removeItem('refreshToken');
+          this.isLoggingOut = true;
           if (this.onUnauthorized) {
             this.onUnauthorized();
           }
@@ -221,6 +236,11 @@ class ApiClient {
     }
 
     const { requiresAuth = true, headers = {}, ...restConfig } = config || {};
+
+    if (this.isLoggingOut && requiresAuth) {
+      throw new Error('Session expired. Please sign in again.');
+    }
+
     const url = `${this.baseURL}${endpoint}`;
 
     const requestHeaders: Record<string, string> = {
@@ -292,3 +312,4 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_URL);
+export type { ApiClient };

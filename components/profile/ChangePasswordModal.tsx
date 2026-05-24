@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { TextInput } from '@/components/ui';
 import { authApi } from '@/lib/api/auth';
 
@@ -24,6 +25,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   onClose,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation('profile');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -46,15 +48,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!oldPassword) {
-      newErrors.oldPassword = 'Current password is required';
+      newErrors.oldPassword = t('changePassword.currentPasswordRequired');
     }
     if (!newPassword) {
-      newErrors.newPassword = 'New password is required';
+      newErrors.newPassword = t('changePassword.newPasswordRequired');
     } else if (newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters';
+      newErrors.newPassword = t('changePassword.newPasswordTooShort');
     }
-    if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+    if (!confirmPassword) {
+      newErrors.confirmPassword = t('changePassword.confirmPasswordRequired');
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = t('changePassword.passwordsDoNotMatch');
     }
 
     setErrors(newErrors);
@@ -71,11 +75,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         new_password: newPassword,
         new_password2: confirmPassword,
       });
-      Alert.alert('Success', 'Your password has been changed.', [
-        { text: 'OK', onPress: handleClose },
+      Alert.alert(t('changePassword.successTitle'), t('changePassword.successMessage'), [
+        { text: t('changePassword.successOk'), onPress: handleClose },
       ]);
     } catch (error: any) {
-      const raw = error?.message || 'Failed to change password. Please try again.';
+      const raw = error?.message || t('changePassword.fallbackError');
       // API returns field-prefixed errors like "old_password: Wrong Password"
       // Strip the field prefix for a cleaner user-facing message
       const message = raw.replace(/^old_password:\s*/i, '')
@@ -110,12 +114,12 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={handleClose} style={styles.cancelButton} disabled={saving}>
-            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>{t('changePassword.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Change Password</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('changePassword.title')}</Text>
           <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
             <Text style={[styles.saveText, { color: saving ? colors.textSecondary : colors.primary }]}>
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('changePassword.saving') : t('changePassword.save')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -128,31 +132,31 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         >
           <View style={styles.formSection}>
             <TextInput
-              label="Current Password"
+              label={t('changePassword.currentPasswordLabel')}
               value={oldPassword}
               onChangeText={setOldPassword}
               error={errors.oldPassword}
-              placeholder="Enter current password"
+              placeholder={t('changePassword.currentPasswordPlaceholder')}
               secureTextEntry
               autoCapitalize="none"
             />
 
             <TextInput
-              label="New Password"
+              label={t('changePassword.newPasswordLabel')}
               value={newPassword}
               onChangeText={setNewPassword}
               error={errors.newPassword}
-              placeholder="Enter new password"
+              placeholder={t('changePassword.newPasswordPlaceholder')}
               secureTextEntry
               autoCapitalize="none"
             />
 
             <TextInput
-              label="Confirm New Password"
+              label={t('changePassword.confirmPasswordLabel')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               error={errors.confirmPassword}
-              placeholder="Confirm new password"
+              placeholder={t('changePassword.confirmPasswordPlaceholder')}
               secureTextEntry
               autoCapitalize="none"
             />

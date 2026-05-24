@@ -72,6 +72,7 @@ export interface ProfileUpdateRequest {
   email?: string;
   date_of_birth?: string;
   gender?: 'M' | 'F' | 'O' | '';
+  profile_picture?: string;  // Base64 data URI from image picker
   profile?: {
     avatar?: string;
     bio?: string;

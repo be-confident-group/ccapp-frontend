@@ -10,7 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 
 export default function FeedSettingsScreen() {
-  const { t } = useTranslation('groups');
+  const { t } = useTranslation(['groups', 'feed']);
   const { colors } = useTheme();
 
   return (
@@ -50,7 +50,7 @@ export default function FeedSettingsScreen() {
             {t('settings.comingSoon')}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: colors.textMuted }]}>
-            Feed settings and preferences will be available here soon.
+            {t('feed:settings.placeholder')}
           </ThemedText>
         </View>
       </ThemedView>

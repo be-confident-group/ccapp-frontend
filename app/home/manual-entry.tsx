@@ -30,13 +30,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { TextInput, Button } from '@/components/ui';
 import { useLocation } from '@/lib/hooks/useLocation';
+import { useTranslation } from 'react-i18next';
 
-const TRIP_TYPES: { type: TripType; label: string; icon: string }[] = [
-  { type: 'walk', label: 'Walking', icon: 'walk' },
-  { type: 'cycle', label: 'Cycling', icon: 'bicycle' },
+const TRIP_TYPES: { type: TripType; labelKey: string; icon: string }[] = [
+  { type: 'walk', labelKey: 'maps:tripTypes.walk', icon: 'walk' },
+  { type: 'cycle', labelKey: 'maps:tripTypes.cycle', icon: 'bicycle' },
 ];
 
 export default function ManualEntryScreen() {
+  const { t } = useTranslation('maps');
   const { colors } = useTheme();
   const { location, getCurrentLocation } = useLocation();
   const { unitSystem, distanceUnit, kmToDistance } = useUnits();
@@ -76,7 +78,8 @@ export default function ManualEntryScreen() {
 
   async function handleSubmit() {
     // Validation
-    let distanceNum = parseFloat(distance);
+    const distanceParsed = parseFloat(distance);
+    const distanceNum = Number.isFinite(distanceParsed) ? distanceParsed : NaN;
     const hoursNum = parseInt(hours) || 0;
     const minutesNum = parseInt(minutes) || 0;
 
@@ -86,15 +89,18 @@ export default function ManualEntryScreen() {
       distanceMeters = calculateRouteDistance(routePoints);
     } else {
       // User entered distance - need to convert from display units to meters
-      if (!distance || isNaN(distanceNum) || distanceNum <= 0) {
-        Alert.alert('Invalid Distance', 'Please enter a distance or draw a route on the map');
+      if (!distance || !Number.isFinite(distanceNum) || distanceNum <= 0) {
+        Alert.alert(
+          t('manualEntry.invalidDistance'),
+          t('manualEntry.invalidDistanceMessage')
+        );
         return;
       }
       distanceMeters = displayDistanceToMeters(distanceNum);
     }
 
     if (hoursNum === 0 && minutesNum === 0) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration');
+      Alert.alert(t('manualEntry.invalidDuration'), t('manualEntry.invalidDurationMessage'));
       return;
     }
 
@@ -113,15 +119,15 @@ export default function ManualEntryScreen() {
         routeData: routePoints.length > 1 ? routePoints : undefined,
       });
 
-      Alert.alert('Success', 'Trip added successfully', [
+      Alert.alert(t('manualEntry.success'), t('manualEntry.successMessage'), [
         {
-          text: 'OK',
+          text: t('manualEntry.ok'),
           onPress: () => router.back(),
         },
       ]);
     } catch (error) {
       console.error('[ManualEntry] Error saving trip:', error);
-      Alert.alert('Error', 'Failed to save trip. Please try again.');
+      Alert.alert(t('manualEntry.error'), t('manualEntry.errorMessage'));
     } finally {
       setLoading(false);
     }
@@ -201,7 +207,7 @@ export default function ManualEntryScreen() {
           </TouchableOpacity>
 
           <ThemedText type="subtitle" style={styles.headerTitle}>
-            Add Manual Trip
+            {t('manualEntry.title')}
           </ThemedText>
 
           <View style={styles.placeholder} />
@@ -214,7 +220,7 @@ export default function ManualEntryScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Type Selection */}
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Activity Type</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('manualEntry.activityType')}</ThemedText>
           <View style={styles.typeGrid}>
             {TRIP_TYPES.map((type) => (
               <TouchableOpacity
@@ -238,7 +244,7 @@ export default function ManualEntryScreen() {
                     selectedType === type.type && { color: colors.primary, fontWeight: '600' },
                   ]}
                 >
-                  {type.label}
+                  {t(type.labelKey)}
                 </ThemedText>
               </TouchableOpacity>
             ))}
@@ -248,7 +254,7 @@ export default function ManualEntryScreen() {
         {/* Route Drawing Option */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Route (Optional)</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('manualEntry.route')}</ThemedText>
             <TouchableOpacity
               style={[styles.toggleButton, { backgroundColor: showMap ? colors.primary : colors.card }]}
               onPress={() => setShowMap(!showMap)}
@@ -259,7 +265,7 @@ export default function ManualEntryScreen() {
                 color={showMap ? '#FFFFFF' : colors.icon}
               />
               <ThemedText style={[styles.toggleText, { color: showMap ? '#FFFFFF' : colors.text }]}>
-                {showMap ? 'Hide Map' : 'Draw Route'}
+                {showMap ? t('manualEntry.hideMap') : t('manualEntry.drawRoute')}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -330,7 +336,7 @@ export default function ManualEntryScreen() {
               </View>
 
               <ThemedText style={[styles.mapHint, { color: colors.textSecondary }]}>
-                Tap on the map to draw your route. Distance will be calculated automatically.
+                {t('manualEntry.mapHint')}
               </ThemedText>
             </>
           )}
@@ -339,10 +345,14 @@ export default function ManualEntryScreen() {
         {/* Distance */}
         <View style={styles.section}>
           <TextInput
-            label={`Distance (${distanceUnit})${routePoints.length > 1 ? ' (Auto-calculated)' : ''}`}
+            label={
+              routePoints.length > 1
+                ? t('manualEntry.distanceLabelAuto', { unit: distanceUnit })
+                : t('manualEntry.distanceLabel', { unit: distanceUnit })
+            }
             value={distance}
             onChangeText={setDistance}
-            placeholder={`Enter distance in ${distanceUnit} or draw route`}
+            placeholder={t('manualEntry.distancePlaceholder', { unit: distanceUnit })}
             keyboardType="decimal-pad"
             editable={routePoints.length < 2}
             containerStyle={styles.inputContainer}
@@ -351,7 +361,7 @@ export default function ManualEntryScreen() {
 
         {/* Duration */}
         <View style={styles.section}>
-          <ThemedText style={styles.label}>Duration</ThemedText>
+          <ThemedText style={styles.label}>{t('manualEntry.durationLabel')}</ThemedText>
           <View style={styles.durationRow}>
             <View style={styles.durationInput}>
               <TextInput
@@ -361,7 +371,7 @@ export default function ManualEntryScreen() {
                 keyboardType="number-pad"
                 containerStyle={styles.durationInputContainer}
               />
-              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>hours</ThemedText>
+              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('manualEntry.hours')}</ThemedText>
             </View>
 
             <View style={styles.durationInput}>
@@ -372,7 +382,7 @@ export default function ManualEntryScreen() {
                 keyboardType="number-pad"
                 containerStyle={styles.durationInputContainer}
               />
-              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>minutes</ThemedText>
+              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('manualEntry.minutes')}</ThemedText>
             </View>
           </View>
         </View>
@@ -380,10 +390,10 @@ export default function ManualEntryScreen() {
         {/* Notes */}
         <View style={styles.section}>
           <TextInput
-            label="Notes (Optional)"
+            label={t('manualEntry.notesLabel')}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Add any notes about your trip"
+            placeholder={t('manualEntry.notesPlaceholder')}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -396,7 +406,7 @@ export default function ManualEntryScreen() {
       {/* Submit Button */}
       <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <Button
-          title="Save Trip"
+          title={t('manualEntry.saveTrip')}
           onPress={handleSubmit}
           variant="primary"
           size="large"

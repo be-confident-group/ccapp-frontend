@@ -38,14 +38,41 @@
     "delete": "Delete",
     "share": "Share"
   },
+  "tripTypes": {
+    "walk": "Walking",
+    "cycle": "Cycling"
+  },
   "manualEntry": {
-    "title": "Log Ride Manually",
+    "title": "Add Manual Trip",
     "rideType": "Ride Type",
     "distance": "Distance (km)",
     "duration": "Duration (min)",
     "date": "Date",
     "notes": "Notes (optional)",
-    "submit": "Log Ride"
+    "submit": "Log Ride",
+    "activityType": "Activity Type",
+    "route": "Route (Optional)",
+    "hideMap": "Hide Map",
+    "drawRoute": "Draw Route",
+    "mapHint": "Tap on the map to draw your route. Distance will be calculated automatically.",
+    "distanceLabel": "Distance ({{unit}})",
+    "distanceLabelAuto": "Distance ({{unit}}) (Auto-calculated)",
+    "distancePlaceholder": "Enter distance in {{unit}} or draw route",
+    "durationLabel": "Duration",
+    "hours": "hours",
+    "minutes": "minutes",
+    "notesLabel": "Notes (Optional)",
+    "notesPlaceholder": "Add any notes about your trip",
+    "saveTrip": "Save Trip",
+    "invalidDistance": "Invalid Distance",
+    "invalidDistanceMessage": "Please enter a distance or draw a route on the map",
+    "invalidDuration": "Invalid Duration",
+    "invalidDurationMessage": "Please enter a valid duration",
+    "success": "Success",
+    "successMessage": "Trip added successfully",
+    "error": "Error",
+    "errorMessage": "Failed to save trip. Please try again.",
+    "ok": "OK"
   },
   "empty": {
     "noHistory": "No rides yet",

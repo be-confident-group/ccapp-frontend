@@ -31,6 +31,9 @@
     "backgroundTracking": "Seguimiento en Segundo Plano",
     "backgroundTrackingSubtitle": "Rastrear viajes automáticamente"
   },
+  "notifications": {
+    "subtitle": "Administra tus preferencias de notificaciones"
+  },
   "privacy": {
     "privacy": "Privacidad",
     "privacySubtitle": "Administra tu configuración de privacidad",
@@ -46,22 +49,51 @@
     "rateUsSubtitle": "Califícanos en la App Store"
   },
   "logout": "Cerrar Sesión",
-  "editProfileModal": {
+  "edit": {
     "title": "Editar Perfil",
-    "firstName": "Nombre",
-    "lastName": "Apellido",
-    "email": "Correo Electrónico",
-    "dateOfBirth": "Fecha de Nacimiento",
-    "gender": "Género",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "tapToChangePhoto": "Toca para cambiar la foto",
+    "firstNameLabel": "Nombre",
+    "firstNamePlaceholder": "Ingresa tu nombre",
+    "firstNameRequired": "El nombre es obligatorio",
+    "lastNameLabel": "Apellido",
+    "lastNamePlaceholder": "Ingresa tu apellido",
+    "emailLabel": "Correo Electrónico",
+    "emailPlaceholder": "correo@ejemplo.com",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "emailInvalid": "Formato de correo electrónico inválido",
+    "dateOfBirthLabel": "Fecha de Nacimiento",
+    "selectDateOfBirth": "Selecciona la fecha de nacimiento",
+    "done": "Listo",
+    "genderLabel": "Género",
+    "selectGender": "Seleccionar género",
+    "selectGenderTitle": "Seleccionar Género",
     "genderMale": "Masculino",
     "genderFemale": "Femenino",
     "genderOther": "Otro",
-    "genderPreferNotToSay": "Prefiero no decir",
-    "selectGender": "Seleccionar Género",
-    "profilePicture": "Foto de Perfil",
-    "changePhoto": "Cambiar Foto",
-    "chooseFromLibrary": "Elegir de la Biblioteca",
-    "takePhoto": "Tomar Foto",
-    "removePhoto": "Eliminar Foto"
+    "genderPreferNotToSay": "Prefiero no decir"
+  },
+  "changePassword": {
+    "title": "Cambiar Contraseña",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "currentPasswordLabel": "Contraseña Actual",
+    "currentPasswordPlaceholder": "Ingresa la contraseña actual",
+    "currentPasswordRequired": "La contraseña actual es obligatoria",
+    "newPasswordLabel": "Nueva Contraseña",
+    "newPasswordPlaceholder": "Ingresa la nueva contraseña",
+    "newPasswordRequired": "La nueva contraseña es obligatoria",
+    "newPasswordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "confirmPasswordLabel": "Confirmar Nueva Contraseña",
+    "confirmPasswordPlaceholder": "Confirmar la nueva contraseña",
+    "confirmPasswordRequired": "Por favor confirma tu nueva contraseña",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden",
+    "successTitle": "Éxito",
+    "successMessage": "Tu contraseña ha sido cambiada.",
+    "successOk": "OK",
+    "fallbackError": "Error al cambiar la contraseña. Por favor, inténtalo de nuevo."
   }
 }

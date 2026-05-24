@@ -22,6 +22,8 @@ import {
 } from 'react-native-heroicons/outline';
 import { authApi } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
+import { showAlert } from '@/lib/utils/alert';
+import i18n from '@/lib/i18n';
 
 type ResetStep = 'email' | 'code' | 'password';
 const CODE_LENGTH = 6;
@@ -53,11 +55,11 @@ export default function ForgotPasswordScreen() {
   const handleSendCode = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      Alert.alert('Error', 'Please enter your email address');
+      showAlert('auth:resetPassword.errorTitle', 'auth:resetPassword.emailRequired');
       return;
     }
     if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert('auth:resetPassword.errorTitle', 'auth:resetPassword.emailInvalid');
       return;
     }
 
@@ -67,8 +69,8 @@ export default function ForgotPasswordScreen() {
       setStep('code');
       setResendCooldown(60);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send reset code. Please try again.';
-      Alert.alert('Error', message);
+      const message = error instanceof Error ? error.message : i18n.t('auth:resetPassword.failedToSendCode');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), message);
     } finally {
       setLoading(false);
     }
@@ -131,10 +133,10 @@ export default function ForgotPasswordScreen() {
     try {
       await authApi.requestPasswordReset(email.trim());
       setResendCooldown(60);
-      Alert.alert('Code Sent', 'A new reset code has been sent to your email.');
+      showAlert('auth:resetPassword.codeSentTitle', 'auth:resetPassword.newCodeSentMessage');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to resend code. Please try again.';
-      Alert.alert('Error', message);
+      const message = error instanceof Error ? error.message : i18n.t('auth:resetPassword.failedToResendCode');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), message);
     }
   };
 
@@ -142,11 +144,11 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (newPassword.length < 8) {
-      Alert.alert('Error', t('auth:resetPassword.passwordTooShort'));
+      showAlert('auth:resetPassword.errorTitle', 'auth:resetPassword.passwordTooShort');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', t('auth:resetPassword.passwordMismatch'));
+      showAlert('auth:resetPassword.errorTitle', 'auth:resetPassword.passwordMismatch');
       return;
     }
 
@@ -157,11 +159,11 @@ export default function ForgotPasswordScreen() {
       Alert.alert(
         t('auth:resetPassword.successTitle'),
         t('auth:resetPassword.successMessage'),
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/welcome') }]
+        [{ text: i18n.t('auth:common.ok'), onPress: () => router.replace('/(auth)/welcome') }]
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to reset password. Please try again.';
-      Alert.alert('Error', message);
+      const message = error instanceof Error ? error.message : i18n.t('auth:resetPassword.failedToReset');
+      Alert.alert(i18n.t('auth:resetPassword.errorTitle'), message);
     } finally {
       setLoading(false);
     }
