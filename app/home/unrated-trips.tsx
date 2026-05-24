@@ -194,7 +194,7 @@ export default function UnratedTripsScreen() {
             <ThemedText
               style={[styles.emptySubtext, { color: colors.textSecondary }]}
             >
-              You've rated all your trips. New trips will appear here after
+              You&apos;ve rated all your trips. New trips will appear here after
               you complete them.
             </ThemedText>
           </View>

@@ -192,6 +192,8 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
   );
 });
 
+MapView.displayName = 'MapView';
+
 /**
  * Calculate zoom level from region delta
  * Using more conservative zoom levels to prevent over-zooming
