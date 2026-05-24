@@ -146,15 +146,15 @@ export default function TripHistoryScreen() {
       };
     }
 
-    if (!isFetched || (backendError && !backendTrips)) {
-      // Still loading, or errored with no cached data: show all local completed trips
+    if (!isFetched || (backendError && !backendTrips) || !backendTrips) {
+      // Still loading, errored with no cached data, or no backend data: show local trips
       // (filtered to the v1 visible trip types — running and drive trips are stored but hidden).
       return localTrips
         .map(localToDisplay)
         .filter((trip) => isVisibleTripType(trip.type));
     }
 
-    // Online: show backend trips + any local trips not yet synced to backend
+    // Backend data available: show backend trips + any local trips not yet synced
     const syncedClientIds = new Set(backendTrips.map(t => t.client_id));
     const unsyncedLocalTrips = localTrips.filter(
       t => t.synced !== 1 && !syncedClientIds.has(t.id)
