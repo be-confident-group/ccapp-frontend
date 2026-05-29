@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "20024221172",
+    "project_id": "radzi-app",
+    "storage_bucket": "radzi-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:20024221172:android:d858a3c9b23cb20b9a6da1",
+        "android_client_info": {
+          "package_name": "com.radzi.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "20024221172-1i8g57t966iuh02buqk2sn8pnqgr1q8g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAs3RsvPyUQ5Axp7CDuv--xsabRvDGEi2c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "20024221172-1i8g57t966iuh02buqk2sn8pnqgr1q8g.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "20024221172-fre8jnpoa47jshpn34pbqm5in1kgq1e3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.radzi.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
