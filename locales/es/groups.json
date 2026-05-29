@@ -44,6 +44,14 @@
     "private": "Privado",
     "create": "Crear Grupo"
   },
+  "feed": {
+    "loading": "Cargando feed...",
+    "filter": {
+      "all": "Todo",
+      "posts": "Publicaciones",
+      "activities": "Actividades"
+    }
+  },
   "empty": {
     "noGroups": "Aún no hay grupos",
     "noGroupsMessage": "Únete o crea un grupo para comenzar",

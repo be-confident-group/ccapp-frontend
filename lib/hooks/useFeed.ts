@@ -4,7 +4,7 @@
 
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { feedAPI } from '@/lib/api/feed';
-import type { FeedResponse } from '@/types/feed';
+import type { FeedType } from '@/lib/api/feed';
 
 /**
  * Query key factory for feed
@@ -12,16 +12,16 @@ import type { FeedResponse } from '@/types/feed';
 export const feedKeys = {
   all: ['feed'] as const,
   lists: () => [...feedKeys.all, 'list'] as const,
-  list: (page?: number) => [...feedKeys.lists(), { page }] as const,
+  list: (page?: number, type?: FeedType) => [...feedKeys.lists(), { page, type }] as const,
 };
 
 /**
  * Hook to fetch feed (single page)
  */
-export function useFeed(page: number = 1, pageSize: number = 20) {
+export function useFeed(page: number = 1, pageSize: number = 20, type?: FeedType) {
   return useQuery({
-    queryKey: feedKeys.list(page),
-    queryFn: () => feedAPI.getFeed(page, pageSize),
+    queryKey: feedKeys.list(page, type),
+    queryFn: () => feedAPI.getFeed(page, pageSize, type),
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 }
@@ -29,10 +29,10 @@ export function useFeed(page: number = 1, pageSize: number = 20) {
 /**
  * Hook to fetch feed with infinite scroll
  */
-export function useInfiniteFeed(pageSize: number = 20) {
+export function useInfiniteFeed(pageSize: number = 20, type?: FeedType) {
   return useInfiniteQuery({
-    queryKey: feedKeys.lists(),
-    queryFn: ({ pageParam = 1 }) => feedAPI.getFeed(pageParam, pageSize),
+    queryKey: [...feedKeys.lists(), { type }],
+    queryFn: ({ pageParam = 1 }) => feedAPI.getFeed(pageParam, pageSize, type),
     getNextPageParam: (lastPage, allPages) => {
       // If there's a next page URL, return the next page number
       if (lastPage.next) {

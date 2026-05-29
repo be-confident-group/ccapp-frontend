@@ -15,7 +15,13 @@
   "feed": {
     "searchPlaceholder": "Search a group, member, etc.",
     "allGroups": "All Groups",
-    "selectGroup": "Select Group"
+    "selectGroup": "Select Group",
+    "loading": "Loading feed...",
+    "filter": {
+      "all": "All",
+      "posts": "Posts",
+      "activities": "Activities"
+    }
   },
   "header": {
     "settings": "Settings",

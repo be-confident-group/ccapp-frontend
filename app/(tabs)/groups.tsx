@@ -6,13 +6,14 @@ import { router } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing, FontSizes } from '@/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import {
   FeedHeader,
   FeedPost,
 } from '@/components/feed';
 import type { ActivityPost, Post } from '@/types/feed';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
+import type { FeedType } from '@/lib/api/feed';
 import { useTogglePostLike } from '@/lib/hooks/usePosts';
 import { NewspaperIcon } from 'react-native-heroicons/outline';
 
@@ -40,9 +41,17 @@ function transformPostToActivityPost(post: Post): ActivityPost {
   };
 }
 
+const FEED_FILTERS: { key: FeedType; labelKey: string }[] = [
+  { key: 'all', labelKey: 'feed.filter.all' },
+  { key: 'posts', labelKey: 'feed.filter.posts' },
+  { key: 'activities', labelKey: 'feed.filter.activities' },
+];
+
 export default function FeedScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+
+  const [feedType, setFeedType] = useState<FeedType>('all');
 
   // Fetch data from API
   const {
@@ -53,7 +62,7 @@ export default function FeedScreen() {
     fetchNextPage,
     refetch,
     isRefetching,
-  } = useInfiniteFeed();
+  } = useInfiniteFeed(20, feedType);
 
   // Like mutation
   const { mutate: toggleLike } = useTogglePostLike();
@@ -129,7 +138,7 @@ export default function FeedScreen() {
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-            {t('feed.loading', 'Loading feed...')}
+            {t('feed.loading')}
           </ThemedText>
         </View>
       );
@@ -173,6 +182,36 @@ export default function FeedScreen() {
           onLeaderboardPress={handleLeaderboardPress}
           onMyClubsPress={handleMyClubsPress}
         />
+
+        <View style={[styles.filterBar, { backgroundColor: colors.background }]}>
+          {FEED_FILTERS.map(({ key, labelKey }) => {
+            const selected = feedType === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setFeedType(key)}
+                activeOpacity={0.7}
+                style={[
+                  styles.filterPill,
+                  selected
+                    ? { backgroundColor: colors.primary }
+                    : { backgroundColor: colors.surface },
+                ]}
+              >
+                <ThemedText
+                  style={[
+                    styles.filterPillText,
+                    selected
+                      ? { color: '#FFFFFF' }
+                      : { color: colors.textSecondary },
+                  ]}
+                >
+                  {t(labelKey)}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         <FlatList
           data={posts}
@@ -226,6 +265,21 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  filterPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  filterPillText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '500',
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
