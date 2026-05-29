@@ -47,8 +47,8 @@ export function registerTripSyncCallback(cb: SyncCallback): () => void {
 // ---------------------------------------------------------------------------
 // Local notifications on trip completion
 // ---------------------------------------------------------------------------
-async function scheduleTripCompletionNotifications(
-  tripId: number,
+export async function scheduleTripCompletionNotifications(
+  tripId: string | number,
   distanceKm: number,
   tripType: string,
 ): Promise<void> {

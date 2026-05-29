@@ -1,5 +1,6 @@
 import { database } from '../database';
 import { calculateDistance, type Coordinate } from '../utils/geoCalculations';
+import { scheduleTripCompletionNotifications } from './TripManager';
 
 /**
  * Cancel a trip that came out of finalization with insufficient distance.
@@ -172,6 +173,15 @@ export class TripFinalizationPipeline {
           notes: `Multi-modal trip split into segments`,
           updated_at: Date.now(),
         });
+
+        // Notify the user — use the parent trip's total distance
+        try {
+          await scheduleTripCompletionNotifications(
+            tripId,
+            (freshTrip.distance ?? 0) / 1000,
+            seg.dominantType,
+          );
+        } catch { /* non-fatal */ }
         
       } else {
         // Single-mode trip
@@ -187,6 +197,13 @@ export class TripFinalizationPipeline {
         const val = await TripValidationService.validateAndFinalizeTrip(tripId, freshTrip.end_time || Date.now());
         if (val.isValid) {
           await syncService.syncSingleTrip(tripId);
+          try {
+            await scheduleTripCompletionNotifications(
+              tripId,
+              (freshTrip.distance ?? fallbackDistance) / 1000,
+              seg.dominantType,
+            );
+          } catch { /* non-fatal */ }
         }
 
         // Happy-path safety net: GPS may have been starved by the accuracy gate even though

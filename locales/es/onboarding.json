@@ -55,6 +55,31 @@
     "goHome": "Ir a la aplicación"
   },
   "banner": {
-    "permissionMissing": "Faltan algunos permisos. Toca para corregirlo en Ajustes."
+    "permissionMissing": "Faltan algunos permisos. Toca para revisar."
+  },
+  "permissionsScreen": {
+    "title": "Permisos de la app",
+    "subtitle": "Radzi necesita estos permisos para registrar tus actividades automáticamente.",
+    "granted": "Concedido",
+    "denied": "Denegado",
+    "notDetermined": "No definido",
+    "request": "Solicitar",
+    "openSettings": "Abrir ajustes",
+    "locationFg": {
+      "name": "Ubicación",
+      "description": "Necesario para trazar tus rutas y calcular la distancia."
+    },
+    "locationBg": {
+      "name": "Ubicación en segundo plano",
+      "description": "Necesario para registrar actividad automáticamente en segundo plano. Selecciona \"Siempre\" en Ajustes."
+    },
+    "motion": {
+      "name": "Movimiento y actividad",
+      "description": "Usado para detectar automáticamente cuando empiezas a caminar o pedalear."
+    },
+    "notifications": {
+      "name": "Notificaciones",
+      "description": "Recibe resúmenes de trayectos, alertas de logros y recordatorios de metas."
+    }
   }
 }

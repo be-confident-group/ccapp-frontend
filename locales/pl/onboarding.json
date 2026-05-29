@@ -55,6 +55,31 @@
     "goHome": "Przejdź do aplikacji"
   },
   "banner": {
-    "permissionMissing": "Brakuje niektórych uprawnień. Dotknij, aby naprawić w Ustawieniach."
+    "permissionMissing": "Brakuje niektórych uprawnień. Dotknij, aby sprawdzić."
+  },
+  "permissionsScreen": {
+    "title": "Uprawnienia aplikacji",
+    "subtitle": "Radzi potrzebuje tych uprawnień, aby automatycznie śledzić Twoje aktywności.",
+    "granted": "Udzielono",
+    "denied": "Odmówiono",
+    "notDetermined": "Nie ustawiono",
+    "request": "Poproś",
+    "openSettings": "Otwórz ustawienia",
+    "locationFg": {
+      "name": "Lokalizacja",
+      "description": "Wymagane do mapowania tras i obliczania dystansu."
+    },
+    "locationBg": {
+      "name": "Lokalizacja w tle",
+      "description": "Wymagane do automatycznego śledzenia aktywności w tle. Wybierz \"Zawsze\" w Ustawieniach."
+    },
+    "motion": {
+      "name": "Ruch i aktywność",
+      "description": "Używane do automatycznego wykrywania, kiedy zaczynasz spacer lub jazdę na rowerze."
+    },
+    "notifications": {
+      "name": "Powiadomienia",
+      "description": "Otrzymuj podsumowania tras, powiadomienia o osiągnięciach i przypomnienia o celach."
+    }
   }
 }

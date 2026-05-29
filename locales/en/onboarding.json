@@ -55,6 +55,31 @@
     "goHome": "Take me to the app"
   },
   "banner": {
-    "permissionMissing": "Some permissions are missing. Tap to fix in Settings."
+    "permissionMissing": "Some permissions are missing. Tap to review."
+  },
+  "permissionsScreen": {
+    "title": "App Permissions",
+    "subtitle": "Radzi needs these permissions to track your activities automatically.",
+    "granted": "Granted",
+    "denied": "Denied",
+    "notDetermined": "Not set",
+    "request": "Request",
+    "openSettings": "Open Settings",
+    "locationFg": {
+      "name": "Location",
+      "description": "Required to map your routes and calculate distance."
+    },
+    "locationBg": {
+      "name": "Background Location",
+      "description": "Required to track activity automatically while the app is in the background. Select \"Always\" in Settings."
+    },
+    "motion": {
+      "name": "Motion & Activity",
+      "description": "Used to automatically detect when you start walking or cycling."
+    },
+    "notifications": {
+      "name": "Notifications",
+      "description": "Receive trip summaries, achievement alerts, and goal reminders."
+    }
   }
 }

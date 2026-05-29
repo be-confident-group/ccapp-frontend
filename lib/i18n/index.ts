@@ -10,7 +10,7 @@ import ur from '@/locales/ur';
 import pl from '@/locales/pl';
 import bn from '@/locales/bn';
 
-const LANGUAGE_STORAGE_KEY = '@beactive_language';
+const LANGUAGE_STORAGE_KEY = '@radzi_language';
 
 // Language detection plugin for AsyncStorage
 const languageDetector = {

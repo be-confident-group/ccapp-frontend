@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ExclamationCircleIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { getSkippedPermissions } from '@/lib/onboarding/state';
-import { openAppSettings } from '@/lib/permissions/wizard';
 import { Spacing, FontSizes, FontWeights } from '@/constants/theme';
 
 const WHITE = '#FFFFFF'; // contrast against error background — does not vary with theme
@@ -16,6 +16,7 @@ export function TrackingPermissionBanner() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
   const { currentUserId } = useAuth();
+  const router = useRouter();
 
   const [hasPermissionWarning, setHasPermissionWarning] = useState(false);
   const [hasSkippedPermissions, setHasSkippedPermissions] = useState(false);
@@ -49,7 +50,7 @@ export function TrackingPermissionBanner() {
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.error }]}
-      onPress={openAppSettings}
+      onPress={() => router.push('/settings/permissions')}
       activeOpacity={0.85}
     >
       <ExclamationCircleIcon size={20} color={WHITE} />

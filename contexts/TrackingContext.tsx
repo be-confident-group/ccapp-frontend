@@ -4,8 +4,8 @@
  * Global context for managing background tracking state across the app
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { Alert, AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   initializeAppStateListener,
@@ -15,6 +15,7 @@ import {
   getTrackingPreference,
 } from '@/lib/services/LocationTrackingService';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
+import { requestLocationBackground } from '@/lib/permissions/wizard';
 import { database } from '@/lib/database';
 import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
 import { showAlert, showConfirmAlert } from '@/lib/utils/alert';
@@ -38,6 +39,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveActivity, setLiveActivity] = useState<LiveActivityState | null>(null);
+  const [isAwaitingPermissionGrant, setIsAwaitingPermissionGrant] = useState(false);
+  const prevAppState = useRef(AppState.currentState);
 
   // Initialize AppState listener and check initial status
   useEffect(() => {
@@ -66,6 +69,36 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       streamingSegmenter.setListener(null);
     };
   }, []);
+
+  // When the user has been sent to Settings to grant background location,
+  // auto-resume tracking when they return to the app and permission is granted.
+  useEffect(() => {
+    if (!isAwaitingPermissionGrant) return;
+
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (prevAppState.current !== 'active' && nextState === 'active') {
+        prevAppState.current = nextState;
+        setIsAwaitingPermissionGrant(false);
+        const perms = await TrackingCoordinator.checkPermissions();
+        if (perms.location === 'granted') {
+          setHasPermissions(true);
+          setIsLoading(true);
+          try {
+            await startTracking();
+          } catch (err) {
+            console.error('[TrackingContext] Failed to start tracking after permission grant:', err);
+          } finally {
+            setIsLoading(false);
+          }
+        }
+        // If still denied: user can try again; no error shown
+      } else {
+        prevAppState.current = nextState;
+      }
+    });
+
+    return () => sub.remove();
+  }, [isAwaitingPermissionGrant]);
 
   async function checkStatus() {
     setError(null);
@@ -124,19 +157,28 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       } else {
         // Check permissions first
         if (!hasPermissions) {
+          const alertKey = Platform.OS === 'android'
+            ? 'alerts:backgroundPermission.androidMessage'
+            : 'alerts:backgroundPermission.iosMessage';
+          const buttonKey = Platform.OS === 'android'
+            ? 'alerts:backgroundPermission.openSettings'
+            : 'alerts:backgroundPermission.grantPermission';
           showConfirmAlert(
-            'alerts:permission.requiredTitle',
-            'alerts:permission.requiredMessage',
+            'alerts:backgroundPermission.title',
+            alertKey,
             async () => {
-              const perms = await TrackingCoordinator.checkPermissions();
-              if (perms.location === 'granted') {
+              const result = await requestLocationBackground();
+              if (result.status === 'granted') {
                 setHasPermissions(true);
                 await startTracking();
+              } else if (result.status === 'opened-settings') {
+                // Android: user is now in Settings — watch AppState for their return
+                setIsAwaitingPermissionGrant(true);
               } else {
                 showAlert('alerts:permission.deniedTitle', 'alerts:permission.deniedMessage');
               }
             },
-            'alerts:permission.grantButton'
+            buttonKey,
           );
           setIsLoading(false);
           return;

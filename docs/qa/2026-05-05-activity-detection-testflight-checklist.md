@@ -123,7 +123,7 @@
 - [ ] Tap "Grant permissions" → iOS prompts for Location (Always) and Motion & Fitness
 
 ### 5b. Location downgrade detection
-- [ ] After granting Always, go to Settings → Privacy → Location Services → BeActive → change to "While Using"
+- [ ] After granting Always, go to Settings → Privacy → Location Services → Radzi → change to "While Using"
 - [ ] Return to the app
 - [ ] A banner on the home screen prompts the user to restore "Always" access
 

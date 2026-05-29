@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 
-const UNITS_STORAGE_KEY = '@beactive_units';
+const UNITS_STORAGE_KEY = '@radzi_units';
 
 export type UnitSystem = 'metric' | 'imperial';
 

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   RadziTrackerNative,
@@ -178,23 +178,27 @@ class CoordinatorImpl {
 
     this.subs.push(RadziTrackerEvents.onTripStarted(async e => {
       this.activeTripId = e.tripId;
-      // Show persistent notification so user knows a trip is being recorded.
-      // Native GRDB already created the trip row — no JS DB write needed.
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status === 'granted') {
-          this.activeTripNotificationId = `trip-recording-${e.tripId}`;
-          await Notifications.scheduleNotificationAsync({
-            identifier: this.activeTripNotificationId,
-            content: {
-              title: 'Trip recording in progress',
-              body: 'Your activity is being tracked',
-            },
-            trigger: null,
-          });
+      // On iOS only: show a persistent notification so the user knows a trip is
+      // being recorded. Android uses the native foreground-service notification
+      // (TrackingForegroundService) which the OS already shows — scheduling an
+      // additional JS notification would create a duplicate.
+      if (Platform.OS !== 'android') {
+        try {
+          const { status } = await Notifications.getPermissionsAsync();
+          if (status === 'granted') {
+            this.activeTripNotificationId = 'trip-recording';
+            await Notifications.scheduleNotificationAsync({
+              identifier: this.activeTripNotificationId,
+              content: {
+                title: 'Trip recording in progress',
+                body: 'Your activity is being tracked',
+              },
+              trigger: null,
+            });
+          }
+        } catch {
+          // Never let notification errors interrupt tracking
         }
-      } catch {
-        // Never let notification errors interrupt tracking
       }
       this.listeners.tripStarted.forEach(cb => cb(e));
     }));
@@ -209,12 +213,17 @@ class CoordinatorImpl {
 
     this.subs.push(RadziTrackerEvents.onTripEnded(async e => {
       this.activeTripId = null;
-      // Dismiss trip-recording notification
+      // Dismiss trip-recording notification.
+      // On iOS: dismiss the fixed-id notification we scheduled above.
+      // On Android: no JS notification was created, but sweep all to clear any
+      // leftovers from previous app versions or unexpected edge cases.
       try {
-        if (this.activeTripNotificationId) {
+        if (Platform.OS === 'android') {
+          await Notifications.dismissAllNotificationsAsync();
+        } else if (this.activeTripNotificationId) {
           await Notifications.dismissNotificationAsync(this.activeTripNotificationId);
-          this.activeTripNotificationId = null;
         }
+        this.activeTripNotificationId = null;
       } catch {
         // Non-fatal
       }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupportedLanguage } from '@/lib/i18n/types';
 
-const LANGUAGE_STORAGE_KEY = '@beactive_language';
+const LANGUAGE_STORAGE_KEY = '@radzi_language';
 
 /**
  * Custom hook for managing language selection and switching

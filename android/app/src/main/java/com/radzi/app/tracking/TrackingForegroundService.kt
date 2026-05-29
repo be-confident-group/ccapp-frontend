@@ -44,7 +44,7 @@ class TrackingForegroundService : LifecycleService() {
     private fun buildNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Tracking active")
-            .setContentText("BeActive is recording your activity")
+            .setContentText("Radzi is recording your activity")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .setSilent(true)
