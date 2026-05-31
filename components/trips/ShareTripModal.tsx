@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -9,15 +9,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useMyClubs } from '@/lib/hooks/useClubs';
 import { tripAPI, type TripShareResult } from '@/lib/api/trips';
-import { XMarkIcon, CheckIcon } from 'react-native-heroicons/outline';
+import { XMarkIcon, CheckIcon, CheckCircleIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
 
 interface ShareTripModalProps {
@@ -39,17 +39,28 @@ export function ShareTripModal({
 }: ShareTripModalProps) {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [selectedClubIds, setSelectedClubIds] = useState<Set<number>>(new Set());
   const [caption, setCaption] = useState('');
+  const [shareSuccessMessage, setShareSuccessMessage] = useState<string | null>(null);
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Re-seed selection and caption whenever the modal opens
+  // Re-seed selection and caption whenever the modal opens; clear success state
   React.useEffect(() => {
     if (visible) {
       setSelectedClubIds(initialClubId ? new Set([initialClubId]) : new Set());
       setCaption('');
+      setShareSuccessMessage(null);
     }
   }, [visible, initialClubId]);
+
+  // Clear auto-close timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    };
+  }, []);
   const [isSharing, setIsSharing] = useState(false);
 
   const { data: myClubs, isLoading } = useMyClubs();
@@ -90,14 +101,18 @@ export function ShareTripModal({
       if (alreadyShared > 0) parts.push(t('trips.shareResult.alreadyShared', { count: alreadyShared }));
       if (errors > 0) parts.push(t('trips.shareResult.failed', { count: errors }));
 
-      if (parts.length > 0) {
-        Alert.alert(t('trips.shareResult.title'), parts.join(', '));
-      }
-
       setSelectedClubIds(new Set());
       setCaption('');
       onSuccess?.(results);
-      onClose();
+
+      if (parts.length > 0) {
+        setShareSuccessMessage(parts.join(' · '));
+        autoCloseTimer.current = setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        onClose();
+      }
     } catch (error) {
       console.error('Failed to share trip:', error);
       alert(error instanceof Error ? error.message : t('trips.shareResult.shareFailed'));
@@ -159,7 +174,7 @@ export function ShareTripModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + Spacing.md }]}>
           <ThemedText style={styles.headerTitle}>
             {t('trips.shareToGroup')}
           </ThemedText>
@@ -172,6 +187,16 @@ export function ShareTripModal({
           </TouchableOpacity>
         </View>
 
+        {shareSuccessMessage ? (
+          <View style={styles.successContainer}>
+            <CheckCircleIcon size={56} color={colors.primary} />
+            <ThemedText style={styles.successTitle}>{t('trips.shareResult.title')}</ThemedText>
+            <ThemedText style={[styles.successMessage, { color: colors.textSecondary }]}>
+              {shareSuccessMessage}
+            </ThemedText>
+          </View>
+        ) : (
+          <>
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.scrollContent}
@@ -246,6 +271,8 @@ export function ShareTripModal({
             )}
           </TouchableOpacity>
         </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -260,8 +287,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
+  },
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: 16,
+    textAlign: 'center',
   },
   headerTitle: {
     fontSize: 18,

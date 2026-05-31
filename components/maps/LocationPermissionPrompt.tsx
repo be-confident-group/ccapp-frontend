@@ -1,58 +1,59 @@
-/**
- * Location permission prompt overlay
- */
-
 import React from 'react';
-import { StyleSheet, View, Text, Pressable, Linking } from 'react-native';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { MapPinIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
+import { openAppSettings } from '@/lib/permissions/wizard';
 import Button from '@/components/ui/Button';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 
 interface LocationPermissionPromptProps {
   onRequestPermission: () => void;
   isLoading?: boolean;
 }
 
-/**
- * Overlay shown when location permission is not granted
- */
 export function LocationPermissionPrompt({
   onRequestPermission,
   isLoading = false,
 }: LocationPermissionPromptProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation('onboarding');
 
-  const openSettings = () => {
-    Linking.openSettings();
-  };
+  const openSettings = openAppSettings;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+        {/* Icon box */}
+        <View
+          style={[
+            styles.iconBox,
+            { backgroundColor: colors.primary + '1F' },
+          ]}
+        >
           <MapPinIcon size={48} color={colors.primary} />
         </View>
 
         <Text style={[styles.title, { color: colors.text }]}>
-          Location Access Needed
+          {t('locationPrompt.title')}
         </Text>
 
         <Text style={[styles.description, { color: colors.textSecondary }]}>
-          Radzi needs access to your location to show your position on the map and track your rides.
+          {t('locationPrompt.description')}
         </Text>
 
         <View style={styles.buttons}>
           <Button
-            title="Enable Location"
+            title={t('locationPrompt.enableButton')}
             variant="primary"
             onPress={onRequestPermission}
             loading={isLoading}
-            style={styles.button}
+            fullWidth
           />
 
           <Pressable onPress={openSettings} style={styles.settingsLink}>
             <Text style={[styles.settingsLinkText, { color: colors.primary }]}>
-              Open Settings
+              {t('locationPrompt.openSettings')}
             </Text>
           </Pressable>
         </View>
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: Spacing.lg,
     zIndex: 100,
   },
   content: {
@@ -74,41 +75,38 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignItems: 'center',
   },
-  iconContainer: {
+  iconBox: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   description: {
-    fontSize: 16,
+    fontSize: FontSizes.md,
     lineHeight: 24,
     textAlign: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 16,
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.md,
   },
   buttons: {
     width: '100%',
-    gap: 16,
+    gap: Spacing.md,
     alignItems: 'center',
   },
-  button: {
-    width: '100%',
-  },
   settingsLink: {
-    padding: 12,
+    padding: Spacing.sm,
     alignItems: 'center',
   },
   settingsLinkText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.semibold,
   },
 });

@@ -23,27 +23,31 @@
     "continue": "Continue"
   },
   "permissions": {
+    "required": "Required",
+    "optional": "Optional",
+    "notNow": "Not now",
     "fgLocation": {
-      "title": "Location Access",
-      "body": "Radzi needs your location to map your routes and calculate distance.",
+      "title": "Know where you are",
+      "body": "Used to show your position on the map while you ride or walk. Without it, the map won't follow you.",
       "allow": "Allow Location",
-      "skip": "Skip for now"
+      "skip": "Not now"
     },
     "bgLocation": {
-      "title": "Background Location",
-      "body": "Allow Radzi to track your route even when the app is in the background.",
-      "allow": "Allow Background Location",
-      "openSettings": "Open Settings"
+      "title": "Auto-track your trips",
+      "body": "Lets Radzi record your route even when the screen is off. Without this, you'll need to start tracking manually every time.",
+      "allow": "Allow",
+      "openSettings": "Open Settings",
+      "notNow": "Not now"
     },
     "motion": {
-      "title": "Motion & Activity",
-      "body": "Radzi uses motion data to automatically detect when you start walking or cycling.",
+      "title": "Detect when you move",
+      "body": "Uses your phone's motion sensors to start recording when you begin walking or cycling. Without it, automatic trip detection won't work.",
       "allow": "Allow Motion",
-      "skip": "Skip for now"
+      "skip": "Not now"
     },
     "notifications": {
-      "title": "Notifications",
-      "body": "Get ride summaries, achievement alerts, and weekly goal reminders.",
+      "title": "Stay in the loop",
+      "body": "Radzi notifies you when a trip is being recorded in the background. You can always check trip status in the app.",
       "allow": "Allow Notifications",
       "skip": "Skip for now"
     }
@@ -67,19 +71,45 @@
     "openSettings": "Open Settings",
     "locationFg": {
       "name": "Location",
-      "description": "Required to map your routes and calculate distance."
+      "description": "Required to show your position on the map and track your routes."
     },
     "locationBg": {
       "name": "Background Location",
-      "description": "Required to track activity automatically while the app is in the background. Select \"Always\" in Settings."
+      "description": "Required to auto-record trips when the screen is off. Select \"Always\" in Settings."
     },
     "motion": {
       "name": "Motion & Activity",
-      "description": "Used to automatically detect when you start walking or cycling."
+      "description": "Required to automatically detect when you start walking or cycling."
     },
     "notifications": {
       "name": "Notifications",
-      "description": "Receive trip summaries, achievement alerts, and goal reminders."
+      "description": "Notifies you when a trip is being recorded in the background."
     }
+  },
+  "permissionToast": {
+    "allow": "Allow",
+    "openSettings": "Open Settings",
+    "locationForeground": {
+      "title": "Location access needed",
+      "subtitle": "Required to track trips and use the map"
+    },
+    "locationBackground": {
+      "title": "Background location needed",
+      "subtitle": "Required for automatic trip tracking"
+    },
+    "motion": {
+      "title": "Activity detection needed",
+      "subtitle": "Required to auto-detect trips"
+    },
+    "notifications": {
+      "title": "Notifications turned off",
+      "subtitle": "Useful for background tracking alerts"
+    }
+  },
+  "locationPrompt": {
+    "title": "Location Access Needed",
+    "description": "Radzi needs access to your location to show your position on the map and track your rides.",
+    "enableButton": "Enable Location",
+    "openSettings": "Open Settings"
   }
 }

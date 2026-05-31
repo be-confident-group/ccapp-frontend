@@ -23,6 +23,9 @@
     "continue": "Kontynuuj"
   },
   "permissions": {
+    "required": "Wymagane",
+    "optional": "Opcjonalne",
+    "notNow": "Nie teraz",
     "fgLocation": {
       "title": "Dostęp do lokalizacji",
       "body": "Radzi potrzebuje Twojej lokalizacji, aby mapować trasy i obliczać dystans.",
@@ -56,6 +59,32 @@
   },
   "banner": {
     "permissionMissing": "Brakuje niektórych uprawnień. Dotknij, aby sprawdzić."
+  },
+  "permissionToast": {
+    "allow": "Zezwól",
+    "openSettings": "Otwórz ustawienia",
+    "locationForeground": {
+      "title": "Wymagany dostęp do lokalizacji",
+      "subtitle": "Wymagane do śledzenia tras i korzystania z mapy"
+    },
+    "locationBackground": {
+      "title": "Wymagana lokalizacja w tle",
+      "subtitle": "Wymagane do automatycznego śledzenia tras"
+    },
+    "motion": {
+      "title": "Wymagane wykrywanie aktywności",
+      "subtitle": "Wymagane do automatycznego wykrywania tras"
+    },
+    "notifications": {
+      "title": "Powiadomienia wyłączone",
+      "subtitle": "Przydatne do alertów śledzenia w tle"
+    }
+  },
+  "locationPrompt": {
+    "title": "Wymagany dostęp do lokalizacji",
+    "description": "Radzi potrzebuje dostępu do Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i śledzić Twoje przejażdżki.",
+    "enableButton": "Włącz lokalizację",
+    "openSettings": "Otwórz ustawienia"
   },
   "permissionsScreen": {
     "title": "Uprawnienia aplikacji",

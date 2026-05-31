@@ -11,6 +11,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { XMarkIcon, ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -46,6 +47,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('profile');
+  const insets = useSafeAreaInsets();
 
   const GENDER_OPTIONS: { value: GenderValue; label: string }[] = [
     { value: 'M', label: t('edit.genderMale') },
@@ -154,7 +156,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         style={[styles.container, { backgroundColor: colors.background }]}
       >
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={onClose} style={styles.cancelButton} disabled={saving}>
             <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>{t('edit.cancel')}</Text>
           </TouchableOpacity>
@@ -362,7 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   cancelButton: {

@@ -1,17 +1,30 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, AppStateStatus, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
+  BellIcon,
+  BoltIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
+  MapIcon,
+  MapPinIcon,
   QuestionMarkCircleIcon,
-} from 'react-native-heroicons/solid';
-import { ThemedView } from '@/components/themed-view';
+} from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import Header from '@/components/layout/Header';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
-import { FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   checkAll,
   openAppSettings,
@@ -30,6 +43,22 @@ const DEFAULT_STATUSES: PermissionStatuses = {
   locationBackground: 'undetermined',
   motion: 'undetermined',
   notifications: 'undetermined',
+};
+
+type IconComponent = React.ComponentType<{ size: number; color: string }>;
+
+const PERMISSION_ICONS: Record<PermissionKey, IconComponent> = {
+  locationForeground: MapPinIcon,
+  locationBackground: MapIcon,
+  motion: BoltIcon,
+  notifications: BellIcon,
+};
+
+const PERMISSION_REQUIRED: Record<PermissionKey, boolean> = {
+  locationForeground: true,
+  locationBackground: true,
+  motion: true,
+  notifications: false,
 };
 
 export default function PermissionsScreen() {
@@ -52,14 +81,12 @@ export default function PermissionsScreen() {
 
   useEffect(() => {
     refresh();
-
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (prevAppState.current !== 'active' && nextState === 'active') {
         refresh();
       }
       prevAppState.current = nextState;
     });
-
     return () => sub.remove();
   }, [refresh]);
 
@@ -67,19 +94,10 @@ export default function PermissionsScreen() {
     setRequesting(key);
     try {
       switch (key) {
-        case 'locationForeground':
-          await requestLocationForeground();
-          break;
-        case 'locationBackground':
-          await requestLocationBackground();
-          // Android opens Settings — AppState listener will re-check on return
-          break;
-        case 'motion':
-          await requestMotion();
-          break;
-        case 'notifications':
-          await requestNotifications();
-          break;
+        case 'locationForeground': await requestLocationForeground(); break;
+        case 'locationBackground': await requestLocationBackground(); break;
+        case 'motion': await requestMotion(); break;
+        case 'notifications': await requestNotifications(); break;
       }
       await refresh();
     } finally {
@@ -87,21 +105,17 @@ export default function PermissionsScreen() {
     }
   }
 
-  const rows: { key: PermissionKey; needsSettings: boolean }[] = [
-    { key: 'locationForeground', needsSettings: false },
-    { key: 'locationBackground', needsSettings: true },
-    { key: 'motion', needsSettings: false },
-    { key: 'notifications', needsSettings: false },
+  const rows: { key: PermissionKey; translationKey: string }[] = [
+    { key: 'locationForeground', translationKey: 'locationFg' },
+    { key: 'locationBackground', translationKey: 'locationBg' },
+    { key: 'motion', translationKey: 'motion' },
+    { key: 'notifications', translationKey: 'notifications' },
   ];
 
-  function StatusIcon({ status }: { status: PermissionResult['status'] }) {
-    if (status === 'granted') {
-      return <CheckCircleIcon size={22} color={colors.success ?? '#22c55e'} />;
-    }
-    if (status === 'denied') {
-      return <ExclamationCircleIcon size={22} color={colors.error} />;
-    }
-    return <QuestionMarkCircleIcon size={22} color={colors.textMuted} />;
+  function statusColor(status: PermissionResult['status']): string {
+    if (status === 'granted') return colors.success;
+    if (status === 'denied') return colors.error;
+    return colors.textMuted;
   }
 
   function statusLabel(status: PermissionResult['status']): string {
@@ -110,8 +124,23 @@ export default function PermissionsScreen() {
     return t('permissionsScreen.notDetermined');
   }
 
+  function StatusIcon({ status }: { status: PermissionResult['status'] }) {
+    const size = 20;
+    if (status === 'granted') return <CheckCircleIcon size={size} color={colors.success} />;
+    if (status === 'denied') return <ExclamationCircleIcon size={size} color={colors.error} />;
+    return <QuestionMarkCircleIcon size={size} color={colors.textMuted} />;
+  }
+
+  function needsSettings(key: PermissionKey, status: PermissionResult['status']): boolean {
+    if (key === 'locationBackground' && Platform.OS === 'android') return true;
+    return status === 'denied';
+  }
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'bottom']}
+    >
       <Header title={t('permissionsScreen.title')} showBack />
       <ThemedView style={styles.container}>
         {loading ? (
@@ -124,63 +153,90 @@ export default function PermissionsScreen() {
               {t('permissionsScreen.subtitle')}
             </ThemedText>
 
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {rows.map((row, index) => {
-                const status = statuses[row.key];
-                const isGranted = status === 'granted';
-                const isRequesting = requesting === row.key;
-                const translationKey = row.key === 'locationForeground'
-                  ? 'locationFg'
-                  : row.key === 'locationBackground'
-                  ? 'locationBg'
-                  : row.key === 'motion'
-                  ? 'motion'
-                  : 'notifications';
+            {rows.map(({ key, translationKey }) => {
+              const status = statuses[key];
+              const isGranted = status === 'granted';
+              const isRequesting = requesting === key;
+              const required = PERMISSION_REQUIRED[key];
+              const PermIcon = PERMISSION_ICONS[key];
+              const opensSettings = needsSettings(key, status);
 
-                return (
-                  <View key={row.key}>
-                    {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                    <View style={styles.row}>
-                      <StatusIcon status={status} />
-                      <View style={styles.rowText}>
+              return (
+                <Card key={key} variant="outlined" style={styles.card}>
+                  <View style={styles.row}>
+                    {/* Permission icon box */}
+                    <View
+                      style={[
+                        styles.iconBox,
+                        { backgroundColor: colors.primary + '1F' },
+                      ]}
+                    >
+                      <PermIcon size={20} color={colors.primary} />
+                    </View>
+
+                    {/* Text */}
+                    <View style={styles.rowText}>
+                      <View style={styles.nameRow}>
                         <ThemedText style={styles.rowLabel}>
                           {t(`permissionsScreen.${translationKey}.name`)}
                         </ThemedText>
-                        <ThemedText style={[styles.rowDescription, { color: colors.textMuted }]}>
-                          {t(`permissionsScreen.${translationKey}.description`)}
-                        </ThemedText>
-                        <ThemedText style={[styles.statusText, {
-                          color: isGranted ? (colors.success ?? '#22c55e') : status === 'denied' ? colors.error : colors.textMuted,
-                        }]}>
+                        {/* Required / Optional chip */}
+                        <View
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: required
+                                ? colors.primary + '20'
+                                : colors.textMuted + '20',
+                            },
+                          ]}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.chipText,
+                              { color: required ? colors.primary : colors.textMuted },
+                            ]}
+                          >
+                            {required
+                              ? t('permissions.required')
+                              : t('permissions.optional')}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <ThemedText style={[styles.rowDescription, { color: colors.textMuted }]}>
+                        {t(`permissionsScreen.${translationKey}.description`)}
+                      </ThemedText>
+                      <View style={styles.statusRow}>
+                        <StatusIcon status={status} />
+                        <ThemedText
+                          style={[styles.statusText, { color: statusColor(status) }]}
+                        >
                           {statusLabel(status)}
                         </ThemedText>
                       </View>
-                      {!isGranted && (
-                        <TouchableOpacity
-                          style={[styles.button, { backgroundColor: colors.primary }]}
-                          onPress={() => row.needsSettings || status === 'denied'
-                            ? openAppSettings()
-                            : handleRequest(row.key)
-                          }
-                          disabled={isRequesting}
-                        >
-                          {isRequesting ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                          ) : (
-                            <ThemedText style={styles.buttonText}>
-                              {row.needsSettings || status === 'denied'
-                                ? t('permissionsScreen.openSettings')
-                                : t('permissionsScreen.request')
-                              }
-                            </ThemedText>
-                          )}
-                        </TouchableOpacity>
-                      )}
                     </View>
+
+                    {/* Action button — only when not yet granted */}
+                    {!isGranted && (
+                      <Button
+                        title={
+                          opensSettings
+                            ? t('permissionsScreen.openSettings')
+                            : t('permissionsScreen.request')
+                        }
+                        onPress={() =>
+                          opensSettings ? openAppSettings() : handleRequest(key)
+                        }
+                        variant="outline"
+                        size="small"
+                        loading={isRequesting}
+                        style={styles.actionButton}
+                      />
+                    )}
                   </View>
-                );
-              })}
-            </View>
+                </Card>
+              );
+            })}
           </View>
         )}
       </ThemedView>
@@ -192,37 +248,73 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: Spacing.lg, gap: Spacing.md },
-  subtitle: { fontSize: FontSizes.sm, lineHeight: 20 },
+  content: {
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  subtitle: {
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+    marginBottom: Spacing.xs,
+  },
   card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
+    marginVertical: 0,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
     gap: Spacing.sm,
   },
-  rowText: { flex: 1, gap: 2 },
-  rowLabel: { fontSize: FontSizes.md, fontWeight: FontWeights.semibold },
-  rowDescription: { fontSize: FontSizes.xs, lineHeight: 18 },
-  statusText: { fontSize: FontSizes.xs, fontWeight: FontWeights.medium, marginTop: 2 },
-  button: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 80,
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
+    flexShrink: 0,
+    marginTop: 2,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: FontSizes.xs,
+  rowText: {
+    flex: 1,
+    gap: 3,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexWrap: 'wrap',
+  },
+  rowLabel: {
+    fontSize: FontSizes.md,
     fontWeight: FontWeights.semibold,
   },
-  divider: { height: 1, marginHorizontal: Spacing.md },
+  chip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  chipText: {
+    fontSize: 10,
+    fontWeight: FontWeights.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  rowDescription: {
+    fontSize: FontSizes.xs,
+    lineHeight: 17,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  statusText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.medium,
+  },
+  actionButton: {
+    alignSelf: 'center',
+    flexShrink: 0,
+  },
 });

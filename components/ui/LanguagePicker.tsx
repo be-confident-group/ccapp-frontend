@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/lib/hooks/useLanguage';
@@ -21,6 +22,7 @@ interface LanguagePickerProps {
 export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
   const { colors } = useTheme();
   const { currentLanguage, changeLanguage, isChanging } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
 
   const handleClose = () => {
@@ -76,7 +78,7 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
     >
       <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 20 }]}>
           <ThemedText style={styles.headerTitle}>Select Language</ThemedText>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <XMarkIcon size={24} color={colors.text} />
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
   },
   headerTitle: {

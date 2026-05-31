@@ -39,6 +39,11 @@ export async function requestMotion(): Promise<PermissionResult> {
         buttonNegative: 'Skip',
       },
     );
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      // User selected "Don't ask again" — must open app settings to re-enable
+      await Linking.openSettings();
+      return { status: 'opened-settings' };
+    }
     return {
       status: result === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied',
     };

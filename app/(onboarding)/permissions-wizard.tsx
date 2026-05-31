@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import * as Location from 'expo-location';
 import {
   BellIcon,
   BoltIcon,
@@ -21,7 +20,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
-import { FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   openAppSettings,
   requestLocationBackground,
@@ -45,12 +44,101 @@ const STEP_ORDER: Step[] = [
   'done',
 ];
 
+const CONTENT_STEPS: Step[] = ['fg-location', 'bg-location', 'motion', 'notifications'];
+
 function advanceStep(current: Step): Step {
   const idx = STEP_ORDER.indexOf(current);
   return STEP_ORDER[idx + 1] ?? 'done';
 }
 
-const ICON_SIZE = 80;
+const ICON_SIZE = 64;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StepDots({ currentStep, colors }: { currentStep: Step; colors: ReturnType<typeof useTheme>['colors'] }) {
+  return (
+    <View style={dotStyles.row}>
+      {CONTENT_STEPS.map((s) => (
+        <View
+          key={s}
+          style={[
+            dotStyles.dot,
+            {
+              backgroundColor: s === currentStep ? colors.primary : 'transparent',
+              borderColor: s === currentStep ? colors.primary : colors.border,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+const dotStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+  },
+});
+
+function PermissionChip({
+  required,
+  colors,
+  t,
+}: {
+  required: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+  t: (key: string) => string;
+}) {
+  return (
+    <View
+      style={[
+        chipStyles.chip,
+        {
+          backgroundColor: required
+            ? colors.primary + '20'
+            : colors.textMuted + '20',
+        },
+      ]}
+    >
+      <Text
+        style={[
+          chipStyles.label,
+          { color: required ? colors.primary : colors.textMuted },
+        ]}
+      >
+        {required ? t('permissions.required') : t('permissions.optional')}
+      </Text>
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.sm,
+  },
+  label: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -65,7 +153,6 @@ export default function PermissionsWizardScreen() {
   const [step, setStep] = useState<Step>('fg-location');
   const [loading, setLoading] = useState(false);
 
-  // Track the previous AppState value so we can detect background→active transition
   const prevAppState = useRef<AppStateStatus>(AppState.currentState);
 
   // ── AppState re-check for Android bg-location ──────────────────────────────
@@ -74,22 +161,18 @@ export default function PermissionsWizardScreen() {
       return;
     }
 
+    prevAppState.current = AppState.currentState;
     const subscription = AppState.addEventListener(
       'change',
-      async (nextState: AppStateStatus) => {
+      (nextState: AppStateStatus) => {
         if (prevAppState.current === 'background' && nextState === 'active') {
-          const { status } = await Location.getBackgroundPermissionsAsync();
-          if (status === 'granted') {
-            setStep(advanceStep('bg-location'));
-          }
+          setStep(advanceStep('bg-location'));
         }
         prevAppState.current = nextState;
       },
     );
 
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [step]);
 
   // ── Navigate when done ─────────────────────────────────────────────────────
@@ -126,14 +209,11 @@ export default function PermissionsWizardScreen() {
         default:
           break;
       }
+      if (!(Platform.OS === 'android' && step === 'bg-location')) {
+        setStep(advanceStep(step));
+      }
     } finally {
       setLoading(false);
-    }
-    // Advance regardless of outcome (except bg-location on Android — user
-    // returns from Settings, AppState listener handles it; but we don't block
-    // the button either, so tapping again is safe)
-    if (!(Platform.OS === 'android' && step === 'bg-location')) {
-      setStep(advanceStep(step));
     }
   }
 
@@ -153,7 +233,8 @@ export default function PermissionsWizardScreen() {
     title: string;
     body: string;
     buttonLabel: string;
-    showSkip: boolean;
+    required: boolean;
+    skipLabel: string;
   };
 
   function getStepConfig(s: Step): StepConfig {
@@ -164,17 +245,20 @@ export default function PermissionsWizardScreen() {
           title: t('permissions.fgLocation.title'),
           body: t('permissions.fgLocation.body'),
           buttonLabel: t('permissions.fgLocation.allow'),
-          showSkip: true,
+          required: true,
+          skipLabel: t('permissions.fgLocation.skip'),
         };
       case 'bg-location':
         return {
           icon: <MapIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.bgLocation.title'),
           body: t('permissions.bgLocation.body'),
-          buttonLabel: Platform.OS === 'android'
-            ? t('permissions.bgLocation.openSettings')
-            : t('permissions.bgLocation.allow'),
-          showSkip: false,
+          buttonLabel:
+            Platform.OS === 'android'
+              ? t('permissions.bgLocation.openSettings')
+              : t('permissions.bgLocation.allow'),
+          required: true,
+          skipLabel: t('permissions.bgLocation.notNow'),
         };
       case 'motion':
         return {
@@ -182,7 +266,8 @@ export default function PermissionsWizardScreen() {
           title: t('permissions.motion.title'),
           body: t('permissions.motion.body'),
           buttonLabel: t('permissions.motion.allow'),
-          showSkip: true,
+          required: true,
+          skipLabel: t('permissions.motion.skip'),
         };
       case 'notifications':
         return {
@@ -190,16 +275,17 @@ export default function PermissionsWizardScreen() {
           title: t('permissions.notifications.title'),
           body: t('permissions.notifications.body'),
           buttonLabel: t('permissions.notifications.allow'),
-          showSkip: true,
+          required: false,
+          skipLabel: t('permissions.notifications.skip'),
         };
       default:
-        // 'done' — should never render
         return {
           icon: <BellIcon size={ICON_SIZE} color={colors.primary} />,
           title: '',
           body: '',
           buttonLabel: '',
-          showSkip: false,
+          required: false,
+          skipLabel: '',
         };
     }
   }
@@ -208,10 +294,7 @@ export default function PermissionsWizardScreen() {
   // Render
   // ─────────────────────────────────────────────────────────────────────────
 
-  if (step === 'done') {
-    // Navigation is triggered in useEffect; render nothing while transitioning
-    return null;
-  }
+  if (step === 'done') return null;
 
   const config = getStepConfig(step);
 
@@ -220,9 +303,21 @@ export default function PermissionsWizardScreen() {
       style={[styles.safe, { backgroundColor: colors.background }]}
       edges={['top', 'bottom']}
     >
-      {/* Icon + text content — centered in the upper portion */}
+      {/* Step indicator */}
+      <StepDots currentStep={step} colors={colors} />
+
+      {/* Icon + text */}
       <View style={styles.content}>
-        <View style={styles.iconWrapper}>{config.icon}</View>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: colors.primary + '1F' },
+          ]}
+        >
+          {config.icon}
+        </View>
+
+        <PermissionChip required={config.required} colors={colors} t={t} />
 
         <Text style={[styles.title, { color: colors.text }]}>
           {config.title}
@@ -233,7 +328,7 @@ export default function PermissionsWizardScreen() {
         </Text>
       </View>
 
-      {/* Buttons — anchored toward the bottom */}
+      {/* Actions */}
       <View style={styles.actions}>
         <Button
           title={config.buttonLabel}
@@ -244,36 +339,18 @@ export default function PermissionsWizardScreen() {
           loading={loading}
         />
 
-        {config.showSkip && (
-          <TouchableOpacity
-            onPress={handleSkip}
-            activeOpacity={0.7}
-            style={styles.skipButton}
-          >
-            <Text style={[styles.skipText, { color: colors.primary }]}>
-              {t(`permissions.${stepKeyForTranslation(step)}.skip`)}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={handleSkip}
+          activeOpacity={0.7}
+          style={styles.skipButton}
+        >
+          <Text style={[styles.skipText, { color: colors.textMuted }]}>
+            {config.skipLabel}
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
-}
-
-// Helper: map Step to camelCase translation key segment
-function stepKeyForTranslation(step: Step): string {
-  switch (step) {
-    case 'fg-location':
-      return 'fgLocation';
-    case 'bg-location':
-      return 'bgLocation';
-    case 'motion':
-      return 'motion';
-    case 'notifications':
-      return 'notifications';
-    default:
-      return '';
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,10 +367,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
   },
-  iconWrapper: {
-    marginBottom: Spacing.xl,
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: Spacing.xl,
   },
   title: {
     fontSize: FontSizes.xxl,
@@ -304,7 +384,7 @@ const styles = StyleSheet.create({
   body: {
     fontSize: FontSizes.md,
     textAlign: 'center',
-    lineHeight: Spacing.lg,
+    lineHeight: 24,
   },
   actions: {
     paddingHorizontal: Spacing.lg,
@@ -317,6 +397,6 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: FontSizes.sm,
-    fontWeight: FontWeights.semibold,
+    fontWeight: FontWeights.medium,
   },
 });

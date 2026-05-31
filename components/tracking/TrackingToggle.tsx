@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Platform } from 'react-native';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
 import { requestLocationBackground } from '@/lib/permissions/wizard';
+import i18n from '@/lib/i18n';
+import { showAlert } from '@/lib/utils/alert';
 import { database } from '@/lib/database';
 
 export function useTrackingToggle() {
@@ -77,16 +79,15 @@ export function useTrackingToggle() {
         // Check permissions first
         if (!hasPermissions) {
           const message = Platform.OS === 'android'
-            ? 'To track your activities automatically, Radzi needs location access all the time.\n\nPlease grant "Allow all the time" permission in the next screen.\n\nThis allows the app to track your walks and rides in the background.'
-            : 'To track your activities automatically, Radzi needs "Always Allow" location access.\n\n1. Tap "Open Settings" below\n2. Go to Location\n3. Select "Always"\n\nThis allows the app to track your walks and rides even when you\'re not actively using it.';
-          const buttonLabel = Platform.OS === 'android' ? 'Open Settings' : 'Open Settings';
+            ? i18n.t('alerts:backgroundPermission.androidMessage')
+            : i18n.t('alerts:backgroundPermission.iosMessage');
           Alert.alert(
-            'Background Tracking Permission',
+            i18n.t('alerts:backgroundPermission.title'),
             message,
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: i18n.t('alerts:backgroundPermission.cancel'), style: 'cancel' },
               {
-                text: buttonLabel,
+                text: i18n.t('alerts:backgroundPermission.openSettings'),
                 onPress: async () => {
                   const result = await requestLocationBackground();
                   if (result.status === 'granted') {
@@ -95,10 +96,7 @@ export function useTrackingToggle() {
                   } else if (result.status === 'opened-settings') {
                     setIsAwaitingPermissionGrant(true);
                   } else {
-                    Alert.alert(
-                      'Permission Denied',
-                      'Background tracking requires "Always" location access. Please enable it in Settings.'
-                    );
+                    showAlert('alerts:permission.deniedTitle', 'alerts:permission.deniedMessage');
                   }
                 },
               },
@@ -112,7 +110,7 @@ export function useTrackingToggle() {
       }
     } catch (error) {
       console.error('[TrackingToggle] Error toggling tracking:', error);
-      Alert.alert('Error', 'Failed to toggle tracking. Please try again.');
+      showAlert('alerts:error.title', 'alerts:tracking.toggleError');
     } finally {
       setIsLoading(false);
     }

@@ -23,27 +23,31 @@
     "continue": "Continuar"
   },
   "permissions": {
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "notNow": "Ahora no",
     "fgLocation": {
-      "title": "Acceso a la ubicación",
-      "body": "Radzi necesita tu ubicación para trazar tus rutas y calcular la distancia.",
+      "title": "Saber dónde estás",
+      "body": "Muestra tu posición en el mapa mientras pedaleas o caminas. Sin esto, el mapa no te seguirá.",
       "allow": "Permitir ubicación",
-      "skip": "Omitir por ahora"
+      "skip": "Ahora no"
     },
     "bgLocation": {
-      "title": "Ubicación en segundo plano",
-      "body": "Permite que Radzi siga tu ruta incluso cuando la app está en segundo plano.",
-      "allow": "Permitir ubicación en segundo plano",
-      "openSettings": "Abrir ajustes"
+      "title": "Registra tus trayectos automáticamente",
+      "body": "Permite que Radzi grabe tu ruta incluso con la pantalla apagada. Sin esto, tendrás que iniciar el seguimiento manualmente cada vez.",
+      "allow": "Permitir",
+      "openSettings": "Abrir ajustes",
+      "notNow": "Ahora no"
     },
     "motion": {
-      "title": "Movimiento y actividad",
-      "body": "Radzi usa datos de movimiento para detectar automáticamente cuándo empiezas a caminar o pedalear.",
+      "title": "Detecta cuando te mueves",
+      "body": "Usa los sensores de movimiento de tu teléfono para comenzar a grabar cuando empiezas a caminar o pedalear. Sin esto, la detección automática no funcionará.",
       "allow": "Permitir movimiento",
-      "skip": "Omitir por ahora"
+      "skip": "Ahora no"
     },
     "notifications": {
-      "title": "Notificaciones",
-      "body": "Recibe resúmenes de tus rutas, alertas de logros y recordatorios de metas semanales.",
+      "title": "Mantente informado",
+      "body": "Radzi te notifica cuando se está grabando un trayecto en segundo plano. Siempre puedes ver el estado en la app.",
       "allow": "Permitir notificaciones",
       "skip": "Omitir por ahora"
     }
@@ -67,19 +71,45 @@
     "openSettings": "Abrir ajustes",
     "locationFg": {
       "name": "Ubicación",
-      "description": "Necesario para trazar tus rutas y calcular la distancia."
+      "description": "Necesario para mostrar tu posición en el mapa y registrar tus rutas."
     },
     "locationBg": {
       "name": "Ubicación en segundo plano",
-      "description": "Necesario para registrar actividad automáticamente en segundo plano. Selecciona \"Siempre\" en Ajustes."
+      "description": "Necesario para grabar trayectos automáticamente con la pantalla apagada. Selecciona «Siempre» en Ajustes."
     },
     "motion": {
       "name": "Movimiento y actividad",
-      "description": "Usado para detectar automáticamente cuando empiezas a caminar o pedalear."
+      "description": "Necesario para detectar automáticamente cuándo empiezas a caminar o pedalear."
     },
     "notifications": {
       "name": "Notificaciones",
-      "description": "Recibe resúmenes de trayectos, alertas de logros y recordatorios de metas."
+      "description": "Te avisa cuando se está grabando un trayecto en segundo plano."
     }
+  },
+  "permissionToast": {
+    "allow": "Permitir",
+    "openSettings": "Abrir ajustes",
+    "locationForeground": {
+      "title": "Necesitas permiso de ubicación",
+      "subtitle": "Obligatorio para registrar trayectos y usar el mapa"
+    },
+    "locationBackground": {
+      "title": "Ubicación en segundo plano necesaria",
+      "subtitle": "Obligatorio para el seguimiento automático"
+    },
+    "motion": {
+      "title": "Detección de actividad necesaria",
+      "subtitle": "Obligatorio para detectar trayectos automáticamente"
+    },
+    "notifications": {
+      "title": "Notificaciones desactivadas",
+      "subtitle": "Útil para alertas de seguimiento en segundo plano"
+    }
+  },
+  "locationPrompt": {
+    "title": "Acceso a la ubicación necesario",
+    "description": "Radzi necesita acceso a tu ubicación para mostrarte en el mapa y registrar tus rutas.",
+    "enableButton": "Activar ubicación",
+    "openSettings": "Abrir ajustes"
   }
 }
