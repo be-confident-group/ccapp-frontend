@@ -29,6 +29,7 @@ import { syncService } from './SyncService';
 import { trophyAPI, type Trophy } from '../api/trophies';
 import { tripAPI } from '../api/trips';
 import { TripValidationService } from './TripValidationService';
+import { isVisibleTripType } from '../utils/tripTypeUi';
 
 // ---------------------------------------------------------------------------
 // Trip sync callback registry
@@ -339,9 +340,10 @@ export class TripManager {
         }
         // Notify React Query subscribers to invalidate home-messages cache
         tripSyncCallbacks.forEach((cb) => cb());
-        // Schedule local push notifications for trip completion
+        // Schedule local push notifications for trip completion (walk + cycle only;
+        // drive/run trips are hidden in v1 so notifications would mislead the user)
         const completedTripData = await database.getTrip(tripId);
-        if (completedTripData?.backend_id) {
+        if (completedTripData?.backend_id && isVisibleTripType(completedTripData.type)) {
           void scheduleTripCompletionNotifications(
             completedTripData.backend_id,
             completedTripData.distance / 1000,
@@ -589,9 +591,9 @@ export class TripManager {
         }
         // Notify React Query subscribers to invalidate home-messages cache
         tripSyncCallbacks.forEach((cb) => cb());
-        // Schedule local push notifications for trip completion
+        // Schedule local push notifications for trip completion (walk + cycle only)
         const updatedTrip = await database.getTrip(tripId);
-        if (updatedTrip?.backend_id) {
+        if (updatedTrip?.backend_id && isVisibleTripType(updatedTrip.type)) {
           void scheduleTripCompletionNotifications(
             updatedTrip.backend_id,
             updatedTrip.distance / 1000,

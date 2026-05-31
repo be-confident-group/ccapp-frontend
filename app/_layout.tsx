@@ -77,7 +77,7 @@ function RootLayoutNav() {
       if (data?.type === 'trip_completed' && data?.tripId) {
         router.replace(`/home/trip-detail?id=${data.tripId}`);
       } else if (data?.type === 'rate_trip' && data?.tripId) {
-        router.replace(`/home/rate-route?tripId=${data.tripId}`);
+        router.replace(`/home/rate-route?id=${data.tripId}`);
       } else if (
         (data?.type === 'post_liked' || data?.type === 'post_commented' || data?.type === 'club_new_post') &&
         data?.postId
