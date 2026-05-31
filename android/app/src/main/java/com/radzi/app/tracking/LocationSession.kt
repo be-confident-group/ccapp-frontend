@@ -89,6 +89,12 @@ class LocationSession(private val context: Context) {
             }
     }
 
+    /** Stops GPS update callbacks without touching the FGS lifecycle. Used during standalone-to-RN handoff. */
+    internal fun stopUpdatesOnly() {
+        fusedClient.removeLocationUpdates(callback)
+        currentMode = AccuracyMode.OFF
+    }
+
     /** Returns "granted", "whenInUse", or "denied". */
     fun currentAuthorization(): String {
         val fine = ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION)

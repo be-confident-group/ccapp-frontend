@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.location.Location
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
@@ -20,13 +21,117 @@ class TrackingForegroundService : LifecycleService() {
             startForeground(NOTIFICATION_ID, buildNotification())
         }
         TrackingLogger.shared.log(TrackingLogger.Level.info, "TrackingForegroundService: started")
+
+        // If no RN module has initialized the tracking stack yet, run one standalone so that
+        // background wakes (activity transition receiver, system restart) track correctly.
+        if (MotionMonitor.shared == null && standaloneMotion == null) {
+            initStandaloneStack()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        tearDownStandaloneInternal()
         TrackingLogger.shared.log(TrackingLogger.Level.info, "TrackingForegroundService: stopped")
     }
+
+    // MARK: - Standalone stack
+
+    private fun initStandaloneStack() {
+        TrackingLogger.shared.log(TrackingLogger.Level.info, "TrackingForegroundService: initializing standalone tracking stack")
+        val ctx = applicationContext
+        TrackingDatabase.init(ctx)
+
+        val motion = MotionMonitor(ctx)
+        val location = LocationSession(ctx)
+        val stateMachine = TripStateMachine()
+
+        stateMachine.delegate = object : TripStateMachineDelegate {
+            override fun requestAccuracyMode(mode: LocationSession.AccuracyMode) = location.setMode(mode)
+            override fun requestImuRunning(running: Boolean, tripId: String?) {}
+            override fun onTransitionTo(state: TripStateMachine.State, from: TripStateMachine.State) {
+                TrackingLogger.shared.log(TrackingLogger.Level.info, "Standalone state: ${from.raw} → ${state.raw}")
+            }
+            override fun onStartTrip(tripId: String, startTime: Long, backfillStart: Long) {
+                TrackingLogger.shared.log(TrackingLogger.Level.info, "Standalone trip started: $tripId")
+            }
+            override fun onEndTrip(tripId: String, endTime: Long) {
+                TrackingLogger.shared.log(TrackingLogger.Level.info, "Standalone trip ended: $tripId")
+            }
+            override fun onLocationStored(tripId: String, lat: Double, lng: Double, accuracy: Double, speed: Double, timestamp: Long) {}
+        }
+
+        motion.delegate = object : MotionMonitorDelegate {
+            override fun onActivityChanged(activity: MotionMonitor.Activity, confidence: MotionMonitor.Confidence, timestampMs: Long) {
+                stateMachine.onMotionActivity(activity, confidence)
+            }
+            override fun onSustainedActivity(activity: MotionMonitor.Activity, forSeconds: Double) {
+                stateMachine.onSustainedMotion(activity)
+            }
+            override fun onPermissionMissing(permission: String) {
+                TrackingLogger.shared.log(TrackingLogger.Level.warn, "Standalone: missing permission $permission")
+            }
+        }
+
+        location.delegate = object : LocationSessionDelegate {
+            override fun onLocationReceived(loc: Location, mode: LocationSession.AccuracyMode) {
+                stateMachine.onLocation(
+                    loc.latitude, loc.longitude,
+                    loc.accuracy.toDouble(), maxOf(loc.speed.toDouble(), 0.0), loc.time
+                )
+            }
+            override fun onAuthorizationChanged(status: String) {}
+            override fun onError(throwable: Throwable) {
+                TrackingLogger.shared.log(TrackingLogger.Level.error, "Standalone location error: $throwable")
+            }
+        }
+
+        val sustain = stateMachine.config.detectionSustainSeconds
+        stateMachine.bind(motion)
+        motion.watchSustain(MotionMonitor.Activity.WALKING,    sustain)
+        motion.watchSustain(MotionMonitor.Activity.RUNNING,    sustain)
+        motion.watchSustain(MotionMonitor.Activity.CYCLING,    sustain)
+        motion.watchSustain(MotionMonitor.Activity.AUTOMOTIVE, sustain)
+
+        standaloneMotion   = motion
+        standaloneLocation = location
+        MotionMonitor.shared = motion
+
+        motion.start()
+        stateMachine.rehydrateIfNeeded()
+
+        Thread {
+            try {
+                val nowMs = System.currentTimeMillis()
+                val covered = TrackingDatabase.shared.recentTripWindows(35 * 60 * 1000L, nowMs)
+                val synthesized = stateMachine.reconcilerBackfill(nowMs, covered)
+                for (syn in synthesized) {
+                    val dist = syn.distanceM ?: continue
+                    if (dist <= 0.0) continue
+                    val id = "syn_${syn.startMs / 1000}"
+                    TrackingDatabase.shared.insertSynthesizedTrip(
+                        id, syn.startMs, syn.endMs,
+                        if (syn.activity == MotionMonitor.Activity.WALKING) "walk" else "cycle",
+                        dist, "gms_activity"
+                    )
+                }
+            } catch (e: Exception) {
+                TrackingLogger.shared.log(TrackingLogger.Level.error, "Standalone backfill failed: $e")
+            }
+        }.start()
+    }
+
+    private fun tearDownStandaloneInternal() {
+        val motion = standaloneMotion ?: return
+        motion.stop()
+        standaloneLocation?.stopUpdatesOnly()
+        if (MotionMonitor.shared === motion) MotionMonitor.shared = null
+        standaloneMotion   = null
+        standaloneLocation = null
+    }
+
+    // MARK: - Notification
 
     private fun createNotificationChannel() {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -51,12 +156,27 @@ class TrackingForegroundService : LifecycleService() {
             .build()
 
     companion object {
-        private const val CHANNEL_ID     = "radzi_tracking"
+        private const val CHANNEL_ID      = "radzi_tracking"
         private const val NOTIFICATION_ID = 1001
 
+        @Volatile private var standaloneMotion:   MotionMonitor?   = null
+        @Volatile private var standaloneLocation: LocationSession? = null
+
+        /**
+         * Called by RadziTrackerModule.init() before it sets up its own stack, so the
+         * standalone stack doesn't conflict with (or duplicate) the RN-managed one.
+         */
+        fun tearDownStandalone() {
+            val motion = standaloneMotion ?: return
+            motion.stop()
+            standaloneLocation?.stopUpdatesOnly()
+            if (MotionMonitor.shared === motion) MotionMonitor.shared = null
+            standaloneMotion   = null
+            standaloneLocation = null
+        }
+
         fun start(context: Context) {
-            val intent = Intent(context, TrackingForegroundService::class.java)
-            context.startForegroundService(intent)
+            context.startForegroundService(Intent(context, TrackingForegroundService::class.java))
         }
 
         fun stop(context: Context) {

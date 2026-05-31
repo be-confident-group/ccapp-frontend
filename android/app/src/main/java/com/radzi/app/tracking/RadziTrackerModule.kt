@@ -35,6 +35,10 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
     private val bgExecutor = Executors.newSingleThreadExecutor()
 
     init {
+        // Hand off from any standalone stack the foreground service may have started
+        // while the app was backgrounded, before we take ownership.
+        TrackingForegroundService.tearDownStandalone()
+
         // Wire up delegates
         motion.delegate = this
         location.delegate = this

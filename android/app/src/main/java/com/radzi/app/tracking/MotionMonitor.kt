@@ -124,10 +124,13 @@ class MotionMonitor(private val ctx: Context) {
 
     internal fun onTransitionResult(result: ActivityTransitionResult) {
         for (event in result.transitionEvents) {
+            if (event.transitionType != ActivityTransition.ACTIVITY_TRANSITION_ENTER) continue
+            val activity = classifyDetectedActivity(event.activityType)
             TrackingLogger.shared.log(
                 TrackingLogger.Level.info,
-                "MotionMonitor: transition ${event.activityType} enter=${event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER}"
+                "MotionMonitor: transition enter → ${activity.raw}"
             )
+            handleActivityChange(activity, Confidence.HIGH, System.currentTimeMillis())
         }
     }
 
