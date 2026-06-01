@@ -13,6 +13,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
 import { saveGoals } from '@/lib/onboarding/state';
+import { authApi } from '@/lib/api/auth';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/theme';
 
 const WHITE = '#FFFFFF'; // contrast against primary brand red — does not vary with theme
@@ -33,12 +34,26 @@ export default function GoalsScreen() {
   const [activeDaysPerWeek, setActiveDaysPerWeek] = useState(DEFAULT_ACTIVE_DAYS_PER_WEEK);
   const [loading, setLoading] = useState(false);
 
+  async function saveGoalsToBackend(distanceKm: number, daysPerWeek: number) {
+    try {
+      await authApi.updateProfile({
+        weekly_distance_km: distanceKm,
+        active_days_per_week: daysPerWeek,
+      });
+    } catch (e) {
+      console.warn('[Goals] updateProfile (goals) failed (non-blocking):', e);
+    }
+  }
+
   async function handleContinue() {
     setLoading(true);
     try {
-      if (currentUserId !== null) {
-        await saveGoals(currentUserId, { weeklyDistanceKm, activeDaysPerWeek });
-      }
+      await Promise.all([
+        saveGoalsToBackend(weeklyDistanceKm, activeDaysPerWeek),
+        currentUserId !== null
+          ? saveGoals(currentUserId, { weeklyDistanceKm, activeDaysPerWeek })
+          : Promise.resolve(),
+      ]);
       router.push('/(onboarding)/permissions-wizard');
     } finally {
       setLoading(false);
@@ -46,12 +61,15 @@ export default function GoalsScreen() {
   }
 
   async function handleSkip() {
-    if (currentUserId !== null) {
-      await saveGoals(currentUserId, {
-        weeklyDistanceKm: DEFAULT_WEEKLY_DISTANCE_KM,
-        activeDaysPerWeek: DEFAULT_ACTIVE_DAYS_PER_WEEK,
-      });
-    }
+    await Promise.all([
+      saveGoalsToBackend(DEFAULT_WEEKLY_DISTANCE_KM, DEFAULT_ACTIVE_DAYS_PER_WEEK),
+      currentUserId !== null
+        ? saveGoals(currentUserId, {
+            weeklyDistanceKm: DEFAULT_WEEKLY_DISTANCE_KM,
+            activeDaysPerWeek: DEFAULT_ACTIVE_DAYS_PER_WEEK,
+          })
+        : Promise.resolve(),
+    ]);
     router.push('/(onboarding)/permissions-wizard');
   }
 

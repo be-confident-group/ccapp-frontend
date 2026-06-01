@@ -34,15 +34,18 @@
     },
     "bgLocation": {
       "title": "Auto-track your trips",
-      "body": "Lets Radzi record your route even when the screen is off. Without this, you'll need to start tracking manually every time.",
-      "allow": "Allow",
+      "bodyIos": "In the next screen, choose \"Always\" to let Radzi record your route even when the screen is off.",
+      "bodyAndroid": "Tap Open Settings, then set Location to \"Allow all the time\" so Radzi can record your route in the background.",
+      "allowIos": "Allow Always",
       "openSettings": "Open Settings",
       "notNow": "Not now"
     },
     "motion": {
       "title": "Detect when you move",
-      "body": "Uses your phone's motion sensors to start recording when you begin walking or cycling. Without it, automatic trip detection won't work.",
-      "allow": "Allow Motion",
+      "bodyIos": "Allows Radzi to use Motion & Fitness data to automatically start recording when you begin walking or cycling.",
+      "bodyAndroid": "Allows Radzi to use Physical Activity data to automatically start recording when you begin walking or cycling.",
+      "allowIos": "Allow Motion & Fitness",
+      "allowAndroid": "Allow Physical Activity",
       "skip": "Not now"
     },
     "notifications": {

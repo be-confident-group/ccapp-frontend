@@ -5,8 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +14,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
-import { TextInput } from '@/components/ui';
 import { UserCircleIcon, CameraIcon } from 'react-native-heroicons/outline';
 import { saveLocalPreferences } from '@/lib/onboarding/state';
 import { authApi } from '@/lib/api/auth';
@@ -30,11 +27,8 @@ export default function ProfileSetupScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
   const router = useRouter();
-  const { currentUserId, user } = useAuth();
+  const { currentUserId } = useAuth();
 
-  const [displayName, setDisplayName] = useState(
-    () => [user?.first_name ?? user?.name ?? '', user?.last_name ?? ''].filter(Boolean).join(' '),
-  );
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [defaultMode, setDefaultMode] = useState<'walk' | 'cycle'>('walk');
   const [loading, setLoading] = useState(false);
@@ -61,11 +55,11 @@ export default function ProfileSetupScreen() {
   async function handleContinue() {
     setLoading(true);
     try {
-      // 1. Update backend profile (best-effort — don't block on failure)
+      // 1. Save go-to activity to backend (best-effort)
       try {
-        await authApi.updateProfile({ name: displayName.trim() });
+        await authApi.updateProfile({ preferred_activity: defaultMode });
       } catch (e) {
-        console.warn('[ProfileSetup] updateProfile failed (non-blocking):', e);
+        console.warn('[ProfileSetup] updateProfile (preferred_activity) failed (non-blocking):', e);
       }
 
       // 2. Upload avatar if selected (best-effort)
@@ -77,7 +71,7 @@ export default function ProfileSetupScreen() {
         }
       }
 
-      // 3. Save local preferences
+      // 3. Save local preference as cache fallback
       if (currentUserId !== null) {
         await saveLocalPreferences(currentUserId, { defaultMode });
       }
@@ -91,14 +85,9 @@ export default function ProfileSetupScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
           {/* Screen title */}
           <Text style={[styles.title, { color: colors.text }]}>
@@ -132,16 +121,6 @@ export default function ProfileSetupScreen() {
               {t('profile.avatarHint')}
             </Text>
           </View>
-
-          {/* Display name input */}
-          <TextInput
-            label={t('profile.nameLabel')}
-            value={displayName}
-            onChangeText={setDisplayName}
-            autoCapitalize="words"
-            autoComplete="name"
-            returnKeyType="done"
-          />
 
           {/* Mode selector */}
           <Text style={[styles.modeLabel, { color: colors.text }]}>
@@ -207,16 +186,12 @@ export default function ProfileSetupScreen() {
             style={styles.continueButton}
           />
         </ScrollView>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: {
-    flex: 1,
-  },
-  keyboardView: {
     flex: 1,
   },
   scrollContent: {

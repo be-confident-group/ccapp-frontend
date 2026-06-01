@@ -22,13 +22,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
+  checkAll,
   openAppSettings,
   requestLocationBackground,
   requestLocationForeground,
   requestMotion,
   requestNotifications,
 } from '@/lib/permissions/wizard';
-import { markPermissionSkipped } from '@/lib/onboarding/state';
+import {
+  clearPermStep,
+  getPermStep,
+  markPermissionSkipped,
+  savePermStep,
+} from '@/lib/onboarding/state';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -45,6 +51,14 @@ const STEP_ORDER: Step[] = [
 ];
 
 const CONTENT_STEPS: Step[] = ['fg-location', 'bg-location', 'motion', 'notifications'];
+
+// Maps onboarding step → key returned by checkAll()
+const STEP_PERM_KEY: Partial<Record<Step, string>> = {
+  'fg-location': 'locationForeground',
+  'bg-location': 'locationBackground',
+  'motion': 'motion',
+  'notifications': 'notifications',
+};
 
 function advanceStep(current: Step): Step {
   const idx = STEP_ORDER.indexOf(current);
@@ -152,28 +166,87 @@ export default function PermissionsWizardScreen() {
 
   const [step, setStep] = useState<Step>('fg-location');
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const prevAppState = useRef<AppStateStatus>(AppState.currentState);
+  // Ref so effects can read currentUserId without being in their deps arrays
+  const currentUserIdRef = useRef(currentUserId);
+  currentUserIdRef.current = currentUserId;
 
-  // ── AppState re-check for Android bg-location ──────────────────────────────
+  // ── Initialize: skip already-granted steps and resume any saved step ───────
   useEffect(() => {
-    if (Platform.OS !== 'android' || step !== 'bg-location') {
-      return;
-    }
+    let cancelled = false;
+    async function initStep() {
+      const uid = currentUserIdRef.current;
+      const [statuses, savedRaw] = await Promise.all([
+        checkAll(),
+        uid !== null ? getPermStep(uid) : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
 
-    prevAppState.current = AppState.currentState;
+      // First step in order that is not yet granted
+      const firstNeeded = (STEP_ORDER.find(
+        (s) => s !== 'done' && statuses[STEP_PERM_KEY[s] ?? ''] !== 'granted'
+      ) ?? 'done') as Step;
+
+      // Use a saved step if it's further along and its permission is still ungranted
+      // (handles app-kill during the wizard — e.g. killed while on bg-location Settings screen)
+      const saved = savedRaw as Step | null;
+      const savedIdx = saved ? STEP_ORDER.indexOf(saved) : -1;
+      const firstIdx = STEP_ORDER.indexOf(firstNeeded);
+      const savedPermKey = saved ? STEP_PERM_KEY[saved] : undefined;
+
+      if (
+        saved &&
+        savedIdx > firstIdx &&
+        saved !== 'done' &&
+        savedPermKey &&
+        statuses[savedPermKey] !== 'granted'
+      ) {
+        setStep(saved);
+      } else {
+        setStep(firstNeeded);
+      }
+      setInitialized(true);
+    }
+    initStep();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Persist step so the wizard can resume after an app kill ───────────────
+  useEffect(() => {
+    if (!initialized) return;
+    const uid = currentUserIdRef.current;
+    if (uid === null) return;
+    if (step === 'done') {
+      clearPermStep(uid);
+    } else {
+      savePermStep(uid, step);
+    }
+  }, [step, initialized]);
+
+  // ── AppState: re-check permission whenever the app returns from background ─
+  // Covers all steps (not just Android bg-location) so the wizard advances
+  // automatically after the user grants a permission in the system Settings.
+  useEffect(() => {
+    if (!initialized || step === 'done') return;
+
     const subscription = AppState.addEventListener(
       'change',
-      (nextState: AppStateStatus) => {
-        if (prevAppState.current === 'background' && nextState === 'active') {
-          setStep(advanceStep('bg-location'));
+      async (nextState: AppStateStatus) => {
+        if (prevAppState.current !== 'active' && nextState === 'active') {
+          const statuses = await checkAll();
+          const permKey = STEP_PERM_KEY[step];
+          if (permKey && statuses[permKey] === 'granted') {
+            setStep(advanceStep(step));
+          }
         }
         prevAppState.current = nextState;
       },
     );
 
     return () => subscription.remove();
-  }, [step]);
+  }, [step, initialized]);
 
   // ── Navigate when done ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -195,7 +268,10 @@ export default function PermissionsWizardScreen() {
           break;
         case 'bg-location':
           if (Platform.OS === 'android') {
+            // Android requires the user to enable "Allow all the time" in Settings.
+            // The AppState listener above will advance when they return with it granted.
             openAppSettings();
+            return;
           } else {
             await requestLocationBackground();
           }
@@ -209,9 +285,7 @@ export default function PermissionsWizardScreen() {
         default:
           break;
       }
-      if (!(Platform.OS === 'android' && step === 'bg-location')) {
-        setStep(advanceStep(step));
-      }
+      setStep(advanceStep(step));
     } finally {
       setLoading(false);
     }
@@ -225,7 +299,7 @@ export default function PermissionsWizardScreen() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Step config
+  // Step config (platform-specific copy for bg-location and motion)
   // ─────────────────────────────────────────────────────────────────────────
 
   type StepConfig = {
@@ -252,11 +326,12 @@ export default function PermissionsWizardScreen() {
         return {
           icon: <MapIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.bgLocation.title'),
-          body: t('permissions.bgLocation.body'),
-          buttonLabel:
-            Platform.OS === 'android'
-              ? t('permissions.bgLocation.openSettings')
-              : t('permissions.bgLocation.allow'),
+          body: Platform.OS === 'ios'
+            ? t('permissions.bgLocation.bodyIos')
+            : t('permissions.bgLocation.bodyAndroid'),
+          buttonLabel: Platform.OS === 'ios'
+            ? t('permissions.bgLocation.allowIos')
+            : t('permissions.bgLocation.openSettings'),
           required: true,
           skipLabel: t('permissions.bgLocation.notNow'),
         };
@@ -264,8 +339,12 @@ export default function PermissionsWizardScreen() {
         return {
           icon: <BoltIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.motion.title'),
-          body: t('permissions.motion.body'),
-          buttonLabel: t('permissions.motion.allow'),
+          body: Platform.OS === 'ios'
+            ? t('permissions.motion.bodyIos')
+            : t('permissions.motion.bodyAndroid'),
+          buttonLabel: Platform.OS === 'ios'
+            ? t('permissions.motion.allowIos')
+            : t('permissions.motion.allowAndroid'),
           required: true,
           skipLabel: t('permissions.motion.skip'),
         };
@@ -294,7 +373,7 @@ export default function PermissionsWizardScreen() {
   // Render
   // ─────────────────────────────────────────────────────────────────────────
 
-  if (step === 'done') return null;
+  if (!initialized || step === 'done') return null;
 
   const config = getStepConfig(step);
 

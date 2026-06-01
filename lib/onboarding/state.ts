@@ -27,6 +27,7 @@ const ONBOARDING_KEY = (uid: string | number) => `@radzi/onboarding_completed:${
 const PREFS_KEY = (uid: string | number) => `@radzi/onboarding_prefs:${uid}`;
 const GOALS_KEY = (uid: string | number) => `@radzi/onboarding_goals:${uid}`;
 const SKIPPED_PERMS_KEY = (uid: string | number) => `@radzi/onboarding_skipped_perms:${uid}`;
+const PERM_STEP_KEY = (uid: string | number) => `@radzi/onboarding_perm_step:${uid}`;
 
 export const MIGRATION_FLAG = '@radzi/onboarding_migrated_v1';
 
@@ -129,6 +130,35 @@ export async function getGoals(uid: string | number): Promise<Goals | null> {
   } catch (error) {
     console.warn(`[onboarding/state] Error reading goals for uid ${uid}:`, error);
     return null;
+  }
+}
+
+// ============================================================================
+// Permission Wizard Step (resume after app kill / Settings navigation)
+// ============================================================================
+
+export async function savePermStep(uid: string | number, step: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(PERM_STEP_KEY(uid), step);
+  } catch (error) {
+    console.warn(`[onboarding/state] Error saving perm step for uid ${uid}:`, error);
+  }
+}
+
+export async function getPermStep(uid: string | number): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(PERM_STEP_KEY(uid));
+  } catch (error) {
+    console.warn(`[onboarding/state] Error reading perm step for uid ${uid}:`, error);
+    return null;
+  }
+}
+
+export async function clearPermStep(uid: string | number): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PERM_STEP_KEY(uid));
+  } catch (error) {
+    console.warn(`[onboarding/state] Error clearing perm step for uid ${uid}:`, error);
   }
 }
 

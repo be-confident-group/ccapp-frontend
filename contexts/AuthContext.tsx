@@ -7,7 +7,6 @@ import PushNotificationService from '@/lib/services/PushNotificationService';
 import * as onboardingState from '@/lib/onboarding/state';
 import { clearQueryCache } from '@/providers/QueryProvider';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
-import { showAlert } from '@/lib/utils/alert';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -118,13 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loadOnboardingState(uid);
     }).catch((profileError) => {
       console.warn('[Auth] Could not fetch profile for onboarding check:', profileError);
-      // Fail open: treat as complete so the user is not stuck
-      setHasCompletedOnboarding(true);
-      // Non-blocking alert: login succeeded but profile data is unavailable
-      showAlert(
-        'alerts:auth.profileLoadFailedTitle',
-        'alerts:auth.profileLoadFailedMessage',
-      );
+      // Fail to onboarding — new users must complete setup even if profile fetch fails.
+      // Existing users will also be sent to onboarding, but markOnboardingComplete persists
+      // to AsyncStorage so they'll pass through immediately on the next mount.
+      setHasCompletedOnboarding(false);
     });
   }, [loadOnboardingState]);
 

@@ -34,15 +34,18 @@
     },
     "bgLocation": {
       "title": "Registra tus trayectos automáticamente",
-      "body": "Permite que Radzi grabe tu ruta incluso con la pantalla apagada. Sin esto, tendrás que iniciar el seguimiento manualmente cada vez.",
-      "allow": "Permitir",
+      "bodyIos": "En la siguiente pantalla, elige \"Siempre\" para que Radzi pueda grabar tu ruta incluso con la pantalla apagada.",
+      "bodyAndroid": "Toca Abrir ajustes y luego establece la ubicación en \"Permitir siempre\" para que Radzi grabe tu ruta en segundo plano.",
+      "allowIos": "Permitir siempre",
       "openSettings": "Abrir ajustes",
       "notNow": "Ahora no"
     },
     "motion": {
       "title": "Detecta cuando te mueves",
-      "body": "Usa los sensores de movimiento de tu teléfono para comenzar a grabar cuando empiezas a caminar o pedalear. Sin esto, la detección automática no funcionará.",
-      "allow": "Permitir movimiento",
+      "bodyIos": "Permite que Radzi use los datos de Actividad física para iniciar el registro automáticamente cuando empiezas a caminar o pedalear.",
+      "bodyAndroid": "Permite que Radzi use los datos de Actividad física para iniciar el registro automáticamente cuando empiezas a caminar o pedalear.",
+      "allowIos": "Permitir actividad física",
+      "allowAndroid": "Permitir actividad física",
       "skip": "Ahora no"
     },
     "notifications": {
