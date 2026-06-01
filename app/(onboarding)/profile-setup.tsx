@@ -30,6 +30,7 @@ export default function ProfileSetupScreen() {
   const { currentUserId } = useAuth();
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [defaultMode, setDefaultMode] = useState<'walk' | 'cycle'>('walk');
   const [loading, setLoading] = useState(false);
 
@@ -45,38 +46,37 @@ export default function ProfileSetupScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled && result.assets.length > 0) {
       setAvatarUri(result.assets[0].uri);
+      setAvatarBase64(result.assets[0].base64 ?? null);
     }
   }
 
   async function handleContinue() {
     setLoading(true);
     try {
-      // 1. Save go-to activity to backend (best-effort)
+      // 1. Save go-to activity + avatar to backend via the profile update endpoint (best-effort)
       try {
-        await authApi.updateProfile({ preferred_activity: defaultMode });
-      } catch (e) {
-        console.warn('[ProfileSetup] updateProfile (preferred_activity) failed (non-blocking):', e);
-      }
-
-      // 2. Upload avatar if selected (best-effort)
-      if (avatarUri) {
-        try {
-          await authApi.uploadAvatar(avatarUri);
-        } catch (e) {
-          console.warn('[ProfileSetup] uploadAvatar failed (non-blocking):', e);
+        const update: Parameters<typeof authApi.updateProfile>[0] = {
+          preferred_activity: defaultMode,
+        };
+        if (avatarBase64) {
+          update.profile_picture = `data:image/jpeg;base64,${avatarBase64}`;
         }
+        await authApi.updateProfile(update);
+      } catch (e) {
+        console.warn('[ProfileSetup] updateProfile failed (non-blocking):', e);
       }
 
-      // 3. Save local preference as cache fallback
+      // 2. Save local preference as cache fallback
       if (currentUserId !== null) {
         await saveLocalPreferences(currentUserId, { defaultMode });
       }
 
-      // 4. Navigate to goals
+      // 3. Navigate to goals
       router.push('/(onboarding)/goals');
     } finally {
       setLoading(false);
