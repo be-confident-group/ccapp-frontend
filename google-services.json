@@ -1,37 +1,37 @@
 {
   "project_info": {
-    "project_number": "20024221172",
-    "project_id": "radzi-app",
-    "storage_bucket": "radzi-app.firebasestorage.app"
+    "project_number": "229488268800",
+    "project_id": "radzi-486911",
+    "storage_bucket": "radzi-486911.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:20024221172:android:d858a3c9b23cb20b9a6da1",
+        "mobilesdk_app_id": "1:229488268800:android:37204ea684149f4dcaaae5",
         "android_client_info": {
           "package_name": "com.radzi.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "20024221172-1i8g57t966iuh02buqk2sn8pnqgr1q8g.apps.googleusercontent.com",
+          "client_id": "229488268800-oblke2o4nom9lc0oaqbkfc5c8lr0c26r.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAs3RsvPyUQ5Axp7CDuv--xsabRvDGEi2c"
+          "current_key": "AIzaSyAWI9GoPfoWKbpatR6eW_xjQgtvXml6TR0"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "20024221172-1i8g57t966iuh02buqk2sn8pnqgr1q8g.apps.googleusercontent.com",
+              "client_id": "229488268800-oblke2o4nom9lc0oaqbkfc5c8lr0c26r.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "20024221172-fre8jnpoa47jshpn34pbqm5in1kgq1e3.apps.googleusercontent.com",
+              "client_id": "229488268800-st69okr9atquav65k8du0iov5fpgqsas.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.radzi.app"

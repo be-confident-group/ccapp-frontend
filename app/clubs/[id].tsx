@@ -139,10 +139,26 @@ export default function ClubDetailScreen() {
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
-      // 400 means the user already submitted a request
-      if (msg.includes('400') || msg.toLowerCase().includes('already')) {
+      if (msg.toLowerCase().includes('already')) {
+        // User already has a pending request or is already a member
         setJoinRequestPending(true);
         showAlert('groups:clubs.requestAlreadyPendingTitle', 'groups:clubs.requestAlreadyPendingMessage');
+      } else if (msg.toLowerCase().includes('private')) {
+        // joinClub was called but club is actually private (stale visibility cache).
+        // Retry as a join request instead.
+        try {
+          await requestJoinMutation.mutateAsync(club.id);
+          setJoinRequestPending(true);
+        } catch (retryError) {
+          const retryMsg = retryError instanceof Error ? retryError.message : '';
+          if (retryMsg.toLowerCase().includes('already')) {
+            setJoinRequestPending(true);
+            showAlert('groups:clubs.requestAlreadyPendingTitle', 'groups:clubs.requestAlreadyPendingMessage');
+          } else {
+            console.error('Failed to request join after private club error:', retryError);
+            showAlert('alerts:error.title', 'alerts:error.generic');
+          }
+        }
       } else {
         console.error('Failed to join/leave club:', error);
         showAlert('alerts:error.title', 'alerts:error.generic');
