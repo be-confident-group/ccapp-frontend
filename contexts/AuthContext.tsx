@@ -106,6 +106,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadOnboardingState]);
 
   const signIn = useCallback(() => {
+    // A new session is being established. The apiClient is a singleton that lives
+    // for the whole JS runtime, so a 401 earlier in this session leaves its
+    // `isLoggingOut` guard stuck true — which then throws "Session expired" on
+    // every authenticated request (profile fetch, You page, etc.) until the app
+    // is force-closed. Reset it here so the fresh login actually works.
+    apiClient.resetLogoutState();
     setIsAuthenticated(true);
     setHasCompletedOnboarding(null);
     // Register push token after login (best-effort, non-blocking)
