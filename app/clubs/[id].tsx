@@ -374,20 +374,6 @@ export default function ClubDetailScreen() {
           </View>
         </View>
 
-        {/* Owner tools: pending join requests row */}
-        {isOwner && (joinRequests?.length ?? 0) > 0 && (
-          <TouchableOpacity
-            style={[styles.pendingRow, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}
-            onPress={() => router.push(`/clubs/pending-requests?id=${club.id}`)}
-            activeOpacity={0.8}
-          >
-            <ClockIcon size={18} color={colors.primary} />
-            <ThemedText style={[styles.pendingRowText, { color: colors.primary }]}>
-              {t('clubs.pendingRequests', { count: joinRequests!.length })}
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-
         {/* Members Preview */}
         {club.members && club.members.length > 0 && (
           <View style={styles.membersSection}>
@@ -395,9 +381,29 @@ export default function ClubDetailScreen() {
               <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
                 {t('clubs.members', 'Members')}
               </ThemedText>
-              <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-                {t('clubs.memberCount', { count: club.members.length })}
-              </ThemedText>
+              <View style={styles.membersHeaderRight}>
+                <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
+                  {t('clubs.memberCount', { count: club.members.length })}
+                </ThemedText>
+                {/* Pending join requests icon — owner only, always visible */}
+                {isOwner && (
+                  <TouchableOpacity
+                    style={[styles.pendingIconButton, { backgroundColor: colors.primary + '15' }]}
+                    onPress={() => router.push(`/clubs/pending-requests?id=${club.id}`)}
+                    activeOpacity={0.7}
+                    accessibilityLabel={t('clubs.pendingRequestsButton', 'View join requests')}
+                  >
+                    <UserPlusIcon size={16} color={colors.primary} />
+                    {(joinRequests?.length ?? 0) > 0 && (
+                      <View style={[styles.pendingBadge, { backgroundColor: colors.primary }]}>
+                        <ThemedText style={styles.pendingBadgeText}>
+                          {joinRequests!.length}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             <ScrollView
               horizontal
@@ -663,6 +669,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  membersHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  pendingIconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 6,
+    borderRadius: BorderRadius.full,
+  },
+  pendingBadge: {
+    marginLeft: 3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   sectionTitle: {
     fontSize: FontSizes.md,
     fontWeight: '600',
@@ -708,18 +739,6 @@ const styles = StyleSheet.create({
   emptyMessage: {
     fontSize: FontSizes.sm,
     textAlign: 'center',
-  },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-  },
-  pendingRowText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
   },
   photoViewerOverlay: {
     flex: 1,
