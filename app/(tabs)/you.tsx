@@ -71,7 +71,7 @@ const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'produ
 
 export default function YouScreen() {
   const { t } = useTranslation();
-  const { signOut } = useAuth();
+  const { signOut, user: contextUser } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
@@ -97,9 +97,9 @@ export default function YouScreen() {
     joinedDateDisplay = new Date(profileData.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
   const userProfile = {
-    firstName: profileData?.name ?? profileData?.first_name ?? 'User',
-    lastName: profileData?.last_name ?? '',
-    email: profileData?.email ?? '',
+    firstName: profileData?.name ?? profileData?.first_name ?? contextUser?.name ?? contextUser?.first_name ?? 'User',
+    lastName: profileData?.last_name ?? contextUser?.last_name ?? '',
+    email: profileData?.email ?? contextUser?.email ?? '',
     dateOfBirth: profileData?.date_of_birth ?? profileData?.profile?.date_of_birth ?? '',
     gender: (profileData?.gender ?? profileData?.profile?.gender ?? '') as 'M' | 'F' | 'O' | '',
     profilePicture,

@@ -127,10 +127,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const markOnboardingComplete = useCallback(async () => {
     if (currentUserId !== null) {
       await onboardingState.markOnboardingComplete(currentUserId);
-      setHasCompletedOnboarding(true);
-    } else {
-      console.warn('[AuthContext] markOnboardingComplete called before currentUserId is set — ignoring');
     }
+    // Always update in-memory flag so navigation unblocks, even when the profile
+    // fetch failed and currentUserId is null (can't persist, but session works).
+    setHasCompletedOnboarding(true);
   }, [currentUserId]);
 
   return (

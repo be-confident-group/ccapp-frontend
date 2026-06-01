@@ -675,13 +675,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   pendingIconButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: 'relative',
     padding: 6,
     borderRadius: BorderRadius.full,
   },
   pendingBadge: {
-    marginLeft: 3,
+    position: 'absolute',
+    top: -5,
+    right: -5,
     minWidth: 16,
     height: 16,
     borderRadius: 8,

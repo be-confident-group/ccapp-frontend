@@ -21,7 +21,7 @@ export default function AllSetScreen() {
     setLoading(true);
     try {
       await markOnboardingComplete();
-      router.replace('/(tabs)/maps/active-ride');
+      router.replace('/(tabs)/maps');
     } finally {
       setLoading(false);
     }
