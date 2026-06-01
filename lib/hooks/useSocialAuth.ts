@@ -20,13 +20,14 @@ import { useAuth } from '@/contexts/AuthContext';
  */
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
+// Note: there is no androidClientId here on purpose. On Android the native SDK
+// resolves the OAuth client from google-services.json by matching the app's
+// package name + signing-key SHA-1, so any androidClientId passed in JS is ignored.
 if (googleWebClientId) {
   GoogleSignin.configure({
     webClientId: googleWebClientId,
     iosClientId: googleIosClientId,
-    ...(googleAndroidClientId ? { androidClientId: googleAndroidClientId } : {}),
     offlineAccess: true,
   });
 } else {
