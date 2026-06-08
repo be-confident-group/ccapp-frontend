@@ -1,7 +1,10 @@
 export type ActivityForFilter = 'walk' | 'run' | 'cycle';
 
 const CEILING_KMH: Record<ActivityForFilter, number> = { walk: 12, run: 30, cycle: 60 };
-const ACCURACY_THRESHOLD_M = 20;
+// 65 m matches the native engine's recordingAccuracyThresholdM default.
+// The previous value of 20 m over-pruned legitimate real-device GPS fixes,
+// collapsing recorded distance and triggering false drift/minimum rejections.
+const ACCURACY_THRESHOLD_M = 65;
 
 export interface RoutePoint {
   lat: number;

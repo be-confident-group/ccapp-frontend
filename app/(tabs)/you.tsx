@@ -41,6 +41,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
 import * as Location from 'expo-location';
+import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
 // ---------------------------------------------------------------------------
 // Local types
@@ -66,12 +67,10 @@ interface UpdateProfilePayload {
   profile_picture?: string;
 }
 
-// Build-time constant — true for dev and EAS preview builds, false for production
-const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
-
 export default function YouScreen() {
   const { t } = useTranslation();
   const { signOut, user: contextUser } = useAuth();
+  const isDebugBuild = isDebugEnabled(contextUser?.email);
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();

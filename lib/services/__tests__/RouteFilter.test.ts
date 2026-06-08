@@ -4,8 +4,23 @@ const pt = (lat: number, lng: number, ts: string, accuracy = 5) => ({ lat, lng, 
 const sec = (s: number) => new Date(s * 1000).toISOString();
 
 describe('RouteFilter', () => {
-  it('drops points with accuracy > 20m', () => {
-    const points = [pt(0, 0, sec(0)), pt(0, 1, sec(1), 50), pt(0, 2, sec(2))];
+  it('retains points with accuracy between 20m and 65m (real-device GPS)', () => {
+    // Points spaced at slow cycling pace (~8 km/h, well under 60 km/h ceiling).
+    // 0.00002° per second ≈ 2.2 m/s ≈ 8 km/h.
+    // 25m, 50m, 64m accuracy should all be kept; 66m dropped.
+    const points = [
+      pt(0, 0,        sec(0),  1),
+      pt(0, 0.00002,  sec(1), 25),
+      pt(0, 0.00004,  sec(2), 50),
+      pt(0, 0.00006,  sec(3), 64),
+      pt(0, 0.00008,  sec(4), 66),
+    ];
+    const result = RouteFilter.filter(points, 'cycle');
+    expect(result).toHaveLength(4); // 66m accuracy dropped, rest kept
+  });
+
+  it('drops points with accuracy > 65m', () => {
+    const points = [pt(0, 0, sec(0)), pt(0, 0.00002, sec(1), 70), pt(0, 0.00004, sec(2))];
     expect(RouteFilter.filter(points, 'cycle')).toHaveLength(2);
   });
 

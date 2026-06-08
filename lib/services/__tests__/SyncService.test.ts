@@ -31,6 +31,13 @@ jest.mock('../TripValidationService', () => ({
   TripValidationService: { validateTrip: jest.fn().mockReturnValue({ isValid: true, reasons: [] }) },
 }));
 
+jest.mock('../TrackingConfig', () => ({
+  getTrackingConfig: () => ({
+    minTripDistanceM: 50,
+    minTripLocationCount: 3,
+  }),
+}));
+
 const mockDatabase = database as jest.Mocked<typeof database>;
 const mockTripAPI = tripAPI as jest.Mocked<typeof tripAPI>;
 
@@ -164,5 +171,70 @@ describe('SyncService.syncDirtyTrips', () => {
 
     expect(mockTripAPI.patchTrip).toHaveBeenCalledTimes(2);
     expect(mockDatabase.updateTrip).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SyncService.cleanupInvalidTrips', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('does NOT cancel a completed walk below the 400m per-type minimum (lets backend decide)', async () => {
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'short-walk', distance: 250, type: 'walk', status: 'completed', synced: 0 } as unknown as Trip,
+    ]);
+    mockDatabase.getLocationsByTrip.mockResolvedValue(
+      Array.from({ length: 20 }, (_, i) => ({ latitude: 51 + i * 0.001, longitude: 0 })) as any
+    );
+
+    await syncService.cleanupInvalidTrips();
+
+    expect(mockDatabase.updateTrip).not.toHaveBeenCalled();
+  });
+
+  it('does NOT cancel a looping walk that trips GPS-drift heuristics', async () => {
+    // 600m walk that returns near its start (looks "circular") — valid real walk
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'loop-walk', distance: 600, type: 'walk', status: 'completed', synced: 0 } as unknown as Trip,
+    ]);
+    mockDatabase.getLocationsByTrip.mockResolvedValue(
+      Array.from({ length: 30 }, (_, i) => ({
+        latitude: 51 + Math.sin((i / 30) * 2 * Math.PI) * 0.001,
+        longitude: Math.cos((i / 30) * 2 * Math.PI) * 0.001,
+      })) as any
+    );
+
+    await syncService.cleanupInvalidTrips();
+
+    expect(mockDatabase.updateTrip).not.toHaveBeenCalled();
+  });
+
+  it('cancels a genuinely GPS-starved trip (below junk floor on BOTH distance and point count)', async () => {
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'junk', distance: 10, type: 'walk', status: 'completed', synced: 0 } as unknown as Trip,
+    ]);
+    // Only 2 points — below minTripLocationCount (3)
+    mockDatabase.getLocationsByTrip.mockResolvedValue([
+      { latitude: 51, longitude: 0 },
+      { latitude: 51, longitude: 0 },
+    ] as any);
+
+    await syncService.cleanupInvalidTrips();
+
+    expect(mockDatabase.updateTrip).toHaveBeenCalledWith('junk', expect.objectContaining({ status: 'cancelled' }));
+  });
+
+  it('does NOT cancel a starved trip if it has enough distance (e.g. manual trip with sparse route)', async () => {
+    mockDatabase.getAllTrips.mockResolvedValue([
+      { id: 'sparse-but-long', distance: 800, type: 'walk', status: 'completed', synced: 0 } as unknown as Trip,
+    ]);
+    mockDatabase.getLocationsByTrip.mockResolvedValue([
+      { latitude: 51, longitude: 0 },
+      { latitude: 51.01, longitude: 0 },
+    ] as any);
+
+    await syncService.cleanupInvalidTrips();
+
+    expect(mockDatabase.updateTrip).not.toHaveBeenCalled();
   });
 });

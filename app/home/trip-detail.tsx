@@ -29,9 +29,8 @@ import { syncService } from '@/lib/services/SyncService';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
 import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
-
-// Build-time constant — true for dev and EAS preview builds, false for production
-const isDebugBuild = __DEV__ || process.env.EXPO_PUBLIC_BUILD_PROFILE !== 'production';
+import { useAuth } from '@/contexts/AuthContext';
+import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
 /**
  * Translates internal tracking notes to user-friendly explanations.
@@ -60,6 +59,8 @@ function getDisplayNote(rawNote: string | null): string | null {
 export default function TripDetailScreen() {
   const { id, local } = useLocalSearchParams<{ id: string; local?: string }>();
   const isLocalTrip = local === 'true';
+  const { user } = useAuth();
+  const isDebugBuild = isDebugEnabled(user?.email);
   const { colors, isDark } = useTheme();
   const { unitSystem, formatElevation, formatWeight } = useUnits();
   const { t } = useTranslation('maps');
@@ -440,7 +441,7 @@ export default function TripDetailScreen() {
               <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
                 {/* Type selector */}
                 <View style={styles.typeSelector}>
-                  {(['walk', 'cycle', 'drive'] as TripType[]).map((type) => {
+                  {(['walk', 'run', 'cycle', 'drive'] as TripType[]).map((type) => {
                     const selected = (confirmTypeOverride ?? backendTrip.type) === type;
                     const tColor = getTripTypeColor(type);
                     return (

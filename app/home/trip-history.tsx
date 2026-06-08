@@ -161,9 +161,7 @@ export default function TripHistoryScreen() {
     );
 
     return [
-      ...(backendTrips)
-        .filter(trip => trip.is_valid !== false)
-        .map(backendToDisplay),
+      ...backendTrips.map(backendToDisplay),
       ...unsyncedLocalTrips.map(localToDisplay),
     ]
       .filter((trip) => isVisibleTripType(trip.type))

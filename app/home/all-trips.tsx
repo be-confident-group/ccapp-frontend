@@ -2,8 +2,9 @@
  * All Trips Review Screen
  *
  * Shows completed trips with options to confirm or flag them.
- * By default hides system-flagged trips (is_valid=false, unconfirmed) to reduce noise.
- * A toggle reveals them. Multi-select mode enables bulk Delete and "Not my trip".
+ * All trips (including backend-flagged ones) are shown by default so recorded
+ * trips are never silently hidden from the user. A toggle filters them out.
+ * Multi-select mode enables bulk Delete and "Not my trip".
  */
 
 import { ThemedText } from '@/components/themed-text';
@@ -56,8 +57,9 @@ export default function AllTripsScreen() {
   const [localLoading, setLocalLoading] = useState(true);
   const [cachedBackendTrips, setCachedBackendTrips] = useState<ApiTrip[] | null>(null);
 
-  // B.9: Hide system-flagged trips by default; user can reveal with toggle.
-  const [showFlagged, setShowFlagged] = useState(false);
+  // Show all trips (including backend-flagged ones) by default so no recorded
+  // trip is ever silently hidden. User can toggle to hide flagged ones.
+  const [showFlagged, setShowFlagged] = useState(true);
 
   // Phase D: Multi-select state
   const [selectionMode, setSelectionMode] = useState(false);

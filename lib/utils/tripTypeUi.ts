@@ -4,19 +4,17 @@
  * The on-device ML classifier and backend both speak the full 4-class set:
  *   walk | run | cycle | drive
  *
- * In v1 the product surface only wants to show walking and cycling. Running
- * and vehicle/transport trips are still stored, synced, and available for
- * future analyses/model retraining — they're just hidden in the UI.
+ * Walk, cycle, and run are user-visible. Drive trips are still stored and
+ * synced (for ML retraining) but hidden in the UI — users see them only via
+ * the "not my trip" / flagged flow.
  *
  * Always funnel a list/stats/chart through `filterVisibleTrips` or the
- * `VISIBLE_TRIP_TYPES` constant before rendering so v1 stays consistent.
- * Bumping the whitelist in one place is how we later "enable" running +
- * transport trips in the UI.
+ * `VISIBLE_TRIP_TYPES` constant before rendering so the UI stays consistent.
  */
 
 import type { TripType } from '@/types/trip';
 
-export const VISIBLE_TRIP_TYPES: readonly TripType[] = ['walk', 'cycle'] as const;
+export const VISIBLE_TRIP_TYPES: readonly TripType[] = ['walk', 'cycle', 'run'] as const;
 
 export function isVisibleTripType(type: TripType | null | undefined): boolean {
   if (!type) return false;

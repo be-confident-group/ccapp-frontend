@@ -1,20 +1,28 @@
 import { database } from '../database';
 import { calculateDistance, type Coordinate } from '../utils/geoCalculations';
 import { scheduleTripCompletionNotifications } from './TripManager';
+import { getTrackingConfig } from './TrackingConfig';
 
 /**
- * Cancel a trip that came out of finalization with insufficient distance.
- * Runs on both happy and error paths so a trip whose GPS got starved (every fix
- * dropped by the accuracy gate, native crash, segmentation aborted, etc.) never
- * lingers in the user-visible list as a 0-distance "completed" walk.
+ * Discard a trip that came out of finalization with essentially no usable GPS data
+ * (every fix dropped by the accuracy gate, native crash, segmentation aborted, etc.).
+ *
+ * This intentionally uses the same low "minimum size" floor as the backend
+ * (minTripDistanceM / minTripLocationCount) rather than the per-type walk/cycle
+ * minimums. A real but short walk (e.g. 250 m) must NOT be cancelled here: cancelling
+ * hides it from every list and stops it from ever syncing, so the user loses the trip.
+ * Sub-minimum-but-real trips are kept and synced; the backend marks them is_valid=false
+ * while keeping them visible under "show flagged".
  */
 async function safetyCancelIfBelowMinimum(tripId: string): Promise<void> {
   try {
     const t = await database.getTripById(tripId);
     if (!t || t.status !== 'completed') return;
     const dist = t.distance ?? 0;
-    const minDist = t.type === 'cycle' ? 1000 : 400;
-    if (dist < minDist) {
+    const cfg = getTrackingConfig();
+    const locationCount = (await database.getLocationsByTrip(tripId)).length;
+    // Genuine junk only: both distance AND point count below the minimum-size floor.
+    if (dist < cfg.minTripDistanceM && locationCount < cfg.minTripLocationCount) {
       // Re-read immediately before writing to avoid clobbering a concurrent manual edit.
       // Note: this narrows but does not eliminate the TOCTOU window — SQLite on React Native
       // has no compare-and-swap, so a concurrent write between this read and the updateTrip
@@ -23,10 +31,10 @@ async function safetyCancelIfBelowMinimum(tripId: string): Promise<void> {
       if (!current || current.status !== 'completed') return;
       await database.updateTrip(tripId, {
         status: 'cancelled',
-        notes: `Cancelled: ${dist}m < ${minDist}m minimum`,
+        notes: `Cancelled: GPS-starved (${dist.toFixed(0)}m, ${locationCount} points)`,
         updated_at: Date.now(),
       });
-      console.warn(`[TripFinalizationPipeline] safety-cancelled trip ${tripId} (${dist}m)`);
+      console.warn(`[TripFinalizationPipeline] discarded GPS-starved trip ${tripId} (${dist.toFixed(0)}m, ${locationCount} pts)`);
     }
   } catch (err) {
     console.warn(`[TripFinalizationPipeline] safety-cancel failed: ${String(err)}`);

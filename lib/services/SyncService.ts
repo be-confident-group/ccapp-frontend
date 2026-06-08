@@ -6,7 +6,6 @@ import NetInfo from '@react-native-community/netinfo';
 import { database } from '../database';
 import { tripAPI, transformTripForApi, type DBTrip, type ApiTrip, type ApiTripCreate } from '../api/trips';
 import type { Trip } from '../database/db';
-import { TripValidationService } from './TripValidationService';
 import { getTrackingConfig } from './TrackingConfig';
 
 export interface SyncResult {
@@ -410,49 +409,32 @@ class SyncService {
       let cleaned = 0;
 
       const cfg = getTrackingConfig();
-      const minWalkM = cfg.minDistanceWalkKm * 1000;
-      const minCycleM = cfg.minDistanceCycleKm * 1000;
 
       for (const trip of completedTrips) {
-        let cancelReason: string | null = null;
+        // Only discard genuinely GPS-starved trips where both distance AND
+        // point count are below the minimum-size floor. This mirrors the
+        // backend's belt-and-braces rejection and prevents noise records
+        // from appearing as 0-distance completed trips.
+        //
+        // Per-type distance thresholds (walk < 400m, cycle < 1km) and GPS-drift
+        // heuristics are intentionally NOT applied here — the backend handles
+        // those and keeps the trip visible (is_valid=false, show-flagged). If
+        // we cancel them here they're permanently lost before they ever sync.
+        const locations = await database.getLocationsByTrip(trip.id);
+        const locationCount = locations.length;
 
-        // Check 1: Distance thresholds. We now sync all 4 ML types (walk, cycle,
-        // run, drive); the backend is responsible for `is_valid` on run/drive.
-        // Frontend still skips very short walk/cycle trips because the UI
-        // shows these and they're usually drift.
-        if (trip.type === 'walk' && trip.distance < minWalkM) {
-          cancelReason = `Walk too short (${trip.distance.toFixed(0)}m < ${minWalkM}m)`;
-        } else if (trip.type === 'cycle' && trip.distance < minCycleM) {
-          cancelReason = `Cycle too short (${trip.distance.toFixed(0)}m < ${minCycleM}m)`;
-        }
-
-        // Check 2: GPS drift detection (spatial validation)
-        if (!cancelReason) {
-          const locations = await database.getLocationsByTrip(trip.id);
-          if (locations.length >= 2) {
-            const coords = locations.map(loc => ({
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-            }));
-            const validation = TripValidationService.validateTrip(coords, trip.distance);
-            if (!validation.isValid) {
-              cancelReason = `GPS drift: ${validation.reasons.join('; ')}`;
-            }
-          }
-        }
-
-        if (cancelReason) {
+        if (trip.distance < cfg.minTripDistanceM && locationCount < cfg.minTripLocationCount) {
           await database.updateTrip(trip.id, {
             status: 'cancelled',
-            notes: cancelReason,
+            notes: `GPS-starved (${trip.distance.toFixed(0)}m, ${locationCount} points)`,
           });
           cleaned++;
-          console.log(`[SyncService] Cleaned trip ${trip.id}: ${cancelReason}`);
+          console.log(`[SyncService] Discarded GPS-starved trip ${trip.id}: ${trip.distance.toFixed(0)}m, ${locationCount} pts`);
         }
       }
 
       if (cleaned > 0) {
-        console.log(`[SyncService] Cleaned up ${cleaned} invalid trips total`);
+        console.log(`[SyncService] Discarded ${cleaned} GPS-starved trips`);
       }
 
       return cleaned;

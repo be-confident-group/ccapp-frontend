@@ -14,6 +14,7 @@ import {
 } from '../utils/geoCalculations';
 import { database } from '../database';
 import type { Trip } from '../database/db';
+import { getTrackingConfig } from './TrackingConfig';
 
 /**
  * Validation metrics calculated for each trip
@@ -268,40 +269,41 @@ export class TripValidationService {
     const tripType = trip.type;
     const totalDistance = trip.distance;
     const maxSpeedKmh = trip.max_speed;
+    const locationCount = coords.length;
 
-    let reason: string | null = null;
+    // The backend is the single authority on `is_valid` — it recomputes distance/speed
+    // from the synced route and applies the same thresholds, but it KEEPS the row
+    // (visible under "show flagged", excluded from stats). The frontend must therefore
+    // NOT cancel a recorded trip on these heuristics: cancelling sets status='cancelled',
+    // which hides the trip from every list AND prevents it from ever syncing, so the user
+    // permanently loses a real walk. We record any quality concern as a diagnostic note
+    // (surfaced in the Beta Diagnostics drawer) and let the trip sync.
+    const diagnostics: string[] = [];
 
-    // Check 1: Max speed (indicates driving / GPS spike)
     if (maxSpeedKmh > MAX_SPEED_KMH) {
-      reason = `Max speed (${maxSpeedKmh.toFixed(1)} km/h) exceeds threshold (${MAX_SPEED_KMH} km/h)`;
+      diagnostics.push(`Max speed (${maxSpeedKmh.toFixed(1)} km/h) exceeds ${MAX_SPEED_KMH} km/h — backend may reclassify as drive`);
     }
-
-    // Check 2: Minimum distance by type
-    if (!reason && tripType === 'walk' && totalDistance < MIN_WALK_DISTANCE) {
-      reason = `Walk distance (${totalDistance.toFixed(0)}m) below minimum (${MIN_WALK_DISTANCE}m)`;
+    if (tripType === 'walk' && totalDistance < MIN_WALK_DISTANCE) {
+      diagnostics.push(`Walk distance (${totalDistance.toFixed(0)}m) below ${MIN_WALK_DISTANCE}m`);
     }
-    if (!reason && tripType === 'cycle' && totalDistance < MIN_RIDE_DISTANCE) {
-      reason = `Ride distance (${totalDistance.toFixed(0)}m) below minimum (${MIN_RIDE_DISTANCE}m)`;
+    if (tripType === 'cycle' && totalDistance < MIN_RIDE_DISTANCE) {
+      diagnostics.push(`Ride distance (${totalDistance.toFixed(0)}m) below ${MIN_RIDE_DISTANCE}m`);
     }
-
-    // Check 3: Unsupported type
-    // 'drive' is accepted by the backend (Trip.type enum includes it) and marked
-    // is_valid=false server-side to exclude from leaderboards — let it through.
-    // 'run' is not in the backend Trip.type enum, so reject it here.
-    if (!reason && tripType === 'run') {
-      reason = `Trip type 'run' is not yet supported`;
-    }
-
-    // Check 4: GPS drift detection
-    if (!reason && coords.length >= 2) {
+    if (coords.length >= 2) {
       const driftResult = this.validateTrip(coords, totalDistance);
       if (!driftResult.isValid) {
-        reason = driftResult.reasons.join('; ');
+        diagnostics.push(`GPS quality: ${driftResult.reasons.join('; ')}`);
       }
     }
 
-    if (reason) {
-      console.log(`[TripValidation] Trip ${tripId} cancelled: ${reason}`);
+    // The ONLY locally-fatal case: a genuinely GPS-starved trip with ~zero usable data
+    // (every fix dropped by the accuracy gate, native engine crash, etc.). This mirrors
+    // the backend's "minimum size rejection" floor so we never sync pure noise, while
+    // still letting every real trip through.
+    const cfg = getTrackingConfig();
+    if (totalDistance < cfg.minTripDistanceM && locationCount < cfg.minTripLocationCount) {
+      const reason = `GPS-starved trip (${totalDistance.toFixed(0)}m, ${locationCount} points)`;
+      console.log(`[TripValidation] Trip ${tripId} discarded: ${reason}`);
       await database.updateTrip(tripId, {
         status: 'cancelled',
         end_time: endTime,
@@ -311,7 +313,11 @@ export class TripValidationService {
       return { isValid: false, reason };
     }
 
-    console.log(`[TripValidation] Trip ${tripId} valid — building route with ${routeForSync.length} points`);
+    const note = diagnostics.length > 0 ? diagnostics.join('; ') : undefined;
+    console.log(
+      `[TripValidation] Trip ${tripId} kept — ${routeForSync.length} points` +
+      (note ? ` (flagged: ${note})` : '')
+    );
 
     // We only want to set route_data if it's missing or if we fell back to locations
     // But overwriting with the identical string is safe and ensures `additionalFields` merges correctly.
@@ -320,6 +326,7 @@ export class TripValidationService {
       end_time: endTime,
       route_data: JSON.stringify(routeForSync),
       updated_at: endTime,
+      ...(note ? { notes: note } : {}),
       ...additionalFields,
     });
 
