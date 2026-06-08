@@ -58,6 +58,9 @@ export interface UserProfile {
   total_rides?: number;
   co2_saved?: number;
   current_streak?: number;
+  preferred_activity?: 'walk' | 'cycle';
+  goal_weekly_distance_km?: number;
+  goal_active_days_per_week?: number;
 }
 
 export interface ChangePasswordRequest {
@@ -77,10 +80,9 @@ export interface ProfileUpdateRequest {
     avatar?: string;
     bio?: string;
   };
-  // Fields below require backend support (not yet deployed — add to User model + serializer)
   preferred_activity?: 'walk' | 'cycle';
-  weekly_distance_km?: number;
-  active_days_per_week?: number;
+  goal_weekly_distance_km?: number;
+  goal_active_days_per_week?: number;
 }
 
 // Auth API functions

@@ -37,8 +37,8 @@ export default function GoalsScreen() {
   async function saveGoalsToBackend(distanceKm: number, daysPerWeek: number) {
     try {
       await authApi.updateProfile({
-        weekly_distance_km: distanceKm,
-        active_days_per_week: daysPerWeek,
+        goal_weekly_distance_km: distanceKm,
+        goal_active_days_per_week: daysPerWeek,
       });
     } catch (e) {
       console.warn('[Goals] updateProfile (goals) failed (non-blocking):', e);
