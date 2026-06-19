@@ -55,7 +55,7 @@
       "lowPowerModeOn": "Activado — GPS y tareas en segundo plano limitados",
       "batteryOpt": "Optimización de Batería",
       "batteryOptExempt": "Exento — la app puede ejecutarse libremente",
-      "batteryOptActive": "Activa — el sistema puede detener el seguimiento",
+      "batteryOptActive": "Optimizada — abre Info. de app → Batería → configura como Sin restricciones",
       "engineState": "Motor de Seguimiento",
       "engineIdle": "En espera",
       "engineActive": "Activo"

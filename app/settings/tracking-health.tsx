@@ -107,7 +107,7 @@ function buildChecks(health: TrackingHealth, t: (k: string) => string): HealthCh
       statusText: health.batteryOptExempt ? tk('batteryOptExempt') : tk('batteryOptActive'),
       status: health.batteryOptExempt ? 'ok' : 'warn',
       onFix: !health.batteryOptExempt
-        ? () => Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS')
+        ? () => Linking.openSettings()
         : undefined,
       fixLabelKey: 'profile:trackingHealth.fixIt',
     });

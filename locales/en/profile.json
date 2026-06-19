@@ -55,7 +55,7 @@
       "lowPowerModeOn": "On — GPS and background tasks throttled",
       "batteryOpt": "Battery Optimisation",
       "batteryOptExempt": "Exempt — app can run freely in background",
-      "batteryOptActive": "Active — OS may kill tracking; tap to request exemption",
+      "batteryOptActive": "Optimised — open App Info → Battery → set to Unrestricted",
       "engineState": "Tracking Engine",
       "engineIdle": "Idle — waiting for movement",
       "engineActive": "Active"
