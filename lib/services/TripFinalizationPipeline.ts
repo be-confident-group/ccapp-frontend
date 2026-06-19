@@ -43,6 +43,21 @@ async function safetyCancelIfBelowMinimum(tripId: string): Promise<void> {
 
 export class TripFinalizationPipeline {
   static async finalize(tripId: string): Promise<void> {
+    try {
+      await TripFinalizationPipeline.runPipeline(tripId);
+    } finally {
+      // Always release the native state machine: it sits in ENDING (ignoring all
+      // motion/location input, unable to start new trips) until this is called.
+      try {
+        const { RadziTrackerNative } = await import('../native/RadziTracker');
+        await RadziTrackerNative.notifyFinalizationComplete();
+      } catch (err) {
+        console.warn(`[TripFinalizationPipeline] notifyFinalizationComplete failed: ${String(err)}`);
+      }
+    }
+  }
+
+  private static async runPipeline(tripId: string): Promise<void> {
     console.log('[TripFinalizationPipeline] starting for', tripId);
 
     // Verify trip exists
@@ -96,7 +111,6 @@ export class TripFinalizationPipeline {
 
     const { TripValidationService } = await import('./TripValidationService');
     const { syncService } = await import('./SyncService');
-    const { RadziTrackerNative } = await import('../native/RadziTracker');
 
     // Classify trip and check for multi-modal segments
     try {
@@ -131,6 +145,7 @@ export class TripFinalizationPipeline {
               lat: Number(loc.latitude.toFixed(6)),
               lng: Number(loc.longitude.toFixed(6)),
               timestamp: new Date(loc.timestamp).toISOString(),
+              ...(loc.accuracy != null ? { accuracy: Math.round(loc.accuracy) } : {}),
             }));
 
             const segmentStartTime = sortedLocations[0].timestamp;
@@ -221,21 +236,6 @@ export class TripFinalizationPipeline {
     } catch (err) {
       console.warn(`[TripFinalizationPipeline] segmentation/validation failed: ${String(err)}`);
       await safetyCancelIfBelowMinimum(tripId);
-    }
-
-    // Run shadow classifier (best-effort)
-    try {
-      const { ShadowClassifierLogger } = await import('./ShadowClassifierLogger');
-      await ShadowClassifierLogger.run(tripId);
-    } catch (err) {
-      console.warn(`[TripFinalizationPipeline] shadow classifier failed: ${String(err)}`);
-    }
-
-    // Signal native state machine to return to idle
-    try {
-      await RadziTrackerNative.notifyFinalizationComplete();
-    } catch (err) {
-      console.warn(`[TripFinalizationPipeline] notifyFinalizationComplete failed: ${String(err)}`);
     }
 
     console.log('[TripFinalizationPipeline] complete for', tripId);

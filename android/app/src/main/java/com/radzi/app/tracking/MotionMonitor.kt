@@ -130,7 +130,12 @@ class MotionMonitor(private val ctx: Context) {
                 TrackingLogger.Level.info,
                 "MotionMonitor: transition enter → ${activity.raw}"
             )
-            handleActivityChange(activity, Confidence.HIGH, System.currentTimeMillis())
+            // Transition events carry no confidence value. Treating them as HIGH
+            // short-circuits the multi-window vote in TripStateMachine and starts a
+            // trip on every single WALKING enter — including indoor shuffle noise and
+            // the brief walk before boarding a train. MEDIUM routes them through the
+            // 20 s vote window like sampled AR results, which is the intended design.
+            handleActivityChange(activity, Confidence.MEDIUM, System.currentTimeMillis())
         }
     }
 
@@ -213,8 +218,19 @@ class MotionMonitor(private val ctx: Context) {
                 .setActivityType(DetectedActivity.STILL)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
                 .build(),
+            // STILL ENTER is the trip-end signal: the sampled AR updates can be
+            // throttled in the background, and without an explicit stationary event
+            // the state machine never enters cooldown and the trip never ends.
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
             ActivityTransition.Builder()
                 .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.RUNNING)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
                 .build(),
             ActivityTransition.Builder()

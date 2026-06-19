@@ -5,15 +5,19 @@ import {
   AppStateStatus,
   Platform,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   BellIcon,
   BoltIcon,
   CheckCircleIcon,
+  ChevronRightIcon,
   ExclamationCircleIcon,
+  HeartIcon,
   MapIcon,
   MapPinIcon,
   QuestionMarkCircleIcon,
@@ -237,6 +241,25 @@ export default function PermissionsScreen() {
                 </Card>
               );
             })}
+
+            {/* Tracking Health link */}
+            <TouchableOpacity
+              onPress={() => router.push('/settings/tracking-health')}
+              style={[styles.healthLink, { borderColor: colors.border }]}
+            >
+              <View style={[styles.healthIconBox, { backgroundColor: colors.primary + '1F' }]}>
+                <HeartIcon size={18} color={colors.primary} />
+              </View>
+              <View style={styles.healthLinkText}>
+                <ThemedText style={styles.healthLinkTitle}>
+                  {t('trackingHealth.title', { ns: 'profile' })}
+                </ThemedText>
+                <ThemedText style={[styles.healthLinkSubtitle, { color: colors.textMuted }]}>
+                  {t('trackingHealth.subtitle', { ns: 'profile' })}
+                </ThemedText>
+              </View>
+              <ChevronRightIcon size={16} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
         )}
       </ThemedView>
@@ -317,4 +340,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexShrink: 0,
   },
+  healthLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.xs,
+  },
+  healthIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  healthLinkText: { flex: 1 },
+  healthLinkTitle: { fontSize: FontSizes.md, fontWeight: FontWeights.semibold },
+  healthLinkSubtitle: { fontSize: FontSizes.xs, lineHeight: 17, marginTop: 2 },
 });

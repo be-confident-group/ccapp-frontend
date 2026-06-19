@@ -6,7 +6,7 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { View, StyleSheet, ViewStyle, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -151,7 +151,7 @@ export default function SegmentPainter({
   style,
   children,
 }: SegmentPainterProps) {
-  const [isPainting, setIsPainting] = useState(false);
+  const [, setIsPainting] = useState(false);
   const startIndexRef = useRef<number | null>(null);
   const currentIndexRef = useRef<number | null>(null);
 

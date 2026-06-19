@@ -31,6 +31,38 @@
     "backgroundTracking": "Phone Background Tracking",
     "backgroundTrackingSubtitle": "Track rides automatically"
   },
+  "trackingHealth": {
+    "title": "Tracking Health",
+    "subtitle": "Checks that background tracking can run reliably on this device",
+    "loading": "Checking...",
+    "refresh": "Refresh",
+    "allGood": "All checks passed",
+    "issuesFound": "Issues found",
+    "fixIt": "Fix",
+    "checks": {
+      "locationAuth": "Location Permission",
+      "locationAuthAlways": "Always — background tracking enabled",
+      "locationAuthWhenInUse": "When In Use — background tracking disabled",
+      "locationAuthDenied": "Denied — go to Settings to allow",
+      "locationPrecise": "Precise Location",
+      "locationPreciseOk": "Full accuracy enabled",
+      "locationPreciseDegraded": "Reduced accuracy — GPS precision degraded",
+      "motion": "Motion & Fitness",
+      "motionGranted": "Granted",
+      "motionDenied": "Denied — activity detection disabled",
+      "lowPowerMode": "Low Power Mode",
+      "lowPowerModeOff": "Off — GPS runs at full speed",
+      "lowPowerModeOn": "On — GPS and background tasks throttled",
+      "batteryOpt": "Battery Optimisation",
+      "batteryOptExempt": "Exempt — app can run freely in background",
+      "batteryOptActive": "Active — OS may kill tracking; tap to request exemption",
+      "engineState": "Tracking Engine",
+      "engineIdle": "Idle — waiting for movement",
+      "engineActive": "Active"
+    },
+    "degradationBanner": "Location permission changed — background tracking may not work",
+    "fixNow": "Fix Now"
+  },
   "notifications": {
     "subtitle": "Manage your notification preferences"
   },

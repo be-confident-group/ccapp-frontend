@@ -13,14 +13,11 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
-  ScrollView,
   Pressable,
-} from 'react-native';
+  TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { ChevronLeftIcon, XMarkIcon } from 'react-native-heroicons/outline';
-import { InformationCircleIcon } from 'react-native-heroicons/solid';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

@@ -90,7 +90,7 @@ export default function MapsScreen() {
   // Use persistent map layer hook
   const { selectedLayer, setSelectedLayer } = useMapLayer(isDark);
 
-  const [isBottomSheetExpanded, setIsBottomSheetExpanded] = useState(false);
+  const [, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -162,7 +162,7 @@ export default function MapsScreen() {
               mapViewRef.current.animateToRegion(region, 800);
             }
           }
-        } catch (error) {
+        } catch {
           // Silently handle - user location not critical
         }
       }
@@ -372,7 +372,7 @@ export default function MapsScreen() {
  */
 function DBTripRoute({ trip, isSelected }: { trip: DBTrip; isSelected: boolean }) {
   // Parse route data
-  let coordinates: Array<[number, number]> = [];
+  let coordinates: [number, number][] = [];
 
   try {
     if (trip.route_data) {

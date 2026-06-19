@@ -23,8 +23,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
-import { TextInput } from '@/components/ui';
-import { Button } from '@/components/ui';
+import { TextInput , Button } from '@/components/ui';
 import { useSubmitFeedback } from '@/lib/hooks/useFeedback';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import type { FeedbackCategory } from '@/lib/api/feedback';

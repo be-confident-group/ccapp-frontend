@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { getTripTypeIcon, getTripTypeColor, type TripType } from '@/types/trip';
+import { getTripTypeColor, type TripType } from '@/types/trip';
 import { formatDurationHuman, parseRouteData } from '@/lib/utils/geoCalculations';
 import type { Trip } from '@/lib/database/db';
 
@@ -129,7 +129,7 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
       // For now, just show distance - could be enhanced with geocoding
       const distanceKm = (trip.distance || 0) / 1000;
       return `${distanceKm.toFixed(1)} km route`;
-    } catch (error) {
+    } catch {
       return 'Route data unavailable';
     }
   };

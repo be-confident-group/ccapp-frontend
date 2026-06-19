@@ -9,7 +9,6 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import {
   FeelingType,
@@ -34,8 +33,6 @@ export default function FeelingSelector({
   style,
   compact = false,
 }: FeelingSelectorProps) {
-  const { colors } = useTheme();
-
   if (compact) {
     return (
       <View style={[styles.compactContainer, style]}>

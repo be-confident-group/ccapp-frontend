@@ -10,7 +10,6 @@ import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
 import {
   ArrowsPointingOutIcon,
-  BeakerIcon,
   ChevronDownIcon,
   FireIcon,
   TrophyIcon,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Alert, ScrollView, TouchableOpacity, Linking, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Alert, ScrollView, Linking, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -18,6 +18,7 @@ import {
   WrenchScrewdriverIcon,
   TrashIcon,
   LockClosedIcon,
+  HeartIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -26,8 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
-// NOTE: ActivityChart is hidden for next version release but import kept for future use
-import { ActivityChart } from '@/components/profile/ActivityChart';
+
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
@@ -74,7 +74,7 @@ export default function YouScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
-  const { isTracking, toggleTracking, hasPermissions } = useTracking();
+  const { isTracking, toggleTracking } = useTracking();
   const [loading, setLoading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -390,6 +390,12 @@ export default function YouScreen() {
                   toggleValue={isTracking}
                   onToggleChange={handleBackgroundTrackingToggle}
                   showChevron={false}
+                />
+                <SettingsItem
+                  icon={<HeartIcon size={22} color={colors.text} />}
+                  title={t('profile:trackingHealth.title')}
+                  subtitle={t('profile:trackingHealth.subtitle')}
+                  onPress={() => router.push('/settings/tracking-health')}
                 />
                 <SettingsItem
                   icon={<Cog6ToothIcon size={22} color={colors.text} />}

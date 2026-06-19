@@ -6,6 +6,21 @@ import { initTrackingConfig } from '@/lib/services/TrackingConfig';
 
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { Stack, router } from 'expo-router';
+import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import 'react-native-reanimated';
+
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { UnitsProvider } from '@/contexts/UnitsContext';
+import { TrackingProvider } from '@/contexts/TrackingContext';
+import { QueryProvider } from '@/providers/QueryProvider';
+import { useProtectedRoute } from '@/contexts/useProtectedRoute';
+import { initializeMapbox } from '@/config/mapbox';
+
+// Initialize i18n
+import '@/lib/i18n';
 
 // Configure how notifications are handled when the app is in the foreground.
 // Trip-recording local notifications are always shown.
@@ -31,21 +46,6 @@ Notifications.setNotificationHandler({
     };
   },
 });
-import { Stack, router } from 'expo-router';
-import { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { UnitsProvider } from '@/contexts/UnitsContext';
-import { TrackingProvider } from '@/contexts/TrackingContext';
-import { QueryProvider } from '@/providers/QueryProvider';
-import { useProtectedRoute } from '@/contexts/useProtectedRoute';
-import { initializeMapbox } from '@/config/mapbox';
-
-// Initialize i18n
-import '@/lib/i18n';
 
 // Initialize Mapbox
 initializeMapbox();

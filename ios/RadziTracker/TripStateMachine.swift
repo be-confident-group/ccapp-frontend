@@ -31,6 +31,8 @@ final class TripStateMachine {
     var cooldownEndSeconds: TimeInterval = 180
     var multiWindowVoteSec: TimeInterval = 20           // vote window for multi-sample CMMA type selection
     var allowLowConfidenceWalking: Bool = true          // allow low-confidence walking through MotionMonitor
+    var modeChangeEndSeconds: TimeInterval = 120        // sustained automotive during a non-drive trip ends it
+    var cooldownResumeWindowSeconds: TimeInterval = 60  // 2nd moving event must arrive within this to resume from cooldown
   }
 
   weak var delegate: TripStateMachineDelegate?
@@ -48,6 +50,18 @@ final class TripStateMachine {
   private var lastMotionActivity: MotionMonitor.Activity = .unknown
   private weak var motionMonitorRef: MotionMonitor?
 
+  // B.11: sustained-automotive detection — ends a non-drive trip when the user
+  // boards a vehicle (train/bus/car) so the walk and the ride don't merge.
+  private var automotiveSinceTime: Date?
+
+  // Cooldown resume hysteresis — a single motion blip (AR/CMMA flapping while
+  // stationary indoors) must not resume a trip and reset the end timer.
+  private var cooldownFirstMovingAt: Date?
+
+  // Urban-canyon diagnostics for the detecting phase.
+  private var detectingDroppedFixCount = 0
+  private var detectingDroppedAccuracySum: Double = 0
+
   // Multi-window CMMA vote state (B.2)
   private var voteBuffer: [(type: String, weight: Int)] = []
   private var voteTimer: Timer?
@@ -56,6 +70,18 @@ final class TripStateMachine {
   private var detectingPedometerSteps: Int = 0
   private var detectingPedometerQueried = false
   private let pedometer = CMPedometer()
+
+  // Pre-trip GPS ring buffer: accumulates fixes during the vote/warm-up window before
+  // detecting officially starts. Flushed into staging (detecting path) or trip locations
+  // (high-confidence path) so the route starts from the actual point of departure.
+  private struct PreBufferFix {
+    let lat: Double; let lng: Double
+    let accuracy: Double; let speed: Double; let timestamp: Int64
+  }
+  private var preTripBuffer: [PreBufferFix] = []
+  private let preTripBufferMaxCount = 300
+  private let preTripBufferMaxAgeMs: Int64 = 5 * 60 * 1000  // 5 minutes
+  private var gpsWarmUpRequested = false
 
   /// Fires every 10 s when in recording/cooldown so we can check elapsed-time
   /// thresholds even when CMMA stops delivering new events (which it does once
@@ -97,6 +123,13 @@ final class TripStateMachine {
     default: return
     }
 
+    // GPS warm-up: as soon as a moving event arrives in idle, start balanced-accuracy GPS
+    // so the chip is warm by the time the vote commits. Fixes flow into preTripBuffer.
+    if !gpsWarmUpRequested {
+      gpsWarmUpRequested = true
+      delegate?.stateMachine(self, requestAccuracyMode: .hundred)
+    }
+
     // High-confidence: short-circuit the vote window and start immediately.
     if confidence == .high {
       cancelVoteTimer()
@@ -134,7 +167,15 @@ final class TripStateMachine {
 
   private func commitVote() {
     defer { voteBuffer.removeAll(); voteTimer = nil }
-    guard state == .idle, !voteBuffer.isEmpty else { return }
+    guard state == .idle, !voteBuffer.isEmpty else {
+      // Vote expired with no usable events — turn GPS back off and keep buffer for SLC wakes.
+      if state == .idle && gpsWarmUpRequested {
+        gpsWarmUpRequested = false
+        preTripBuffer.removeAll()
+        delegate?.stateMachine(self, requestAccuracyMode: .off)
+      }
+      return
+    }
     var scores: [String: Int] = [:]
     for entry in voteBuffer { scores[entry.type, default: 0] += entry.weight }
     guard let winnerType = scores.max(by: { $0.value < $1.value })?.key else { return }
@@ -153,6 +194,24 @@ final class TripStateMachine {
       break  // Stationary/unknown blips are tolerated. checkDetectingPromotion() aborts
              // if 60s pass with <50m displacement — that's the right false-start gate.
     case .recording:
+      // B.11: a sustained run of automotive during a non-drive trip means the user
+      // boarded a vehicle — end the trip now so the walk and the ride don't merge
+      // into one record. Stationary blips (e.g. a train stopping at a station) do
+      // not reset the run; only a different *moving* activity does.
+      if activity == .automotive && currentTripType != "drive" {
+        if automotiveSinceTime == nil { automotiveSinceTime = Date() }
+        if let since = automotiveSinceTime,
+           Date().timeIntervalSince(since) >= config.modeChangeEndSeconds {
+          TrackingLogger.shared.log(.info, "TripStateMachine: sustained automotive \(Int(config.modeChangeEndSeconds))s during \(currentTripType ?? "untyped") trip — ending trip")
+          automotiveSinceTime = nil
+          transitionRecordingToCooldown()
+          transitionCooldownToEnding()
+          return
+        }
+      } else if Self.isMoving(activity) {
+        automotiveSinceTime = nil
+      }
+
       if Self.isMoving(activity) {
         stationaryStartTime = nil
         cancelStationaryCheckTimer()
@@ -165,7 +224,22 @@ final class TripStateMachine {
       }
     case .cooldown:
       if Self.isMoving(activity) {
-        transitionCooldownToRecording()
+        // Hysteresis: high-confidence motion resumes immediately; medium/low needs a
+        // second moving event within the resume window. Indoor AR/CMMA flapping fires
+        // lone low/medium events minutes apart — those must not resume the trip and
+        // reset the 180 s end timer (observed: 374 m walk kept alive for 56 minutes).
+        if confidence == .high {
+          cooldownFirstMovingAt = nil
+          transitionCooldownToRecording()
+        } else if let first = cooldownFirstMovingAt,
+                  Date().timeIntervalSince(first) <= config.cooldownResumeWindowSeconds {
+          cooldownFirstMovingAt = nil
+          transitionCooldownToRecording()
+        } else {
+          cooldownFirstMovingAt = Date()
+          TrackingLogger.shared.log(.info, "TripStateMachine: cooldown — lone \(confidence) moving event, awaiting corroboration")
+          checkCooldownEndingThreshold()
+        }
       } else {
         checkCooldownEndingThreshold()
       }
@@ -182,11 +256,24 @@ final class TripStateMachine {
 
   func onLocation(lat: Double, lng: Double, accuracy: Double, speed: Double, timestamp: Int64) {
     switch state {
-    case .idle, .ending:
+    case .ending:
+      return
+    case .idle:
+      // GPS is warm (vote window active) — buffer this fix so we can backfill the trip start.
+      if gpsWarmUpRequested {
+        preTripBuffer.append(PreBufferFix(lat: lat, lng: lng, accuracy: accuracy, speed: speed, timestamp: timestamp))
+        let cutoff = timestamp - preTripBufferMaxAgeMs
+        preTripBuffer.removeAll { $0.timestamp < cutoff }
+        if preTripBuffer.count > preTripBufferMaxCount {
+          preTripBuffer.removeFirst(preTripBuffer.count - preTripBufferMaxCount)
+        }
+      }
       return
     case .detecting:
       // B.3: Drop low-accuracy fixes — cold-start GPS at ±100–500 m corrupts displacement maths.
       guard accuracy <= config.detectingAccuracyThresholdM else {
+        detectingDroppedFixCount += 1
+        detectingDroppedAccuracySum += accuracy
         TrackingLogger.shared.log(.info, "TripStateMachine: detecting — dropped low-accuracy fix (\(Int(accuracy))m)")
         return
       }
@@ -224,13 +311,28 @@ final class TripStateMachine {
   private func immediateStartTrip(type: String, classificationSource: String) {
     let now = Int64(Date().timeIntervalSince1970 * 1000)
     let tripId = "trip_\(now)_\(Int.random(in: 1000...9999))"
+    // Determine backfill start from pre-buffer (earliest qualifying fix).
+    let bufferCutoff = now - preTripBufferMaxAgeMs
+    let qualifying = preTripBuffer.filter { $0.accuracy <= config.detectingAccuracyThresholdM && $0.timestamp >= bufferCutoff }
+    let backfillStart = qualifying.first?.timestamp ?? now
     do {
-      try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: now,
+      try TrackingDatabase.shared.createTrip(id: tripId, startTime: now, backfillStart: backfillStart,
                                               type: type, classificationSource: classificationSource)
+      // Backfill pre-trip GPS fixes into the trip route.
+      for fix in qualifying {
+        try? TrackingDatabase.shared.insertLocation(tripId: tripId, lat: fix.lat, lng: fix.lng,
+          accuracy: fix.accuracy, speed: fix.speed, heading: nil, altitude: nil,
+          timestamp: fix.timestamp, accuracyMode: "best")
+      }
+      if !qualifying.isEmpty {
+        TrackingLogger.shared.log(.info, "TripStateMachine: pre-buffer flushed \(qualifying.count) fixes into trip \(tripId) (backfill \(now - backfillStart)ms)")
+      }
+      preTripBuffer.removeAll()
+      gpsWarmUpRequested = false
       currentTripId = tripId
       currentTripType = type
       transition(to: .recording)
-      delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: now)
+      delegate?.stateMachine(self, didStartTrip: tripId, startTime: now, backfillStart: backfillStart)
       delegate?.stateMachine(self, requestAccuracyMode: .best)
       delegate?.stateMachine(self, requestImuRunning: true, tripId: tripId)
       altimeter.start()
@@ -269,9 +371,24 @@ final class TripStateMachine {
     cancelVoteTimer()  // Cancel any in-progress vote window; detecting path takes over.
     let stagingId = "staging_\(Int64(Date().timeIntervalSince1970 * 1000))"
     currentStagingId = stagingId
+    // Flush the pre-trip buffer into staging so the route starts from where motion began.
+    let now = Int64(Date().timeIntervalSince1970 * 1000)
+    let bufferCutoff = now - preTripBufferMaxAgeMs
+    let qualifying = preTripBuffer.filter { $0.accuracy <= config.detectingAccuracyThresholdM && $0.timestamp >= bufferCutoff }
+    for fix in qualifying {
+      try? TrackingDatabase.shared.insertStagingLocation(stagingId: stagingId,
+        lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy, speed: fix.speed, timestamp: fix.timestamp)
+    }
+    if !qualifying.isEmpty {
+      TrackingLogger.shared.log(.info, "TripStateMachine: pre-buffer flushed \(qualifying.count) fixes into staging \(stagingId)")
+    }
+    preTripBuffer.removeAll()
+    gpsWarmUpRequested = false
     detectingStartTime = Date()
     detectingPedometerSteps = 0
     detectingPedometerQueried = false
+    detectingDroppedFixCount = 0
+    detectingDroppedAccuracySum = 0
     transition(to: .detecting)
     delegate?.stateMachine(self, requestAccuracyMode: .best)
   }
@@ -282,9 +399,20 @@ final class TripStateMachine {
     detectingStartTime = nil
     detectingPedometerSteps = 0
     detectingPedometerQueried = false
+    preTripBuffer.removeAll()
+    gpsWarmUpRequested = false
     transition(to: .idle)
     delegate?.stateMachine(self, requestAccuracyMode: .off)
-    TrackingLogger.shared.log(.info, "TripStateMachine: detecting→idle (\(reason))")
+    // Urban-canyon diagnostic: if GPS accuracy starved the detecting phase, say so
+    // explicitly — this is the signature of a missed walk between tall buildings.
+    if detectingDroppedFixCount > 0 {
+      let avg = Int(detectingDroppedAccuracySum / Double(detectingDroppedFixCount))
+      TrackingLogger.shared.log(.warn, "TripStateMachine: detecting→idle (\(reason)) — urban-canyon suspect: dropped \(detectingDroppedFixCount) fixes above \(Int(config.detectingAccuracyThresholdM))m gate (avg \(avg)m)")
+    } else {
+      TrackingLogger.shared.log(.info, "TripStateMachine: detecting→idle (\(reason))")
+    }
+    detectingDroppedFixCount = 0
+    detectingDroppedAccuracySum = 0
   }
 
   private func checkDetectingPromotion() {
@@ -365,6 +493,8 @@ final class TripStateMachine {
 
   private func transitionRecordingToCooldown() {
     cancelStationaryCheckTimer()
+    cooldownFirstMovingAt = nil
+    automotiveSinceTime = nil
     // Don't drain yet — trip may resume. Just stop the hardware.
     altimeter.stopAndDrain().forEach { s in
       guard let tripId = currentTripId else { return }
@@ -380,6 +510,8 @@ final class TripStateMachine {
   private func transitionCooldownToRecording() {
     stationaryStartTime = nil
     cooldownEnteredAt = nil
+    cooldownFirstMovingAt = nil
+    automotiveSinceTime = nil
     cancelStationaryCheckTimer()
     transition(to: .recording)
     altimeter.start()
@@ -406,11 +538,25 @@ final class TripStateMachine {
       try? TrackingDatabase.shared.updateTripElevation(tripId: tripId, gainM: agg.gainMeters, lossM: agg.lossMeters)
     }
 
+    // Store step count for the trip (used by TripValidationService for phantom-walk detection).
+    let durationSec = endStats?.durationSec ?? 0
+    let tripStartForSteps = durationSec > 0
+      ? Date(timeIntervalSince1970: Double(now) / 1000.0 - Double(durationSec))
+      : Date(timeIntervalSinceNow: -300)
+    let capturedForSteps = tripId
+    if CMPedometer.isStepCountingAvailable() {
+      pedometer.queryPedometerData(from: tripStartForSteps, to: Date()) { data, _ in
+        if let steps = data?.numberOfSteps.intValue, steps > 0 {
+          TrackingDatabase.shared.updateTripStepCount(tripId: capturedForSteps, steps: steps)
+          TrackingLogger.shared.log(.info, "TripStateMachine: stored \(steps) steps for trip \(capturedForSteps)")
+        }
+      }
+    }
+
     // B.7: Reject trivially short/empty trips. If GPS distance and location count are
     // both below minimums, check pedometer. Only notify JS if the trip is worth keeping.
     let distanceM = endStats?.distanceMeters ?? 0
     let locationCount = endStats?.locationCount ?? 0
-    let durationSec = endStats?.durationSec ?? 0
     let shouldCheckPedometer = distanceM < 50.0 && locationCount < 3
 
     if shouldCheckPedometer && CMPedometer.isStepCountingAvailable() {
@@ -467,16 +613,26 @@ final class TripStateMachine {
     // onFinalizationComplete() still needs to be called to reset state; fire it directly.
     cancelStationaryCheckTimer()
     currentTripId = nil
+    currentTripType = nil
     stationaryStartTime = nil
     cooldownEnteredAt = nil
+    cooldownFirstMovingAt = nil
+    automotiveSinceTime = nil
+    preTripBuffer.removeAll()
+    gpsWarmUpRequested = false
     transition(to: .idle)
   }
 
   func onFinalizationComplete() {
     cancelStationaryCheckTimer()
     currentTripId = nil
+    currentTripType = nil
     stationaryStartTime = nil
     cooldownEnteredAt = nil
+    cooldownFirstMovingAt = nil
+    automotiveSinceTime = nil
+    preTripBuffer.removeAll()
+    gpsWarmUpRequested = false
     transition(to: .idle)
   }
 

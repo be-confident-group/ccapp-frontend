@@ -31,6 +31,38 @@
     "backgroundTracking": "Seguimiento en Segundo Plano",
     "backgroundTrackingSubtitle": "Rastrear viajes automáticamente"
   },
+  "trackingHealth": {
+    "title": "Estado del Seguimiento",
+    "subtitle": "Verifica que el seguimiento en segundo plano funcione correctamente",
+    "loading": "Verificando...",
+    "refresh": "Actualizar",
+    "allGood": "Todo correcto",
+    "issuesFound": "Problemas encontrados",
+    "fixIt": "Corregir",
+    "checks": {
+      "locationAuth": "Permiso de Ubicación",
+      "locationAuthAlways": "Siempre — seguimiento en segundo plano activado",
+      "locationAuthWhenInUse": "Solo en uso — seguimiento en segundo plano desactivado",
+      "locationAuthDenied": "Denegado — ve a Ajustes para permitir",
+      "locationPrecise": "Ubicación Precisa",
+      "locationPreciseOk": "Precisión completa activada",
+      "locationPreciseDegraded": "Precisión reducida — precisión GPS degradada",
+      "motion": "Movimiento y Actividad",
+      "motionGranted": "Concedido",
+      "motionDenied": "Denegado — detección de actividad desactivada",
+      "lowPowerMode": "Modo de Bajo Consumo",
+      "lowPowerModeOff": "Desactivado — GPS a máxima velocidad",
+      "lowPowerModeOn": "Activado — GPS y tareas en segundo plano limitados",
+      "batteryOpt": "Optimización de Batería",
+      "batteryOptExempt": "Exento — la app puede ejecutarse libremente",
+      "batteryOptActive": "Activa — el sistema puede detener el seguimiento",
+      "engineState": "Motor de Seguimiento",
+      "engineIdle": "En espera",
+      "engineActive": "Activo"
+    },
+    "degradationBanner": "Permiso de ubicación cambiado — el seguimiento puede no funcionar",
+    "fixNow": "Corregir"
+  },
   "notifications": {
     "subtitle": "Administra tus preferencias de notificaciones"
   },

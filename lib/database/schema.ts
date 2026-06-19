@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export const DB_NAME = 'radzi.db';
-export const DB_VERSION = 10;
+export const DB_VERSION = 11;
 
 export const SCHEMA = {
   trips: `
@@ -446,6 +446,17 @@ export async function runMigrations(db: SQLite.SQLiteDatabase, from: number, to:
       console.log('[Database] Migration 9->10: ALTER skipped (likely exists):', err);
     }
     console.log('[Database] Migration 9->10: Completed');
+  }
+
+  // Migration from version 10 to 11: Add step_count for pedometer cross-check
+  if (from < 11 && to >= 11) {
+    console.log('[Database] Migration 10->11: Adding step_count column to trips');
+    try {
+      await db.execAsync('ALTER TABLE trips ADD COLUMN step_count INTEGER');
+    } catch (err) {
+      console.log('[Database] Migration 10->11: ALTER skipped (likely exists):', err);
+    }
+    console.log('[Database] Migration 10->11: Completed');
   }
 
   console.log('[Database] Migrations completed');

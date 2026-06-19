@@ -25,7 +25,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
 import type { Coordinate } from '@/types/location';
-import type { RouteSegment, FeelingType } from '@/types/rating';
+import type { RouteSegment } from '@/types/rating';
 import { getFeelingColor, UNPAINTED_COLOR } from '@/types/rating';
 
 /**
@@ -239,7 +239,7 @@ function calculateBounds(
 
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
   ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false, onLongPress }, ref) => {
-    const { colors, isDark } = useTheme();
+    const { isDark } = useTheme();
     const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
     const cameraRef = useRef<Camera>(null);

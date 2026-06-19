@@ -2,7 +2,6 @@ import React from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View, Dimensions, Text } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useUnits } from '@/contexts/UnitsContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { XMarkIcon } from 'react-native-heroicons/outline';
 import type { WeatherData } from '@/lib/services/WeatherService';
@@ -18,8 +17,7 @@ const { width } = Dimensions.get('window');
 const MODAL_WIDTH = Math.min(width - 48, 400);
 
 export function WeatherDetailsModal({ visible, onClose, weather }: WeatherDetailsModalProps) {
-  const { colors, isDark } = useTheme();
-  const { formatTemperature } = useUnits();
+  const { colors } = useTheme();
 
   if (!weather) return null;
 

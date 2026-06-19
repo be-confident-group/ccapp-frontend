@@ -29,6 +29,12 @@ class TrackingForegroundService : LifecycleService() {
         }
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        // START_STICKY: if the OS kills the service for resources, restart it with a null intent.
+        return START_STICKY
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -45,6 +51,8 @@ class TrackingForegroundService : LifecycleService() {
 
         val motion = MotionMonitor(ctx)
         val location = LocationSession(ctx)
+        val altimeter = AltimeterMonitor(ctx)
+        val pedometer = PedometerSource(ctx)
         val stateMachine = TripStateMachine()
 
         stateMachine.delegate = object : TripStateMachineDelegate {
@@ -89,16 +97,22 @@ class TrackingForegroundService : LifecycleService() {
 
         val sustain = stateMachine.config.detectionSustainSeconds
         stateMachine.bind(motion)
+        // Without the pedometer bound, detecting-state promotion has no step
+        // corroboration and silently falls back to GPS-only (20 m accuracy gate) —
+        // cold-start detection then fails whenever GPS is degraded.
+        stateMachine.bindSensors(altimeter, pedometer)
         motion.watchSustain(MotionMonitor.Activity.WALKING,    sustain)
         motion.watchSustain(MotionMonitor.Activity.RUNNING,    sustain)
         motion.watchSustain(MotionMonitor.Activity.CYCLING,    sustain)
         motion.watchSustain(MotionMonitor.Activity.AUTOMOTIVE, sustain)
 
-        standaloneMotion   = motion
-        standaloneLocation = location
+        standaloneMotion    = motion
+        standaloneLocation  = location
+        standalonePedometer = pedometer
         MotionMonitor.shared = motion
 
         motion.start()
+        pedometer.start()
         stateMachine.rehydrateIfNeeded()
 
         Thread {
@@ -122,14 +136,7 @@ class TrackingForegroundService : LifecycleService() {
         }.start()
     }
 
-    private fun tearDownStandaloneInternal() {
-        val motion = standaloneMotion ?: return
-        motion.stop()
-        standaloneLocation?.stopUpdatesOnly()
-        if (MotionMonitor.shared === motion) MotionMonitor.shared = null
-        standaloneMotion   = null
-        standaloneLocation = null
-    }
+    private fun tearDownStandaloneInternal() = tearDownStandalone()
 
     // MARK: - Notification
 
@@ -159,20 +166,25 @@ class TrackingForegroundService : LifecycleService() {
         private const val CHANNEL_ID      = "radzi_tracking"
         private const val NOTIFICATION_ID = 1001
 
-        @Volatile private var standaloneMotion:   MotionMonitor?   = null
-        @Volatile private var standaloneLocation: LocationSession? = null
+        @Volatile private var standaloneMotion:    MotionMonitor?   = null
+        @Volatile private var standaloneLocation:  LocationSession? = null
+        @Volatile private var standalonePedometer: PedometerSource? = null
 
         /**
          * Called by RadziTrackerModule.init() before it sets up its own stack, so the
          * standalone stack doesn't conflict with (or duplicate) the RN-managed one.
+         * Note: any trip the standalone stack was recording stays 'active' in the DB —
+         * the module's rehydrateIfNeeded() adopts it (it is fresh) and carries it on.
          */
         fun tearDownStandalone() {
             val motion = standaloneMotion ?: return
             motion.stop()
             standaloneLocation?.stopUpdatesOnly()
+            standalonePedometer?.stop()
             if (MotionMonitor.shared === motion) MotionMonitor.shared = null
-            standaloneMotion   = null
-            standaloneLocation = null
+            standaloneMotion    = null
+            standaloneLocation  = null
+            standalonePedometer = null
         }
 
         fun start(context: Context) {

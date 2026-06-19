@@ -13,7 +13,7 @@ interface CustomUserLocationProps {
 
 export function CustomUserLocation({ onLocationUpdate }: CustomUserLocationProps) {
   const [location, setLocation] = useState<[number, number] | null>(null);
-  const [heading, setHeading] = useState<number>(0);
+  const [, setHeading] = useState<number>(0);
 
   useEffect(() => {
     let subscription: ExpoLocation.LocationSubscription | null = null;

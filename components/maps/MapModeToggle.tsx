@@ -16,7 +16,7 @@ export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) 
   const inactiveTextColor = isDark ? colors.textSecondary : '#4A4A4A';
   const pressedBackground = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
 
-  const modes: Array<{ key: MapViewMode; label: string }> = [
+  const modes: { key: MapViewMode; label: string }[] = [
     { key: 'heatmap', label: MAP_MODE_LABELS.viewMode.heatmap },
     { key: 'feedback', label: MAP_MODE_LABELS.viewMode.feedback },
   ];

@@ -3,7 +3,7 @@ import { View, StyleSheet, Image } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { LeaderboardUser } from '@/types/leaderboard';
 import { CURRENT_USER_ID } from '@/lib/utils/mockLeaderboardData';
 

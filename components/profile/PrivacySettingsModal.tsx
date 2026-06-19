@@ -20,14 +20,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { XMarkIcon } from 'react-native-heroicons/outline';
-import { ThemedText } from '@/components/themed-text';
-import { SettingsItem } from '@/components/profile/SettingsItem';
-import { useTheme } from '@/contexts/ThemeContext';
-import {
+import { XMarkIcon ,
   ShieldCheckIcon,
   EyeIcon,
   MapPinIcon,
@@ -35,6 +30,9 @@ import {
   UserGroupIcon,
   GlobeAltIcon,
 } from 'react-native-heroicons/outline';
+import { ThemedText } from '@/components/themed-text';
+import { SettingsItem } from '@/components/profile/SettingsItem';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 

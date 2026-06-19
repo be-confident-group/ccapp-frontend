@@ -89,8 +89,12 @@ describe('TripValidationService.validateAndFinalizeTrip', () => {
 
     const result = await TripValidationService.validateAndFinalizeTrip('trip-1', endTime);
 
-    expect(result.isValid).toBe(true);
-    expect(mockDb.updateTrip).toHaveBeenCalledWith('trip-1', expect.objectContaining({ status: 'completed' }));
+    // Short walk is kept in DB (status=completed) but hidden from lists (visible=0, isValid=false).
+    expect(result.isValid).toBe(false);
+    expect(mockDb.updateTrip).toHaveBeenCalledWith('trip-1', expect.objectContaining({
+      status: 'completed',
+      visible: 0,
+    }));
   });
 
   it('keeps a fast walk that exceeds the old 30 km/h speed threshold', async () => {
@@ -126,7 +130,8 @@ describe('TripValidationService.validateAndFinalizeTrip', () => {
     expect(mockDb.updateTrip).toHaveBeenCalledWith('trip-1', expect.objectContaining({ status: 'cancelled' }));
   });
 
-  it('records quality diagnostics in notes without cancelling the trip', async () => {
+  it('records quality diagnostics in notes and hides the trip (visible=0)', async () => {
+    // 300m walk under the 400m minimum — kept in DB but hidden from lists.
     const trip = makeTrip({ distance: 300, type: 'walk', max_speed: 40 });
     mockDb.getTrip.mockResolvedValue(trip);
     const locations = Array.from({ length: 15 }, (_, i) => ({
@@ -139,10 +144,12 @@ describe('TripValidationService.validateAndFinalizeTrip', () => {
 
     const result = await TripValidationService.validateAndFinalizeTrip('trip-1', endTime);
 
-    expect(result.isValid).toBe(true);
+    // Short walk: hidden (visible=0, isValid=false) but not cancelled.
+    expect(result.isValid).toBe(false);
     const updateCall = mockDb.updateTrip.mock.calls.find(c => c[1]?.status === 'completed');
     expect(updateCall).toBeDefined();
-    // Diagnostic note about speed should be present
+    expect(updateCall?.[1]?.visible).toBe(0);
+    // Diagnostic note should be present
     expect(updateCall?.[1]?.notes).toContain('km/h');
   });
 });

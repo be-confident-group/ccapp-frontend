@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';

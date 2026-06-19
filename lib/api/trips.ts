@@ -24,6 +24,7 @@ export interface ApiTripRoute {
   lat: number;
   lng: number;
   timestamp: string; // ISO 8601
+  accuracy?: number; // metres — horizontal accuracy of the GPS fix, when known
 }
 
 export interface ApiTripCreate {
@@ -196,6 +197,7 @@ export function transformTripForApi(dbTrip: DBTrip): ApiTripCreate {
             lat: coord.lat,
             lng: coord.lng,
             timestamp: coord.timestamp,
+            ...(coord.accuracy != null ? { accuracy: Math.round(coord.accuracy) } : {}),
           }));
         }
       }

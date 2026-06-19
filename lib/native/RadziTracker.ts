@@ -19,6 +19,23 @@ export interface PermissionStatus {
   motion: 'granted' | 'denied' | 'restricted';
 }
 
+export interface TrackingHealth {
+  platform: 'ios' | 'android';
+  /** 'always' = background tracking OK; 'whenInUse' = foreground only; 'denied' = no tracking. */
+  locationAuth: 'always' | 'whenInUse' | 'denied';
+  /** false when iOS reduced-accuracy is enabled — GPS precision is degraded. */
+  locationPrecise: boolean;
+  motion: 'granted' | 'denied' | 'restricted' | 'notDetermined';
+  /** iOS: true while Low Power Mode is on (throttles GPS & background activity). */
+  lowPowerMode: boolean;
+  /** Android: true = app is exempt from battery optimisation (tracking can run freely). */
+  batteryOptExempt: boolean;
+  /** iOS: significant-location-change monitor is running (app will relaunch after force-quit). */
+  slcRunning: boolean;
+  engineState: TrackingState;
+  tripId: string | null;
+}
+
 export interface TrackerConfig {
   detectionSustainSeconds: number;
   detectingMinDurationSeconds: number;
@@ -80,6 +97,7 @@ interface RadziTrackerNativeModule {
   forceStartTrip(): Promise<{ tripId: string }>;
   forceStopTrip(): Promise<void>;
   checkPermissions(): Promise<PermissionStatus>;
+  getTrackingHealth(): Promise<TrackingHealth>;
   setConfig(config: Partial<TrackerConfig>): Promise<void>;
   getConfig(): Promise<TrackerConfig>;
   recoverStaleTrip(): Promise<{ recovered: string | null }>;
@@ -102,6 +120,7 @@ export const RadziTrackerNative: RadziTrackerNativeModule = Native ?? {
   forceStartTrip: unavailable,
   forceStopTrip: unavailable,
   checkPermissions: unavailable,
+  getTrackingHealth: unavailable,
   setConfig: unavailable,
   getConfig: unavailable,
   recoverStaleTrip: unavailable,

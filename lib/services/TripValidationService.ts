@@ -10,6 +10,7 @@ import {
   calculateMaxDistanceFromStart,
   calculateRadiusOfGyration,
   calculateBoundingBoxDimensions,
+  trimStationaryTail,
   type Coordinate,
 } from '../utils/geoCalculations';
 import { database } from '../database';
@@ -257,17 +258,52 @@ export class TripValidationService {
         latitude: loc.latitude,
         longitude: loc.longitude,
       }));
-      
+
       // Build route_data from location points
       routeForSync = locations.map(loc => ({
         lat: Number(loc.latitude.toFixed(6)),
         lng: Number(loc.longitude.toFixed(6)),
         timestamp: new Date(loc.timestamp).toISOString(),
+        ...(loc.accuracy != null ? { accuracy: Math.round(loc.accuracy) } : {}),
       }));
     }
 
+    // Trim the trailing stationary tail (GPS drift after arrival kept alive by
+    // motion flapping). Adjusts end_time/distance/duration to the real journey.
+    let effectiveEndTime = endTime;
+    let trimmedStats: { distance: number; duration: number } | null = null;
+    const hasTimestamps = routeForSync.length >= 3 && routeForSync.every((p: any) => p.timestamp != null);
+    if (hasTimestamps) {
+      const trimmed = trimStationaryTail(routeForSync as { lat: number; lng: number; timestamp: string | number }[]);
+      if (trimmed.length >= 2 && trimmed.length < routeForSync.length) {
+        const lastTs = typeof trimmed[trimmed.length - 1].timestamp === 'number'
+          ? (trimmed[trimmed.length - 1].timestamp as number)
+          : Date.parse(trimmed[trimmed.length - 1].timestamp as string);
+        if (isFinite(lastTs) && lastTs > trip.start_time) {
+          console.log(
+            `[TripValidation] Trimmed stationary tail: ${routeForSync.length - trimmed.length} points, ` +
+            `${Math.round((endTime - lastTs) / 60000)} min`
+          );
+          routeForSync = trimmed;
+          coords = trimmed.map((p: any) => ({
+            latitude: p.lat ?? p.latitude,
+            longitude: p.lng ?? p.longitude,
+          }));
+          effectiveEndTime = lastTs;
+          let trimmedDistance = 0;
+          for (let i = 1; i < coords.length; i++) {
+            trimmedDistance += calculateDistance(coords[i - 1], coords[i]);
+          }
+          trimmedStats = {
+            distance: Math.round(trimmedDistance),
+            duration: Math.round((lastTs - trip.start_time) / 1000),
+          };
+        }
+      }
+    }
+
     const tripType = trip.type;
-    const totalDistance = trip.distance;
+    const totalDistance = trimmedStats?.distance ?? trip.distance;
     const maxSpeedKmh = trip.max_speed;
     const locationCount = coords.length;
 
@@ -314,22 +350,49 @@ export class TripValidationService {
     }
 
     const note = diagnostics.length > 0 ? diagnostics.join('; ') : undefined;
+
+    // Pedometer cross-check: a walk with significant duration but <100 steps is GPS drift,
+    // not real movement. A cycle with walking-cadence steps is likely mislabeled.
+    // These rules use only platform sensor data — no ML, no speed thresholds.
+    if (trip.step_count != null && trip.step_count >= 0) {
+      const durationMin = (totalDistance > 0 ? (endTime - trip.start_time) / 60000 : 0);
+      const stepRate = durationMin > 0 ? trip.step_count / durationMin : 0;
+
+      if (tripType === 'walk' && durationMin >= 5 && trip.step_count < 100) {
+        // Long walk duration but almost no steps — high confidence this is GPS drift.
+        diagnostics.push(`Pedometer: walk ${durationMin.toFixed(0)}min but only ${trip.step_count} steps — likely GPS drift`);
+      } else if (tripType === 'cycle' && durationMin >= 3 && stepRate > 80) {
+        // Cycling cadence of >80 steps/min sustained means the user was walking, not cycling.
+        // Don't auto-flip — leave visible so the user can confirm.
+        diagnostics.push(`Pedometer: cycle typed but walking cadence (~${stepRate.toFixed(0)} steps/min) — please confirm activity type`);
+      }
+    }
+
+    // Trips below the per-type distance minimum are kept in the DB (so they sync and
+    // appear in diagnostics) but hidden from all user-facing lists via visible=0.
+    // GPS-quality-only issues (e.g. loop walks) are flagged in notes but remain visible.
+    const isHidden = diagnostics.some(d =>
+      d.includes('Walk distance') || d.includes('Ride distance') ||
+      d.includes('Pedometer: walk') // drift confirmed by step count — hide these
+    );
+
     console.log(
-      `[TripValidation] Trip ${tripId} kept — ${routeForSync.length} points` +
+      `[TripValidation] Trip ${tripId} kept (visible=${isHidden ? 0 : 1}) — ${routeForSync.length} points` +
       (note ? ` (flagged: ${note})` : '')
     );
 
-    // We only want to set route_data if it's missing or if we fell back to locations
-    // But overwriting with the identical string is safe and ensures `additionalFields` merges correctly.
     await database.updateTrip(tripId, {
       status: 'completed',
-      end_time: endTime,
+      end_time: effectiveEndTime,
       route_data: JSON.stringify(routeForSync),
       updated_at: endTime,
+      visible: isHidden ? 0 : 1,
       ...(note ? { notes: note } : {}),
       ...additionalFields,
+      // Tail-trim wins over caller-supplied stats: it reflects the real journey end.
+      ...(trimmedStats ? trimmedStats : {}),
     });
 
-    return { isValid: true };
+    return { isValid: !isHidden, reason: isHidden ? note : undefined };
   }
 }

@@ -72,6 +72,12 @@ final class LocationSession: NSObject, CLLocationManagerDelegate {
     return CLLocationManager.authorizationStatus()
   }
 
+  /// Returns false when the user granted reduced accuracy (iOS 14+).
+  var isFullAccuracy: Bool {
+    if #available(iOS 14, *) { return manager.accuracyAuthorization == .fullAccuracy }
+    return true
+  }
+
   // MARK: - CLLocationManagerDelegate
 
   func locationManager(_ manager: CLLocationManager,

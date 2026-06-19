@@ -21,7 +21,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   size = 120,
   editable = true,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [localImageUri, setLocalImageUri] = useState(imageUri);
 
   // Sync local state with prop changes

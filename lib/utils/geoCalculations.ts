@@ -161,17 +161,25 @@ export function calculateCalories(
 }
 
 /**
- * Calculate elevation gain from altitude array
+ * Calculate elevation gain from altitude array.
+ * Uses a 3 m dead-band to suppress barometric/GPS jitter:
+ * baseline only moves (and gain accumulates) once altitude climbs
+ * at least 3 m above the last committed low.
  */
 export function calculateElevationGain(altitudes: (number | null | undefined)[]): number {
+  const THRESHOLD_M = 3;
   let gain = 0;
+  let baseline: number | null = null;
 
-  for (let i = 1; i < altitudes.length; i++) {
-    const prev = altitudes[i - 1];
-    const curr = altitudes[i];
-
-    if (prev != null && curr != null && curr > prev) {
-      gain += curr - prev;
+  for (const alt of altitudes) {
+    if (alt == null) continue;
+    if (baseline === null) { baseline = alt; continue; }
+    const diff = alt - baseline;
+    if (diff >= THRESHOLD_M) {
+      gain += diff;
+      baseline = alt;
+    } else if (diff <= -THRESHOLD_M) {
+      baseline = alt;
     }
   }
 
@@ -179,21 +187,74 @@ export function calculateElevationGain(altitudes: (number | null | undefined)[])
 }
 
 /**
- * Calculate elevation loss from altitude array
+ * Calculate elevation loss from altitude array.
+ * Uses the same 3 m dead-band as calculateElevationGain.
  */
 export function calculateElevationLoss(altitudes: (number | null | undefined)[]): number {
+  const THRESHOLD_M = 3;
   let loss = 0;
+  let baseline: number | null = null;
 
-  for (let i = 1; i < altitudes.length; i++) {
-    const prev = altitudes[i - 1];
-    const curr = altitudes[i];
-
-    if (prev != null && curr != null && curr < prev) {
-      loss += prev - curr;
+  for (const alt of altitudes) {
+    if (alt == null) continue;
+    if (baseline === null) { baseline = alt; continue; }
+    const diff = alt - baseline;
+    if (diff <= -THRESHOLD_M) {
+      loss += Math.abs(diff);
+      baseline = alt;
+    } else if (diff >= THRESHOLD_M) {
+      baseline = alt;
     }
   }
 
   return loss;
+}
+
+/**
+ * Trim the trailing stationary tail from a route.
+ *
+ * When the user stops at their destination but the trip keeps recording
+ * (motion flapping keeps resetting the cooldown timer), the route gains a
+ * long tail of GPS drift clustered around the end point. This trims any
+ * contiguous trailing run of points that stays within `radiusM` of the
+ * final point, provided that run spans at least `minTailMs` — so a normal
+ * arrival (a few seconds near the end point) is never clipped.
+ *
+ * Runs iteratively: trimming once can expose a further drift cluster
+ * (drift wanders, shifting the "end point"), so repeat until stable.
+ */
+export function trimStationaryTail<T extends { lat: number; lng: number; timestamp: string | number }>(
+  route: T[],
+  radiusM: number = 50,
+  minTailMs: number = 180_000
+): T[] {
+  const toMs = (ts: string | number): number =>
+    typeof ts === 'number' ? ts : Date.parse(ts);
+  const distM = (a: T, b: T): number =>
+    calculateDistance(
+      { latitude: a.lat, longitude: a.lng },
+      { latitude: b.lat, longitude: b.lng }
+    );
+
+  let current = route;
+  let changed = true;
+  while (changed && current.length >= 3) {
+    changed = false;
+    const end = current[current.length - 1];
+    let i = current.length - 1;
+    while (i >= 0 && distM(current[i], end) <= radiusM) {
+      i--;
+    }
+    const clusterStartIdx = i + 1;
+    if (clusterStartIdx >= current.length - 1) break; // no cluster beyond the final point
+
+    const tailSpanMs = toMs(end.timestamp) - toMs(current[clusterStartIdx].timestamp);
+    if (!isFinite(tailSpanMs) || tailSpanMs < minTailMs) break;
+
+    current = current.slice(0, clusterStartIdx + 1);
+    changed = true;
+  }
+  return current;
 }
 
 /**

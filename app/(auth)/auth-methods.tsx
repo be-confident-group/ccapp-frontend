@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/ui';
+
 import { EnvelopeIcon } from 'react-native-heroicons/outline';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 import { useTranslation } from 'react-i18next';

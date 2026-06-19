@@ -28,7 +28,7 @@ export const SettingsItem: React.FC<SettingsItemProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const content = (
     <>

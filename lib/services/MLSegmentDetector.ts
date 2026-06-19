@@ -58,13 +58,17 @@ export class MLSegmentDetector {
     const windows = await database.getActivityWindowsByTrip(tripId);
 
     if (windows.length === 0) {
+      // No platform activity data available — do not classify by speed.
+      // TripManager will fall back to getDominantActivity() (platform location labels).
       console.log(
-        `[MLSegmentDetector] No activity_windows for ${tripId}, falling back to speed-based`,
+        `[MLSegmentDetector] No activity_windows for ${tripId}, skipping classification`,
       );
-      const legacy = speedBasedFallback(locations);
       return {
-        ...legacy,
-        classificationMethod: 'speed',
+        isMultiModal: false,
+        segments: [],
+        dominantType: 'walk',
+        confidence: 0,
+        classificationMethod: 'cmma',
         mlWindowCount: 0,
       };
     }

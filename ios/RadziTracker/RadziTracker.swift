@@ -1,6 +1,7 @@
 import Foundation
 import React
 import CoreLocation
+import CoreMotion
 
 @objc(RadziTracker)
 final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessionDelegate, TripStateMachineDelegate {
@@ -308,6 +309,39 @@ final class RadziTracker: RCTEventEmitter, MotionMonitorDelegate, LocationSessio
     } else {
       imu.pause()
     }
+  }
+
+  @objc(getTrackingHealth:rejecter:)
+  func getTrackingHealth(_ resolve: @escaping RCTPromiseResolveBlock,
+                         rejecter reject: @escaping RCTPromiseRejectBlock) {
+    let locStatus = location.currentAuthorization()
+    let locStr: String
+    switch locStatus {
+    case .authorizedAlways: locStr = "always"
+    case .authorizedWhenInUse: locStr = "whenInUse"
+    default: locStr = "denied"
+    }
+
+    let motionStr: String
+    switch CMMotionActivityManager.authorizationStatus() {
+    case .authorized: motionStr = "granted"
+    case .denied: motionStr = "denied"
+    case .restricted: motionStr = "restricted"
+    case .notDetermined: motionStr = "notDetermined"
+    @unknown default: motionStr = "unknown"
+    }
+
+    resolve([
+      "platform": "ios",
+      "locationAuth": locStr,
+      "locationPrecise": location.isFullAccuracy,
+      "motion": motionStr,
+      "lowPowerMode": ProcessInfo.processInfo.isLowPowerModeEnabled,
+      "batteryOptExempt": true,  // N/A on iOS
+      "slcRunning": slcMonitor.isRunning,
+      "engineState": stateMachine.state.rawValue,
+      "tripId": stateMachine.currentTripId as Any? ?? NSNull(),
+    ])
   }
 
   @objc(getLogs:rejecter:)

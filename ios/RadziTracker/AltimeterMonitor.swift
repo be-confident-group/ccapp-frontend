@@ -33,11 +33,21 @@ final class AltimeterMonitor {
 
   static func aggregate(samples: [(timestamp: Date, relativeAltitudeM: Double)]) -> Aggregate {
     guard samples.count >= 3 else { return Aggregate(gainMeters: nil, lossMeters: nil) }
+    // 3 m dead-band: only commit gain/loss once altitude moves >= 3 m from the last baseline.
+    // Suppresses barometric sensor oscillations (door openings, pressure transients, etc.).
+    let threshold = 3.0
     var gain = 0.0
     var loss = 0.0
+    var baseline = samples[0].relativeAltitudeM
     for i in 1..<samples.count {
-      let delta = samples[i].relativeAltitudeM - samples[i - 1].relativeAltitudeM
-      if delta > 0 { gain += delta } else { loss += -delta }
+      let diff = samples[i].relativeAltitudeM - baseline
+      if diff >= threshold {
+        gain += diff
+        baseline = samples[i].relativeAltitudeM
+      } else if diff <= -threshold {
+        loss += -diff
+        baseline = samples[i].relativeAltitudeM
+      }
     }
     return Aggregate(gainMeters: gain, lossMeters: loss)
   }

@@ -40,6 +40,7 @@ export interface Trip {
   elevation_loss_m?: number | null;
   backend_avg_speed_kmh?: number | null;
   visible?: number | null; // 0 or 1
+  step_count?: number | null;
 }
 
 export interface LocationPoint {

@@ -32,29 +32,6 @@ import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
-/**
- * Translates internal tracking notes to user-friendly explanations.
- * Used for beta users to understand what happened to their trip.
- */
-function getDisplayNote(rawNote: string | null): string | null {
-  if (!rawNote) return null;
-
-  if (rawNote.includes('[Auto-ended: background tracking timeout]')) {
-    return 'Trip ended automatically — no GPS signal was detected for 45 minutes. This can happen if the app was backgrounded, battery saver mode was on, or you were indoors for a long time.';
-  }
-  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('No locations recorded')) {
-    return 'Trip was cancelled — GPS could not be obtained when the trip started.';
-  }
-  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('below minimum')) {
-    return 'Trip was cancelled — the distance was too short to record.';
-  }
-  if (rawNote.includes('[Auto-ended zombie]') && rawNote.includes('not supported')) {
-    return 'Trip was cancelled — it was detected as a drive or run, which are not tracked.';
-  }
-
-  // Return raw note for anything we don't recognize
-  return rawNote;
-}
 
 export default function TripDetailScreen() {
   const { id, local } = useLocalSearchParams<{ id: string; local?: string }>();
@@ -62,7 +39,7 @@ export default function TripDetailScreen() {
   const { user } = useAuth();
   const isDebugBuild = isDebugEnabled(user?.email);
   const { colors, isDark } = useTheme();
-  const { unitSystem, formatElevation, formatWeight } = useUnits();
+  const { unitSystem } = useUnits();
   const { t } = useTranslation('maps');
   const { selectedLayer } = useMapLayer(isDark);
   const [localTrip, setLocalTrip] = useState<Trip | null>(null);
@@ -171,7 +148,7 @@ export default function TripDetailScreen() {
       // Parse route_data JSON string.
       // route_data is stored as {lat, lng, timestamp} — normalize to {latitude, longitude}
       // so the Mapbox coordinate mapping ([coord.longitude, coord.latitude]) works correctly.
-      let parsedRoute: Array<{ latitude: number; longitude: number; timestamp?: string }> = [];
+      let parsedRoute: { latitude: number; longitude: number; timestamp?: string }[] = [];
       if (localTrip.route_data) {
         try {
           const raw = JSON.parse(localTrip.route_data);
@@ -249,8 +226,22 @@ export default function TripDetailScreen() {
     try {
       await updateTrip.mutateAsync({
         id: backendTrip.id,
-        data: { user_confirmed: true, type: selectedType },
+        data: { user_confirmed: true, type: selectedType, classification_source: 'manual' },
       });
+      // Mirror the label into local SQLite so the type_dirty merge in SyncService
+      // never clobbers the user's choice on the next background sync.
+      if (backendTrip.client_id) {
+        try {
+          await database.updateTrip(backendTrip.client_id, {
+            type: selectedType,
+            classification_source: 'manual',
+            type_dirty: 0,
+            updated_at: Date.now(),
+          });
+        } catch {
+          // Non-fatal — local DB update is best-effort.
+        }
+      }
     } catch (error) {
       setConfirmedLocally(false);
       console.error('[TripDetail] Error confirming trip:', error);

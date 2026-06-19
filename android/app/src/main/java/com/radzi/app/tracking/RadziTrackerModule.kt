@@ -73,13 +73,20 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
                     TrackingDatabase.shared.insertSynthesizedTrip(
                         id, syn.startMs, syn.endMs,
                         if (syn.activity == MotionMonitor.Activity.WALKING) "walk" else "cycle",
-                        dist, "apple_motion"
+                        dist, "android_motion"
                     )
                 } catch (_: Exception) {}
             }
         }
 
         stateMachine.rehydrateIfNeeded()
+        // A rehydrated RECORDING trip can only end if motion events flow: without the
+        // MotionMonitor running, the state machine never sees STILL, never enters
+        // cooldown, and the trip stays active forever.
+        if (stateMachine.state == TripStateMachine.State.RECORDING) {
+            motion.start()
+            pedometer.start()
+        }
 
         // Schedule background sync
         BackgroundSyncWorker.enqueue(ctx)
@@ -200,6 +207,9 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
     fun start(promise: Promise) {
         motion.start()
         pedometer.start()
+        // Persist tracking-enabled flag so the watchdog can restart the service if the OS kills it.
+        ctx.getSharedPreferences("radzi_tracking", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("tracking_enabled", true).apply()
         promise.resolve(null)
     }
 
@@ -209,6 +219,8 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
         location.setMode(LocationSession.AccuracyMode.OFF)
         imu.pause()
         pedometer.stop()
+        ctx.getSharedPreferences("radzi_tracking", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("tracking_enabled", false).apply()
         promise.resolve(null)
     }
 
@@ -305,18 +317,24 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
     @ReactMethod
     fun recoverStaleTrip(promise: Promise) {
         try {
-            val stale = TrackingDatabase.shared.findStaleRecordingTrip()
-            if (stale != null) {
+            // Recover every stale trip, but never the one the live state machine is
+            // actively recording — that one ends through the normal cooldown path.
+            var lastRecovered: String? = null
+            while (true) {
+                val stale = TrackingDatabase.shared.findStaleRecordingTrip(
+                    excludeId = stateMachine.currentTripId
+                ) ?: break
                 TrackingDatabase.shared.endTrip(stale.id, stale.lastUpdate)
                 emit("tripEnded", Arguments.createMap().apply {
                     putString("tripId", stale.id)
                     putDouble("endTime", stale.lastUpdate.toDouble())
                     putBoolean("recovered", true)
                 })
-                promise.resolve(Arguments.createMap().apply { putString("recovered", stale.id) })
-            } else {
-                promise.resolve(Arguments.createMap().apply { putNull("recovered") })
+                lastRecovered = stale.id
             }
+            promise.resolve(Arguments.createMap().apply {
+                if (lastRecovered != null) putString("recovered", lastRecovered) else putNull("recovered")
+            })
         } catch (e: Exception) {
             promise.reject("recover_failed", e.message, e)
         }
@@ -339,5 +357,25 @@ class RadziTrackerModule(private val ctx: ReactApplicationContext) :
             })
         }
         promise.resolve(entries)
+    }
+
+    @ReactMethod
+    fun getTrackingHealth(promise: Promise) {
+        val fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val bg = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val motionGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+        val powerManager = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        val batteryOptExempt = powerManager.isIgnoringBatteryOptimizations(ctx.packageName)
+        promise.resolve(Arguments.createMap().apply {
+            putString("platform", "android")
+            putString("locationAuth", when { fine && bg -> "always"; fine -> "whenInUse"; else -> "denied" })
+            putBoolean("locationPrecise", fine)
+            putString("motion", if (motionGranted) "granted" else "denied")
+            putBoolean("lowPowerMode", false)
+            putBoolean("batteryOptExempt", batteryOptExempt)
+            putBoolean("slcRunning", false)
+            putString("engineState", stateMachine.state.raw)
+            stateMachine.currentTripId?.let { putString("tripId", it) } ?: putNull("tripId")
+        })
     }
 }

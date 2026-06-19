@@ -23,8 +23,7 @@ import { useCreatePost } from '@/lib/hooks/usePosts';
 import { useMyClubs } from '@/lib/hooks/useClubs';
 import { pickAndProcessMultipleImages } from '@/lib/utils/imageHelpers';
 import { PhotoIcon, XMarkIcon, ChevronDownIcon, CheckIcon } from 'react-native-heroicons/outline';
-import type { PostCreateRequest } from '@/types/feed';
-import type { Club } from '@/types/feed';
+import type { PostCreateRequest , Club } from '@/types/feed';
 
 export default function CreateStandalonePostScreen() {
   const { t } = useTranslation('groups');

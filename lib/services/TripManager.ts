@@ -751,31 +751,11 @@ export class TripManager {
       driving: 'drive',
     };
 
-    const mappedType = mapping[dominant] || 'walk';
-
-    // Transit override: if calculated avg speed suggests transit but per-point classification says walking,
-    // the user is likely on a train/bus where GPS device speed reads ~0
-    if (mappedType === 'walk' && locations.length >= 2) {
-      const duration = (locations[locations.length - 1].timestamp - locations[0].timestamp) / 1000;
-      if (duration > 0) {
-        let totalDist = 0;
-        for (let i = 1; i < locations.length; i++) {
-          totalDist += calculateDistance(
-            { latitude: locations[i - 1].latitude, longitude: locations[i - 1].longitude },
-            { latitude: locations[i].latitude, longitude: locations[i].longitude }
-          );
-        }
-        const calcAvgSpeedKmh = (totalDist / duration) * 3.6;
-        if (calcAvgSpeedKmh > 10) {
-          console.log(
-            `[TripManager] Transit override: avg speed ${calcAvgSpeedKmh.toFixed(1)} km/h but classified as walking`
-          );
-          return 'drive';
-        }
-      }
-    }
-
-    return mappedType;
+    // Platform-only classification: trust the per-point activity labels from
+    // CMMotionActivity / Android Activity Recognition as-is. Transit (train/bus)
+    // is handled upstream by the native state machine, which ends a non-drive
+    // trip when it sees sustained AUTOMOTIVE activity.
+    return mapping[dominant] || 'walk';
   }
 
   /**

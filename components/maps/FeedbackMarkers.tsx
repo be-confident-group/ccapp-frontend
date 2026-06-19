@@ -10,7 +10,7 @@ import type { GlobalFeedback } from '@/lib/api/globalFeedback';
 import { convertFeedbackToGeoJSON } from '@/lib/utils/feedbackHelpers';
 
 interface FeedbackMarkersProps {
-  feedbacks?: Array<MapFeedback | GlobalFeedback>;
+  feedbacks?: (MapFeedback | GlobalFeedback)[];
   type: 'personal' | 'community';
   onMarkerPress?: (feedback: MapFeedback | GlobalFeedback) => void;
 }

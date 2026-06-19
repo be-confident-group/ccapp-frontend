@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TextInputProps as RNTextInputProps,
-  TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 

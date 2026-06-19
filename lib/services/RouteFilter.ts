@@ -15,8 +15,9 @@ export interface RoutePoint {
 
 export const RouteFilter = {
   filter(points: RoutePoint[], activity: ActivityForFilter): RoutePoint[] {
-    // 1. Drop bad accuracy
-    let kept = points.filter(p => (p.accuracy ?? 0) <= ACCURACY_THRESHOLD_M);
+    // 1. Drop bad accuracy. Points with no accuracy reading pass through —
+    //    the native engine already vetted them; explicit bad readings are dropped.
+    let kept = points.filter(p => p.accuracy == null || p.accuracy <= ACCURACY_THRESHOLD_M);
 
     // 2. Drop sub-second duplicates (same position within <1s)
     kept = kept.filter((p, i, arr) => {
@@ -29,19 +30,35 @@ export const RouteFilter = {
       return true;
     });
 
-    // 3. Spike rejection: drop points where implied speed exceeds ceiling or 1.5× p95 of ±5 window
-    if (kept.length < 2) return kept;
-    const speeds = computeSpeeds(kept);
+    // 3. Spike rejection: iterate until stable.
+    // Each pass drops an interior point when either of its implied-speed segments
+    // exceeds the activity ceiling or 1.5× the local p95. Iterating handles the
+    // case where removing a spike creates a new jump between its neighbours.
+    // First and last points are always kept (they anchor the route).
     const ceiling = CEILING_KMH[activity];
-    return kept.filter((_, i) => {
-      if (i === 0 || i === kept.length - 1) return true;
-      const speedIn = speeds[i - 1];
-      const speedOut = speeds[i];
-      if (speedIn > ceiling || speedOut > ceiling) return false;
-      const window = speeds.slice(Math.max(0, i - 5), Math.min(speeds.length, i + 6));
-      const p95 = percentile(window, 0.95);
-      return speedIn <= 1.5 * p95 && speedOut <= 1.5 * p95;
-    });
+    let changed = true;
+    while (changed && kept.length >= 3) {
+      changed = false;
+      const speeds = computeSpeeds(kept);
+      const next = kept.filter((_, i) => {
+        if (i === 0 || i === kept.length - 1) return true; // always keep endpoints
+        const speedIn = speeds[i - 1];
+        const speedOut = speeds[i];
+
+        if (speedIn > ceiling || speedOut > ceiling) return false;
+
+        const windowSpeeds = speeds.slice(Math.max(0, i - 5), Math.min(speeds.length, i + 6));
+        const p95 = percentile(windowSpeeds, 0.95);
+        if (p95 > 0 && (speedIn > 1.5 * p95 || speedOut > 1.5 * p95)) return false;
+
+        return true;
+      });
+      if (next.length !== kept.length) {
+        changed = true;
+        kept = next;
+      }
+    }
+    return kept;
   },
 };
 

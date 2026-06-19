@@ -344,12 +344,18 @@ class TrackingDatabase private constructor(context: Context) {
 
     data class StaleTrip(val id: String, val lastUpdate: Long)
 
-    fun findStaleRecordingTrip(staleAfterMs: Long = 10L * 60 * 1000): StaleTrip? {
+    fun findStaleRecordingTrip(staleAfterMs: Long = 10L * 60 * 1000, excludeId: String? = null): StaleTrip? {
         val cutoff = System.currentTimeMillis() - staleAfterMs
-        db.rawQuery(
-            "SELECT id, updated_at FROM trips WHERE engine = 'native' AND status = 'active' AND updated_at < ? ORDER BY updated_at DESC LIMIT 1",
-            arrayOf(cutoff.toString())
-        ).use { c ->
+        val sql = StringBuilder(
+            "SELECT id, updated_at FROM trips WHERE engine = 'native' AND status = 'active' AND updated_at < ?"
+        )
+        val args = mutableListOf(cutoff.toString())
+        if (excludeId != null) {
+            sql.append(" AND id != ?")
+            args.add(excludeId)
+        }
+        sql.append(" ORDER BY updated_at DESC LIMIT 1")
+        db.rawQuery(sql.toString(), args.toTypedArray()).use { c ->
             return if (c.moveToFirst()) StaleTrip(c.getString(0), c.getLong(1)) else null
         }
     }
@@ -433,6 +439,10 @@ class TrackingDatabase private constructor(context: Context) {
                 arrayOf(movingDurationS, movingAvgSpeedKmh, tripId)
             )
         }
+    }
+
+    fun updateTripStepCount(tripId: String, steps: Int) {
+        write { db.execSQL("UPDATE trips SET step_count = ? WHERE id = ?", arrayOf(steps, tripId)) }
     }
 
     // MARK: - Singleton

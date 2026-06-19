@@ -49,13 +49,26 @@ class AltimeterMonitor(context: Context) {
     }
 
     companion object {
+        /** 3 m dead-band: only commit gain/loss once altitude moves >= 3 m from the
+         *  last baseline. The pressure sensor at SENSOR_DELAY_NORMAL produces thousands
+         *  of +-1-4 m jitter samples per trip; a naive delta sum accumulates them into
+         *  absurd totals (observed: 17,149 m gain on a 533 m walk). */
+        private const val DEAD_BAND_M = 3.0
+
         fun aggregate(samples: List<Pair<Long, Double>>): Aggregate {
             if (samples.size < 3) return Aggregate(null, null)
             var gain = 0.0
             var loss = 0.0
+            var baseline = samples[0].second
             for (i in 1 until samples.size) {
-                val delta = samples[i].second - samples[i - 1].second
-                if (delta > 0) gain += delta else loss += -delta
+                val diff = samples[i].second - baseline
+                if (diff >= DEAD_BAND_M) {
+                    gain += diff
+                    baseline = samples[i].second
+                } else if (diff <= -DEAD_BAND_M) {
+                    loss += -diff
+                    baseline = samples[i].second
+                }
             }
             return Aggregate(gain, loss)
         }

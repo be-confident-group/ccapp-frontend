@@ -118,6 +118,29 @@ class TrackingDatabaseTest {
     }
 
     @Test
+    fun `findStaleRecordingTrip skips excluded trip`() {
+        val old = System.currentTimeMillis() - 15 * 60 * 1000L
+        db.createTrip("held-by-machine", old, old)
+        assertNull(db.findStaleRecordingTrip(10 * 60 * 1000L, excludeId = "held-by-machine"))
+
+        // A second stale trip is still found when the first is excluded
+        val older = System.currentTimeMillis() - 30 * 60 * 1000L
+        db.createTrip("orphan", older, older)
+        val stale = db.findStaleRecordingTrip(10 * 60 * 1000L, excludeId = "held-by-machine")
+        assertNotNull(stale)
+        assertEquals("orphan", stale!!.id)
+    }
+
+    @Test
+    fun `endTrip on stale trip makes it invisible to findStaleRecordingTrip`() {
+        val old = System.currentTimeMillis() - 15 * 60 * 1000L
+        db.createTrip("zombie", old, old)
+        db.endTrip("zombie", old)
+        assertNull(db.findStaleRecordingTrip(10 * 60 * 1000L))
+        assertEquals("completed", db.loadTripStatus("zombie"))
+    }
+
+    @Test
     fun `stagingDisplacementMeters returns haversine distance`() {
         val t = 1_000_000L
         db.insertStagingLocation("s1", 51.500000, -0.120000, 5.0, 1.0, t)

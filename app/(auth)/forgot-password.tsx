@@ -8,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   TextInput as RNTextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';

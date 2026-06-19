@@ -470,6 +470,15 @@ extension TrackingDatabase {
       }
     }
   }
+
+  func updateTripStepCount(tripId: String, steps: Int) {
+    try? writeQueue.sync {
+      try queue.write { db in
+        try db.execute(sql: "UPDATE trips SET step_count = ? WHERE id = ?",
+                       arguments: [steps, tripId])
+      }
+    }
+  }
 }
 
 // MARK: - Helpers

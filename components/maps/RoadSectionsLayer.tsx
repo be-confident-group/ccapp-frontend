@@ -10,7 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { RoadSectionPersonal, RoadSectionCommunity } from '@/lib/api/roadSections';
 
 interface RoadSectionsLayerProps {
-  sections?: Array<RoadSectionPersonal | RoadSectionCommunity>;
+  sections?: (RoadSectionPersonal | RoadSectionCommunity)[];
   type: 'personal' | 'global';
   onSectionPress?: (section: RoadSectionPersonal | RoadSectionCommunity) => void;
 }
@@ -19,7 +19,7 @@ interface RoadSectionsLayerProps {
  * Convert road sections to GeoJSON FeatureCollection
  */
 function convertToGeoJSON(
-  sections: Array<RoadSectionPersonal | RoadSectionCommunity>
+  sections: (RoadSectionPersonal | RoadSectionCommunity)[]
 ): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',

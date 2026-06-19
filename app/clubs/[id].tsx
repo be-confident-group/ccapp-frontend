@@ -43,8 +43,7 @@ import {
   LockClosedIcon,
   ClockIcon,
 } from 'react-native-heroicons/outline';
-import type { Post } from '@/types/feed';
-import type { ActivityPost } from '@/types/feed';
+import type { Post , ActivityPost } from '@/types/feed';
 
 // Helper function to transform backend Post to ActivityPost for legacy component
 function transformPostToActivityPost(post: Post): ActivityPost {
@@ -78,7 +77,7 @@ export default function ClubDetailScreen() {
   const clubId = params.id ? parseInt(params.id, 10) : 0;
 
   const { data: club, isLoading, refetch, isRefetching } = useClub(clubId);
-  const { data: posts, isLoading: isLoadingPosts, refetch: refetchPosts } = useClubPosts(clubId);
+  const { data: posts, refetch: refetchPosts } = useClubPosts(clubId);
   const { data: currentUser } = useCurrentUser();
   const joinClubMutation = useJoinClub();
   const leaveClubMutation = useLeaveClub();

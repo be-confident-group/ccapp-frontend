@@ -8,12 +8,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { XMarkIcon, ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
+import { ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { TextInput } from '@/components/ui';
@@ -45,7 +43,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   profile,
   onSave,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation('profile');
   const insets = useSafeAreaInsets();
 

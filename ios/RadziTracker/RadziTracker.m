@@ -40,5 +40,8 @@ RCT_EXTERN_METHOD(notifyFinalizationComplete:
 RCT_EXTERN_METHOD(getLogs:
                   (RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(getTrackingHealth:
+                  (RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 
 @end

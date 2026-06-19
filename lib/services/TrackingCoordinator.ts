@@ -60,17 +60,14 @@ class CoordinatorImpl {
 
     this.attachNativeSubscriptions();
 
-    try {
-      const result = await RadziTrackerNative.recoverStaleTrip();
-      if (result.recovered) {
-        console.warn(`[TrackingCoordinator] Recovered stale trip ${result.recovered}`);
-      }
-    } catch (err) {
-      console.error(`[TrackingCoordinator] recoverStaleTrip failed: ${String(err)}`);
-    }
+    await this.recoverStaleTrips();
 
     const appStateSub = AppState.addEventListener('change', async (state) => {
       if (state === 'active') {
+        // The JS process can stay alive in the background for hours; a trip
+        // orphaned during that time would never be recovered if recovery only
+        // ran once at init.
+        await this.recoverStaleTrips();
         try {
           const perms = await this.checkPermissions();
           if (perms.location !== 'granted' || perms.motion !== 'granted') {
@@ -83,6 +80,17 @@ class CoordinatorImpl {
       }
     });
     this.subs.push(() => appStateSub.remove());
+  }
+
+  private async recoverStaleTrips(): Promise<void> {
+    try {
+      const result = await RadziTrackerNative.recoverStaleTrip();
+      if (result.recovered) {
+        console.warn(`[TrackingCoordinator] Recovered stale trip ${result.recovered}`);
+      }
+    } catch (err) {
+      console.error(`[TrackingCoordinator] recoverStaleTrip failed: ${String(err)}`);
+    }
   }
 
   async getEngine(): Promise<Engine> { return 'native'; }

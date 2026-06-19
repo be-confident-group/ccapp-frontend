@@ -11,7 +11,7 @@ interface MapLayerSelectorProps {
   onLayerChange: (layer: MapLayer) => void;
 }
 
-const LAYERS: Array<{ key: MapLayer; label: string; description: string }> = [
+const LAYERS: { key: MapLayer; label: string; description: string }[] = [
   { key: 'light', label: 'Light', description: 'Clean minimal style' },
   { key: 'dark', label: 'Dark', description: 'Dark mode friendly' },
   { key: 'streets', label: 'Streets', description: 'Standard map' },
