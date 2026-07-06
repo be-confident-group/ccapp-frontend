@@ -4,13 +4,6 @@
  */
 
 // ---------------------------------------------------------------------------
-// API
-// ---------------------------------------------------------------------------
-
-/** Base URL for the backend API. Set via EXPO_PUBLIC_API_URL in .env */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
-
-// ---------------------------------------------------------------------------
 // Store IDs
 // ---------------------------------------------------------------------------
 
@@ -25,6 +18,15 @@ export const IOS_APP_STORE_ID = process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? 'PLA
  * Replace PLACEHOLDER_ANDROID_PACKAGE with the real value before shipping.
  */
 export const ANDROID_PACKAGE_NAME = process.env.EXPO_PUBLIC_ANDROID_PACKAGE ?? 'PLACEHOLDER_ANDROID_PACKAGE';
+
+// ---------------------------------------------------------------------------
+// Legal
+// ---------------------------------------------------------------------------
+
+export const PRIVACY_POLICY_URL = 'https://www.radzi.com/privacy';
+
+/** TODO: set once Radzi publishes a Terms of Service page. */
+export const TERMS_OF_SERVICE_URL: string | null = null;
 
 // ---------------------------------------------------------------------------
 // Dev-time warnings for placeholder values

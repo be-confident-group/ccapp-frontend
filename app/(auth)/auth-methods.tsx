@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EnvelopeIcon } from 'react-native-heroicons/outline';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
+import { TermsPrivacyNotice } from '@/components/TermsPrivacyNotice';
 import { useTranslation } from 'react-i18next';
 
 export default function AuthMethodsScreen() {
@@ -27,9 +28,7 @@ export default function AuthMethodsScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t('auth:welcome.title')}</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {t('auth:welcome.termsPrefix')}
-          </Text>
+          <TermsPrivacyNotice style={[styles.subtitle, { color: colors.textSecondary }]} />
         </View>
 
         <View style={styles.buttonGroup}>

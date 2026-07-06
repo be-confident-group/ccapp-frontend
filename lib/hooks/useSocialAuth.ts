@@ -5,6 +5,10 @@ import {
   isErrorWithCode,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+
+// Android's native module rejects with this code (CommonStatusCodes.DEVELOPER_ERROR = 10)
+// on SHA-1/package misconfiguration, but it isn't exposed via `statusCodes` in this library version.
+const GOOGLE_DEVELOPER_ERROR_CODE = '10';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,7 +114,7 @@ export function useSocialAuth() {
               'Google Play Services is not available on this device.',
             );
             break;
-          case statusCodes.DEVELOPER_ERROR:
+          case GOOGLE_DEVELOPER_ERROR_CODE:
             console.error('[GoogleSignIn] DEVELOPER_ERROR:', error, '— verify SHA-1 and package in Google Cloud + google-services.json is bundled.');
             Alert.alert(
               'Configuration Error',

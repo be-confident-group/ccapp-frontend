@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UnitsProvider } from '@/contexts/UnitsContext';
 import { TrackingProvider } from '@/contexts/TrackingContext';
@@ -156,15 +157,17 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <QueryProvider>
-          <UnitsProvider>
-            <TrackingProvider>
-              <RootLayoutNav />
-            </TrackingProvider>
-          </UnitsProvider>
-        </QueryProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <QueryProvider>
+            <UnitsProvider>
+              <TrackingProvider>
+                <RootLayoutNav />
+              </TrackingProvider>
+            </UnitsProvider>
+          </QueryProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

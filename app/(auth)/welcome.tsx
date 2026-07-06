@@ -24,6 +24,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDownIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { authApi } from '@/lib/api';
+import { TermsPrivacyNotice } from '@/components/TermsPrivacyNotice';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
@@ -405,9 +406,8 @@ export default function WelcomeScreen() {
               {!showEmailInput ? (
                 <>
                   <Text style={[styles.authTitle, { color: colors.text }]}>{t('auth:welcome.title')}</Text>
-                  <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
-                    {t('auth:welcome.termsPrefix')}
-                  </Text>
+                  <TermsPrivacyNotice style={[styles.authSubtitle, { color: colors.textSecondary }]} />
+
 
                   <View style={styles.authButtons}>
                     {/* Google Button */}

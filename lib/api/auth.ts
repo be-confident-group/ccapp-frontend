@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readAuthToken, saveAuthToken, deleteAuthToken } from './tokenStorage';
 
 // Types
 export interface LoginRequest {
@@ -117,7 +117,7 @@ export const authApi = {
     // Normalize and store token (backend returns { token })
     const token = response?.access || response?.token || '';
     if (token) {
-      await AsyncStorage.setItem('authToken', token);
+      await saveAuthToken(token);
     }
 
     return { token } as AuthResponse;
@@ -190,7 +190,7 @@ export const authApi = {
     // Backend returns { token } (DRF token)
     const token = response.token || '';
     if (token) {
-      await AsyncStorage.setItem('authToken', token);
+      await saveAuthToken(token);
     }
 
     return response;
@@ -205,9 +205,8 @@ export const authApi = {
     } catch (error) {
       console.error('Logout API error:', error);
     } finally {
-      // Clear tokens regardless of API success
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('refreshToken');
+      // Clear token regardless of API success
+      await deleteAuthToken();
     }
   },
 
@@ -216,8 +215,7 @@ export const authApi = {
    */
   async deleteAccount(): Promise<void> {
     await apiClient.delete('/api/delete-user/');
-    await AsyncStorage.removeItem('authToken');
-    await AsyncStorage.removeItem('refreshToken');
+    await deleteAuthToken();
   },
 
   /**
@@ -263,23 +261,15 @@ export const authApi = {
    * Check if user is authenticated
    */
   async isAuthenticated(): Promise<boolean> {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      return !!token;
-    } catch {
-      return false;
-    }
+    const token = await readAuthToken();
+    return !!token;
   },
 
   /**
    * Get stored auth token
    */
   async getToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem('authToken');
-    } catch {
-      return null;
-    }
+    return readAuthToken();
   },
 
 };

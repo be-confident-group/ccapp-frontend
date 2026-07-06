@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readAuthToken, deleteAuthToken } from './tokenStorage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -51,12 +51,7 @@ class ApiClient {
   }
 
   private async getAuthToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem('authToken');
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
+    return readAuthToken();
   }
 
   private async request<T>(
@@ -107,8 +102,7 @@ class ApiClient {
         // Handle 401 Unauthorized — token is invalid/expired
         if (response.status === 401 && requiresAuth) {
           console.warn('[API] 401 Unauthorized — clearing invalid token');
-          await AsyncStorage.removeItem('authToken');
-          await AsyncStorage.removeItem('refreshToken');
+          await deleteAuthToken();
           this.isLoggingOut = true;
           if (this.onUnauthorized) {
             this.onUnauthorized();

@@ -667,14 +667,16 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     await logBackgroundTaskExecution(locations.length);
 
     // Log raw location data for debugging
-    console.log('[LocationTracking] Raw locations received:', locations.map((loc, i) => ({
-      index: i,
-      lat: loc.coords.latitude.toFixed(6),
-      lng: loc.coords.longitude.toFixed(6),
-      accuracy: loc.coords.accuracy?.toFixed(0) || 'unknown',
-      speed: loc.coords.speed?.toFixed(2) || 'unknown',
-      timestamp: new Date(loc.timestamp).toISOString(),
-    })));
+    if (__DEV__) {
+      console.log('[LocationTracking] Raw locations received:', locations.map((loc, i) => ({
+        index: i,
+        lat: loc.coords.latitude.toFixed(6),
+        lng: loc.coords.longitude.toFixed(6),
+        accuracy: loc.coords.accuracy?.toFixed(0) || 'unknown',
+        speed: loc.coords.speed?.toFixed(2) || 'unknown',
+        timestamp: new Date(loc.timestamp).toISOString(),
+      })));
+    }
 
     // Filter by accuracy - use relaxed threshold before trip starts, strict during trip
     await database.init();

@@ -41,7 +41,7 @@ export function useWeather(): UseWeatherReturn {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      console.log('[useWeather] Got location:', location.coords.latitude, location.coords.longitude);
+      if (__DEV__) console.log('[useWeather] Got location:', location.coords.latitude, location.coords.longitude);
 
       // Fetch weather
       console.log('[useWeather] Fetching weather data...');

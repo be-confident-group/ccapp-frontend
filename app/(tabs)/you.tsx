@@ -33,10 +33,10 @@ import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-import { showAlert, showConfirmAlert, showInfoAlert, showComingSoonAlert, showErrorAlert } from '@/lib/utils/alert';
+import { showAlert, showConfirmAlert, showInfoAlert, showErrorAlert } from '@/lib/utils/alert';
 import i18n from '@/lib/i18n';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
-import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME } from '@/config/env';
+import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME, PRIVACY_POLICY_URL } from '@/config/env';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
@@ -437,7 +437,9 @@ export default function YouScreen() {
                   title={t('profile:privacy.privacy')}
                   subtitle={t('profile:privacy.privacySubtitle')}
                   onPress={() => {
-                    showComingSoonAlert('privacySettings');
+                    Linking.openURL(PRIVACY_POLICY_URL).catch(() =>
+                      showInfoAlert('alerts:error.title', 'alerts:error.generic')
+                    );
                   }}
                   isFirst
                 />

@@ -76,15 +76,15 @@ export default {
       [
         "expo-image-picker",
         {
-          photosPermission: "Radzi needs access to your photo library to let you select images for your profile picture and posts."
+          photosPermission: "Radzi needs access to your photo library to let you select and upload images for your profile picture and posts."
         }
       ],
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "Allow Radzi to use your location to automatically track your activities in the background.",
+          locationAlwaysAndWhenInUsePermission: "Radzi uses your location in the background to record trips automatically. The motion sensor wakes the GPS only when you start moving — your battery is preserved when you're not on the move.",
           locationAlwaysPermission: "Allow Radzi to track your activities all the time.",
-          locationWhenInUsePermission: "Allow Radzi to use your location to track your activities and show your position on the map.",
+          locationWhenInUsePermission: "Radzi needs your location while in use to track your active rides.",
           isAndroidBackgroundLocationEnabled: true,
           isAndroidForegroundServiceEnabled: true,
         }

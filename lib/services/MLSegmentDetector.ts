@@ -46,7 +46,7 @@ const MIN_WINDOW_CONFIDENCE = 0.45;
 const SMOOTH_WINDOWS = 3;
 
 export interface MLSegmentAnalysis extends SegmentAnalysis {
-  classificationMethod: 'ml' | 'speed';
+  classificationMethod: 'ml' | 'speed' | 'cmma';
   mlWindowCount: number;
 }
 
