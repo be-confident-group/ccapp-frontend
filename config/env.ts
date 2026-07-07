@@ -25,8 +25,7 @@ export const ANDROID_PACKAGE_NAME = process.env.EXPO_PUBLIC_ANDROID_PACKAGE ?? '
 
 export const PRIVACY_POLICY_URL = 'https://www.radzi.com/privacy';
 
-/** TODO: set once Radzi publishes a Terms of Service page. */
-export const TERMS_OF_SERVICE_URL: string | null = null;
+export const TERMS_OF_SERVICE_URL = 'https://www.radzi.com/terms';
 
 // ---------------------------------------------------------------------------
 // Dev-time warnings for placeholder values

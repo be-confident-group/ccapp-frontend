@@ -11,15 +11,11 @@ interface TermsPrivacyNoticeProps {
 export function TermsPrivacyNotice({ style }: TermsPrivacyNoticeProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const termsUrl = TERMS_OF_SERVICE_URL;
 
   return (
     <Text style={style}>
       {t('auth:welcome.termsPrefix')}
-      <Text
-        style={termsUrl ? { color: colors.primary } : undefined}
-        onPress={termsUrl ? () => Linking.openURL(termsUrl) : undefined}
-      >
+      <Text style={{ color: colors.primary }} onPress={() => Linking.openURL(TERMS_OF_SERVICE_URL)}>
         {t('auth:welcome.terms')}
       </Text>
       {t('auth:welcome.and')}
