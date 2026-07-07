@@ -35,7 +35,10 @@
     "title": "Delete Account",
     "message": "This will permanently delete your account and all your data. This action cannot be undone.",
     "confirmButton": "Delete Account",
-    "cancelButton": "Cancel"
+    "cancelButton": "Cancel",
+    "transferRequiredTitle": "Transfer Ownership Required",
+    "transferRequiredMessage": "You own the following group(s): {{clubNames}}. You must transfer ownership to another member before deleting your account.",
+    "manageClubs": "Manage Groups"
   },
   "permission": {
     "changedTitle": "Permission Changed",

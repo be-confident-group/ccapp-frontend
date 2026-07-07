@@ -20,8 +20,9 @@ import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/layout/Header';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
-import { useClub, useUpdateClub, useDeleteClub, useTransferOwnership } from '@/lib/hooks/useClubs';
+import { useClub, useUpdateClub, useDeleteClub } from '@/lib/hooks/useClubs';
 import { pickAndProcessImage } from '@/lib/utils/imageHelpers';
+import { TransferOwnershipModal } from '@/components/clubs/TransferOwnershipModal';
 import { PhotoIcon, XMarkIcon, LockClosedIcon, GlobeAltIcon } from 'react-native-heroicons/outline';
 import type { ClubUpdateRequest } from '@/types/feed';
 
@@ -34,7 +35,6 @@ export default function EditClubScreen() {
   const { data: club, isLoading } = useClub(clubId);
   const updateClubMutation = useUpdateClub();
   const deleteClubMutation = useDeleteClub();
-  const transferOwnershipMutation = useTransferOwnership(clubId);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -42,6 +42,7 @@ export default function EditClubScreen() {
   const [photoChanged, setPhotoChanged] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   // Pre-populate form when club data loads
   useEffect(() => {
@@ -118,32 +119,8 @@ export default function EditClubScreen() {
   }, [clubId, name, description, photoBase64, photoChanged, validateForm, updateClubMutation]);
 
   const handleTransferOwnership = useCallback(() => {
-    if (!club?.members?.length) return;
-    const eligible = club.members.filter((m) => m.id !== club.owner.id);
-    if (!eligible.length) {
-      Alert.alert('No Members', 'You need at least one other member to transfer ownership.');
-      return;
-    }
-    Alert.alert(
-      'Transfer Ownership',
-      'Select a member to transfer ownership to:',
-      [
-        ...eligible.slice(0, 5).map((m) => ({
-          text: `${m.name} ${m.last_name}`,
-          onPress: async () => {
-            try {
-              await transferOwnershipMutation.mutateAsync(m.id);
-              Alert.alert('Done', `Ownership transferred to ${m.name} ${m.last_name}.`);
-              router.back();
-            } catch {
-              Alert.alert('Error', 'Failed to transfer ownership. Please try again.');
-            }
-          },
-        })),
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  }, [club, transferOwnershipMutation]);
+    setShowTransferModal(true);
+  }, []);
 
   const handleDelete = useCallback(() => {
     if (!clubId || !club) return;
@@ -363,16 +340,11 @@ export default function EditClubScreen() {
                   <TouchableOpacity
                     style={[styles.dangerButton, { borderWidth: 1, borderColor: colors.error }]}
                     onPress={handleTransferOwnership}
-                    disabled={transferOwnershipMutation.isPending}
                     activeOpacity={0.8}
                   >
-                    {transferOwnershipMutation.isPending ? (
-                      <ActivityIndicator size="small" color={colors.error} />
-                    ) : (
-                      <ThemedText style={[styles.dangerButtonText, { color: colors.error }]}>
-                        {t('clubs.transfer', 'Transfer')}
-                      </ThemedText>
-                    )}
+                    <ThemedText style={[styles.dangerButtonText, { color: colors.error }]}>
+                      {t('clubs.transfer', 'Transfer')}
+                    </ThemedText>
                   </TouchableOpacity>
                 </View>
                 {/* Delete Group */}
@@ -427,6 +399,13 @@ export default function EditClubScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <TransferOwnershipModal
+        visible={showTransferModal}
+        club={club}
+        onClose={() => setShowTransferModal(false)}
+        onTransferred={() => router.back()}
+      />
     </SafeAreaView>
   );
 }

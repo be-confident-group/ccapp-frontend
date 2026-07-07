@@ -35,7 +35,10 @@
     "title": "Eliminar Cuenta",
     "message": "Esto eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.",
     "confirmButton": "Eliminar Cuenta",
-    "cancelButton": "Cancelar"
+    "cancelButton": "Cancelar",
+    "transferRequiredTitle": "Se requiere transferir la propiedad",
+    "transferRequiredMessage": "Eres propietario de los siguientes grupos: {{clubNames}}. Debes transferir la propiedad a otro miembro antes de eliminar tu cuenta.",
+    "manageClubs": "Administrar Grupos"
   },
   "permission": {
     "changedTitle": "Permiso Cambiado",

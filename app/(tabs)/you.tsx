@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Alert, ScrollView, Linking, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,6 +40,7 @@ import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME, PRIVACY_POLICY_URL } from '@/co
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
+import { useMyClubs } from '@/lib/hooks/useClubs';
 import * as Location from 'expo-location';
 import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
@@ -89,6 +90,13 @@ export default function YouScreen() {
     gcTime: 1000 * 60 * 30,    // keep in memory 30 minutes
   });
 
+  const { data: myClubs } = useMyClubs();
+  const currentUserId = profileData?.id ?? contextUser?.id;
+  const ownedClubs = useMemo(
+    () => (myClubs ?? []).filter((club) => currentUserId !== undefined && Number(club.owner.id) === Number(currentUserId)),
+    [myClubs, currentUserId]
+  );
+
   // Map API response to local profile shape
   const profilePicture = profileData?.profile_picture;
   let joinedDateDisplay = '';
@@ -120,6 +128,19 @@ export default function YouScreen() {
   };
 
   const handleDeleteAccount = () => {
+    if (ownedClubs.length > 0) {
+      const clubNames = ownedClubs.map((club) => club.name).join(', ');
+      Alert.alert(
+        i18n.t('alerts:deleteAccount.transferRequiredTitle'),
+        i18n.t('alerts:deleteAccount.transferRequiredMessage', { clubNames }),
+        [
+          { text: i18n.t('common:buttons.cancel'), style: 'cancel' },
+          { text: i18n.t('alerts:deleteAccount.manageClubs'), onPress: () => router.push('/clubs/my-clubs') },
+        ]
+      );
+      return;
+    }
+
     showConfirmAlert(
       'alerts:deleteAccount.title',
       'alerts:deleteAccount.message',
