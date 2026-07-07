@@ -1,5 +1,5 @@
 import { Spacing } from '@/constants/theme';
-import type { FeedbackMode, HeatmapMode, MapViewMode } from '@/types/mapMode';
+import type { FeedbackMode, MapViewMode } from '@/types/mapMode';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +10,9 @@ import { MapSubModeToggle } from './MapSubModeToggle';
 
 interface MapControlsProps {
   viewMode: MapViewMode;
-  heatmapMode: HeatmapMode;
   feedbackMode: FeedbackMode;
   selectedLayer: MapLayer;
   onViewModeChange: (mode: MapViewMode) => void;
-  onHeatmapModeChange: (mode: HeatmapMode) => void;
   onFeedbackModeChange: (mode: FeedbackMode) => void;
   onLayerChange: (layer: MapLayer) => void;
   onFindLocation: () => void;
@@ -24,11 +22,9 @@ interface MapControlsProps {
 
 export function MapControls({
   viewMode,
-  heatmapMode,
   feedbackMode,
   selectedLayer,
   onViewModeChange,
-  onHeatmapModeChange,
   onFeedbackModeChange,
   onLayerChange,
   onFindLocation,
@@ -49,20 +45,16 @@ export function MapControls({
         {/* Heatmap/Feedback Mode Toggle */}
         <MapModeToggle activeMode={viewMode} onModeChange={onViewModeChange} />
 
-        {/* Global/Personal Sub-mode Toggle */}
-        <View style={{ marginTop: buttonGap }}>
-          <MapSubModeToggle
-            mode={viewMode}
-            activeSubMode={viewMode === 'heatmap' ? heatmapMode : feedbackMode}
-            onSubModeChange={(subMode) => {
-              if (viewMode === 'heatmap') {
-                onHeatmapModeChange(subMode as import('@/types/mapMode').HeatmapMode);
-              } else {
-                onFeedbackModeChange(subMode as import('@/types/mapMode').FeedbackMode);
-              }
-            }}
-          />
-        </View>
+        {/* Community/Personal Sub-mode Toggle (feedback only — global heatmap isn't built yet, see MapSubModeToggle) */}
+        {viewMode === 'feedback' && (
+          <View style={{ marginTop: buttonGap }}>
+            <MapSubModeToggle
+              mode={viewMode}
+              activeSubMode={feedbackMode}
+              onSubModeChange={(subMode) => onFeedbackModeChange(subMode as import('@/types/mapMode').FeedbackMode)}
+            />
+          </View>
+        )}
 
         {/* Layers and Location Buttons */}
         <View style={{ marginTop: buttonGap }}>

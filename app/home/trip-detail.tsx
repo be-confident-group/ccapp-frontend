@@ -29,15 +29,13 @@ import { syncService } from '@/lib/services/SyncService';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
 import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
-import { useAuth } from '@/contexts/AuthContext';
 import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
 
 export default function TripDetailScreen() {
   const { id, local } = useLocalSearchParams<{ id: string; local?: string }>();
   const isLocalTrip = local === 'true';
-  const { user } = useAuth();
-  const isDebugBuild = isDebugEnabled(user?.email);
+  const isDebugBuild = isDebugEnabled();
   const { colors, isDark } = useTheme();
   const { unitSystem } = useUnits();
   const { t } = useTranslation('maps');

@@ -23,7 +23,7 @@ import { usePersonalRoadSections, useCommunityRoadSections } from '@/lib/hooks/u
 import { mockUserLocation } from '@/lib/utils/mockMapData';
 import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Alert } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
@@ -71,10 +71,8 @@ export default function MapsScreen() {
   const { location, permissionStatus, requestPermission, isLoading, getCurrentLocation } = useLocation();
   const {
     viewMode,
-    heatmapMode,
     feedbackMode,
     setViewMode,
-    setHeatmapMode,
     setFeedbackMode,
   } = useMapMode();
   
@@ -200,19 +198,6 @@ export default function MapsScreen() {
     setViewMode(mode);
   }, [setViewMode]);
 
-  // Handle heatmap mode change - global heatmap is coming soon
-  const handleHeatmapModeChange = useCallback((mode: 'personal' | 'global') => {
-    if (mode === 'global') {
-      Alert.alert(
-        'Coming Soon',
-        'Global heatmap showing popular cycling and walking routes will be available soon!',
-        [{ text: 'OK' }]
-      );
-      return; // Don't change mode
-    }
-    setHeatmapMode(mode);
-  }, [setHeatmapMode]);
-
   // Handle layer change from user interaction
   const handleLayerChange = useCallback((layer: MapLayer) => {
     setSelectedLayer(layer);
@@ -322,11 +307,9 @@ export default function MapsScreen() {
         {/* Map controls overlay */}
         <MapControls
           viewMode={viewMode}
-          heatmapMode={heatmapMode}
           feedbackMode={feedbackMode}
           selectedLayer={selectedLayer}
           onViewModeChange={handleViewModeChange}
-          onHeatmapModeChange={handleHeatmapModeChange}
           onFeedbackModeChange={setFeedbackMode}
           onLayerChange={handleLayerChange}
           onFindLocation={handleFindLocation}

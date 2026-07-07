@@ -70,7 +70,7 @@ interface UpdateProfilePayload {
 export default function YouScreen() {
   const { t } = useTranslation();
   const { signOut, user: contextUser } = useAuth();
-  const isDebugBuild = isDebugEnabled(contextUser?.email);
+  const isDebugBuild = isDebugEnabled();
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
@@ -258,6 +258,11 @@ export default function YouScreen() {
       );
     }
   };
+
+  const hasStoreListing =
+    Platform.OS === 'ios'
+      ? IOS_APP_STORE_ID !== 'PLACEHOLDER_IOS_APP_ID'
+      : ANDROID_PACKAGE_NAME !== 'PLACEHOLDER_ANDROID_PACKAGE';
 
   const handleRateApp = () => {
     const storeUrl =
@@ -474,14 +479,17 @@ export default function YouScreen() {
                   subtitle={t('profile:feedback.sendFeedbackSubtitle')}
                   onPress={() => router.push('/feedback')}
                   isFirst
+                  isLast={!hasStoreListing}
                 />
-                <SettingsItem
-                  icon={<StarIcon size={22} color={colors.text} />}
-                  title={t('profile:feedback.rateUs')}
-                  subtitle={t('profile:feedback.rateUsSubtitle')}
-                  onPress={handleRateApp}
-                  isLast
-                />
+                {hasStoreListing && (
+                  <SettingsItem
+                    icon={<StarIcon size={22} color={colors.text} />}
+                    title={t('profile:feedback.rateUs')}
+                    subtitle={t('profile:feedback.rateUsSubtitle')}
+                    onPress={handleRateApp}
+                    isLast
+                  />
+                )}
               </View>
             </View>
           </View>
