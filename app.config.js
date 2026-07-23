@@ -20,7 +20,7 @@ export default {
     ios: {
       bundleIdentifier: "com.radzi.app",
       buildNumber: "1",
-      supportsTablet: true,
+      supportsTablet: false,
       usesAppleSignIn: true,
       associatedDomains: ["applinks:www.radzi.com"],
       infoPlist: {
