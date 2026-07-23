@@ -32,7 +32,9 @@ import {
 } from '@/lib/hooks/useClubs';
 import { useClubPosts, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
-import { FeedPost } from '@/components/feed';
+import { useBlockedUsers } from '@/lib/hooks/useBlockedUsers';
+import { FeedPost, PostModerationSheet } from '@/components/feed';
+import type { ModerationTarget } from '@/components/feed';
 import {
   UsersIcon,
   PlusIcon,
@@ -99,17 +101,28 @@ export default function ClubDetailScreen() {
   }, [club, currentUser]);
 
   const { data: joinRequests } = useJoinRequests(clubId, isOwnerResolved);
+  const { data: blockedUserIds = [] } = useBlockedUsers();
 
-  // Store sorted backend posts for like handler
+  // Store sorted backend posts for like handler — blocked authors are
+  // filtered out here so their posts disappear from this club on this device.
   const sortedPosts = useMemo(() => {
     if (!posts) return [];
-    return [...posts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [posts]);
+    return [...posts]
+      .filter((post) => !blockedUserIds.includes(post.author.id))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [posts, blockedUserIds]);
 
   // Transform posts to legacy format
   const activityPosts = useMemo(() => {
     return sortedPosts.map(transformPostToActivityPost);
   }, [sortedPosts]);
+
+  const ownPostIds = useMemo(() => {
+    if (currentUser?.id == null) return new Set<string>();
+    return new Set(
+      sortedPosts.filter((p) => p.author.id === currentUser.id).map((p) => p.id.toString())
+    );
+  }, [sortedPosts, currentUser]);
 
   const isOwner = isOwnerResolved;
 
@@ -243,6 +256,19 @@ export default function ClubDetailScreen() {
     setPhotoViewer({ photos, index });
   }, []);
 
+  const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
+
+  const handleOptionsPress = useCallback((postId: string) => {
+    const post = sortedPosts.find((p) => p.id.toString() === postId);
+    if (!post) return;
+    setModerationTarget({
+      postId: post.id,
+      authorId: post.author.id,
+      authorName: `${post.author.name} ${post.author.last_name}`.trim(),
+      clubName: post.club,
+    });
+  }, [sortedPosts]);
+
   const renderPost = useCallback(
     ({ item }: { item: ActivityPost }) => (
       <FeedPost
@@ -251,9 +277,10 @@ export default function ClubDetailScreen() {
         onComment={handleComment}
         onUserPress={handleUserPress}
         onPhotoPress={handlePhotoPress}
+        onOptionsPress={ownPostIds.has(item.id) ? undefined : handleOptionsPress}
       />
     ),
-    [handleLike, handleComment, handleUserPress, handlePhotoPress]
+    [handleLike, handleComment, handleUserPress, handlePhotoPress, handleOptionsPress, ownPostIds]
   );
 
   const headerElement = useMemo(() => {
@@ -565,6 +592,11 @@ export default function ClubDetailScreen() {
           )}
         </TouchableOpacity>
       </Modal>
+      <PostModerationSheet
+        visible={moderationTarget != null}
+        target={moderationTarget}
+        onClose={() => setModerationTarget(null)}
+      />
     </SafeAreaView>
   );
 }

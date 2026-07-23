@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { EllipsisHorizontalIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
@@ -31,6 +32,7 @@ interface FeedPostProps {
   onComment: (postId: string) => void;
   onUserPress?: (userId: string) => void;
   onPhotoPress?: (photos: string[], index: number) => void;
+  onOptionsPress?: (postId: string) => void;
 }
 
 
@@ -40,6 +42,7 @@ export const FeedPost = React.memo(function FeedPost({
   onComment,
   onUserPress,
   onPhotoPress,
+  onOptionsPress,
 }: FeedPostProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation('groups');
@@ -64,30 +67,42 @@ export const FeedPost = React.memo(function FeedPost({
           )}
 
           {/* User info section */}
-          <TouchableOpacity
-            style={styles.userSection}
-            onPress={() => onUserPress?.(post.user.id)}
-            activeOpacity={0.7}
-          >
-            <UserAvatar
-              imageUri={post.user.avatarUrl}
-              name={post.user.name}
-              size={44}
-            />
-            <View style={styles.userInfo}>
-              <View style={styles.userRow}>
-                <ThemedText style={styles.userName}>{post.user.name}</ThemedText>
-                <ThemedText style={[styles.timestamp, { color: colors.textMuted }]}>
-                  {formatRelativeTime(post.createdAt)}
-                </ThemedText>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.userSection}
+              onPress={() => onUserPress?.(post.user.id)}
+              activeOpacity={0.7}
+            >
+              <UserAvatar
+                imageUri={post.user.avatarUrl}
+                name={post.user.name}
+                size={44}
+              />
+              <View style={styles.userInfo}>
+                <View style={styles.userRow}>
+                  <ThemedText style={styles.userName}>{post.user.name}</ThemedText>
+                  <ThemedText style={[styles.timestamp, { color: colors.textMuted }]}>
+                    {formatRelativeTime(post.createdAt)}
+                  </ThemedText>
+                </View>
+                {post.location && (
+                  <ThemedText style={[styles.location, { color: colors.textSecondary }]}>
+                    {post.location}
+                  </ThemedText>
+                )}
               </View>
-              {post.location && (
-                <ThemedText style={[styles.location, { color: colors.textSecondary }]}>
-                  {post.location}
-                </ThemedText>
-              )}
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            {onOptionsPress && (
+              <TouchableOpacity
+                onPress={() => onOptionsPress(post.id)}
+                style={styles.optionsButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={t('moderation.postOptions')}
+              >
+                <EllipsisHorizontalIcon size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Activity stats banner — shown for trip posts */}
           {isTripPost && (
@@ -184,11 +199,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: BorderRadius.xl,
     zIndex: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   userSection: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.md,
     gap: 12,
+  },
+  optionsButton: {
+    paddingHorizontal: Spacing.md,
   },
   userInfo: {
     flex: 1,

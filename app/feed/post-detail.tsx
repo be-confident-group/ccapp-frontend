@@ -14,6 +14,7 @@ import { useLocalSearchParams } from 'expo-router';
 import {
   PaperAirplaneIcon,
   HeartIcon as HeartIconOutline,
+  EllipsisHorizontalIcon,
 } from 'react-native-heroicons/outline';
 import { HeartIcon as HeartIconSolid } from 'react-native-heroicons/solid';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +22,14 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
-import { UserAvatar, PhotoGallery } from '@/components/feed';
+import { UserAvatar, PhotoGallery, PostModerationSheet } from '@/components/feed';
+import type { ModerationTarget } from '@/components/feed';
 import { useAddComment, usePost, useTogglePostLike } from '@/lib/hooks/usePosts';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
+import { useBlockedUsers } from '@/lib/hooks/useBlockedUsers';
+import { containsObjectionableContent } from '@/lib/utils/contentFilter';
+import { showAlert } from '@/lib/utils/alert';
 import Header from '@/components/layout/Header';
 
 export default function PostDetailScreen() {
@@ -57,8 +63,33 @@ export default function PostDetailScreen() {
   const addCommentMutation = useAddComment();
   const toggleLike = useTogglePostLike();
 
+  const { data: currentUser } = useCurrentUser();
+  const { data: blockedUserIds = [] } = useBlockedUsers();
+  const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
+
+  const visibleComments = useMemo(() => {
+    return (post?.comments ?? []).filter((c) => !blockedUserIds.includes(c.author.id));
+  }, [post?.comments, blockedUserIds]);
+
+  const isOwnPost = post != null && currentUser?.id != null && post.author.id === currentUser.id;
+
+  const handleOptionsPress = useCallback(() => {
+    if (!post) return;
+    setModerationTarget({
+      postId: post.id,
+      authorId: post.author.id,
+      authorName: `${post.author.name} ${post.author.last_name}`.trim(),
+      clubName: post.club,
+    });
+  }, [post]);
+
   const handlePostComment = useCallback(async () => {
     if (!commentText.trim() || !post) return;
+
+    if (containsObjectionableContent(commentText)) {
+      showAlert('alerts:moderation.contentBlockedTitle', 'alerts:moderation.contentBlockedMessage');
+      return;
+    }
 
     try {
       await addCommentMutation.mutateAsync({
@@ -143,7 +174,21 @@ export default function PostDetailScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'bottom']}
     >
-      <Header title={headerTitle} showBack />
+      <Header
+        title={headerTitle}
+        showBack
+        rightElement={
+          !isOwnPost ? (
+            <TouchableOpacity
+              onPress={handleOptionsPress}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t('moderation.postOptions')}
+            >
+              <EllipsisHorizontalIcon size={22} color={colors.text} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -242,9 +287,9 @@ export default function PostDetailScreen() {
                 {t('feed.comments', 'Comments')} ({post.comment_count})
               </ThemedText>
 
-              {post.comments && post.comments.length > 0 ? (
+              {visibleComments.length > 0 ? (
                 <View style={styles.commentsList}>
-                  {post.comments.map((comment) => (
+                  {visibleComments.map((comment) => (
                     <View key={comment.id} style={[styles.commentItem, { borderBottomColor: colors.border }]}>
                       <UserAvatar
                         name={`${comment.author.name} ${comment.author.last_name}`}
@@ -307,6 +352,11 @@ export default function PostDetailScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+        <PostModerationSheet
+          visible={moderationTarget != null}
+          target={moderationTarget}
+          onClose={() => setModerationTarget(null)}
+        />
       </SafeAreaView>
   );
 }

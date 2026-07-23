@@ -63,7 +63,9 @@
       "titleRequired": "Title is required",
       "titleTooShort": "Title must be at least 3 characters",
       "textRequired": "Post content is required",
-      "textTooShort": "Post content must be at least 10 characters"
+      "textTooShort": "Post content must be at least 10 characters",
+      "titleObjectionable": "Please remove inappropriate language from your title",
+      "textObjectionable": "Please remove inappropriate language from your post"
     }
   },
   "createPost": {
@@ -238,6 +240,27 @@
     "empty": {
       "noData": "No data for this period"
     }
+  },
+  "moderation": {
+    "postOptions": "Post options",
+    "report": "Report post",
+    "block": "Block {{name}}",
+    "cancel": "Cancel",
+    "reportTitle": "Report post",
+    "reportReasonLabel": "Reason",
+    "reasons": {
+      "spam": "Spam",
+      "harassment": "Harassment or bullying",
+      "inappropriate": "Inappropriate content",
+      "misinformation": "False information",
+      "other": "Other"
+    },
+    "detailsLabel": "Additional details (optional)",
+    "detailsPlaceholder": "Add any details that will help us review this...",
+    "sendReport": "Send Report",
+    "blockConfirmTitle": "Block {{name}}?",
+    "blockConfirmMessage": "You won't see posts or comments from {{name}} anymore.",
+    "blockConfirmButton": "Block"
   },
   "notificationPreferences": {
     "title": "Notification Preferences",

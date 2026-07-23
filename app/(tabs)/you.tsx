@@ -19,6 +19,7 @@ import {
   TrashIcon,
   LockClosedIcon,
   HeartIcon,
+  LifebuoyIcon,
 } from 'react-native-heroicons/outline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -36,7 +37,7 @@ import { useLanguage } from '@/lib/hooks/useLanguage';
 import { showAlert, showConfirmAlert, showInfoAlert, showErrorAlert } from '@/lib/utils/alert';
 import i18n from '@/lib/i18n';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n/types';
-import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME, PRIVACY_POLICY_URL } from '@/config/env';
+import { IOS_APP_STORE_ID, ANDROID_PACKAGE_NAME, PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '@/config/env';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { useTracking } from '@/contexts/TrackingContext';
@@ -474,6 +475,22 @@ export default function YouScreen() {
                   title={t('profile:privacy.notificationSettings')}
                   subtitle={t('profile:privacy.notificationSettingsSubtitle')}
                   onPress={() => router.push('/settings/notifications')}
+                />
+                <SettingsItem
+                  icon={<LifebuoyIcon size={22} color={colors.text} />}
+                  title={t('profile:privacy.contactSupport')}
+                  subtitle={t('profile:privacy.contactSupportSubtitle')}
+                  onPress={async () => {
+                    const url = `mailto:${SUPPORT_EMAIL}`;
+                    const canOpen = await Linking.canOpenURL(url).catch(() => false);
+                    if (canOpen) {
+                      Linking.openURL(url).catch(() =>
+                        Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }))
+                      );
+                    } else {
+                      Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }));
+                    }
+                  }}
                   isLast
                 />
               </View>

@@ -10,11 +10,15 @@ import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import {
   FeedHeader,
   FeedPost,
+  PostModerationSheet,
 } from '@/components/feed';
+import type { ModerationTarget } from '@/components/feed';
 import type { ActivityPost, Post } from '@/types/feed';
 import { useInfiniteFeed } from '@/lib/hooks/useFeed';
 import type { FeedType } from '@/lib/api/feed';
 import { useTogglePostLike } from '@/lib/hooks/usePosts';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
+import { useBlockedUsers } from '@/lib/hooks/useBlockedUsers';
 import { NewspaperIcon } from 'react-native-heroicons/outline';
 
 // Helper function to transform backend Post to ActivityPost for legacy component
@@ -67,11 +71,23 @@ export default function FeedScreen() {
   // Like mutation
   const { mutate: toggleLike } = useTogglePostLike();
 
-  // Store raw backend posts for like handler
+  const { data: currentUser } = useCurrentUser();
+  const { data: blockedUserIds = [] } = useBlockedUsers();
+
+  // Store raw backend posts for like handler — blocked authors are filtered
+  // out here so their posts disappear from the feed on this device.
   const backendPosts = useMemo(() => {
     if (!feedData?.pages) return [];
-    return feedData.pages.flatMap((page) => page.results);
-  }, [feedData]);
+    const all = feedData.pages.flatMap((page) => page.results);
+    return all.filter((post) => !blockedUserIds.includes(post.author.id));
+  }, [feedData, blockedUserIds]);
+
+  const ownPostIds = useMemo(() => {
+    if (currentUser?.id == null) return new Set<string>();
+    return new Set(
+      backendPosts.filter((p) => p.author.id === currentUser.id).map((p) => p.id.toString())
+    );
+  }, [backendPosts, currentUser]);
 
   // Transform backend data to legacy format
   const posts = useMemo(() => {
@@ -119,6 +135,19 @@ export default function FeedScreen() {
     setPhotoViewer({ photos, index });
   }, []);
 
+  const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
+
+  const handleOptionsPress = useCallback((postId: string) => {
+    const post = backendPosts.find((p) => p.id.toString() === postId);
+    if (!post) return;
+    setModerationTarget({
+      postId: post.id,
+      authorId: post.author.id,
+      authorName: `${post.author.name} ${post.author.last_name}`.trim(),
+      clubName: post.club,
+    });
+  }, [backendPosts]);
+
   const renderPost = useCallback(
     ({ item }: { item: ActivityPost }) => (
       <FeedPost
@@ -127,9 +156,10 @@ export default function FeedScreen() {
         onComment={handleComment}
         onUserPress={handleUserPress}
         onPhotoPress={handlePhotoPress}
+        onOptionsPress={ownPostIds.has(item.id) ? undefined : handleOptionsPress}
       />
     ),
-    [handleLike, handleComment, handleUserPress, handlePhotoPress]
+    [handleLike, handleComment, handleUserPress, handlePhotoPress, handleOptionsPress, ownPostIds]
   );
 
   const renderEmptyState = () => {
@@ -255,6 +285,11 @@ export default function FeedScreen() {
           )}
         </TouchableOpacity>
       </Modal>
+      <PostModerationSheet
+        visible={moderationTarget != null}
+        target={moderationTarget}
+        onClose={() => setModerationTarget(null)}
+      />
     </SafeAreaView>
   );
 }

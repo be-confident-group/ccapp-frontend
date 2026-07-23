@@ -23,7 +23,8 @@
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection.",
     "appStore": "Unable to open app store",
-    "invalidDateFormat": "Date of birth must be in YYYY-MM-DD format."
+    "invalidDateFormat": "Date of birth must be in YYYY-MM-DD format.",
+    "mailUnavailable": "We couldn't open your mail app. Please email {{email}} directly."
   },
   "deleteConfirm": {
     "title": "Delete",
@@ -60,6 +61,16 @@
   "auth": {
     "profileLoadFailedTitle": "Profile Unavailable",
     "profileLoadFailedMessage": "Your profile couldn't be loaded. Some features may be limited."
+  },
+  "moderation": {
+    "reportOpenedTitle": "Report ready to send",
+    "reportOpenedMessage": "We opened your mail app with the details filled in — please hit send so our team can review it.",
+    "reportFailedTitle": "Couldn't open Mail",
+    "reportFailedMessage": "Please email {{email}} with the reason and the post details.",
+    "blockedTitle": "User blocked",
+    "blockedMessage": "You won't see their content anymore.",
+    "contentBlockedTitle": "Let's keep it friendly",
+    "contentBlockedMessage": "Your comment contains language that isn't allowed in Radzi. Please edit it and try again."
   },
   "backgroundPermission": {
     "title": "Background Tracking Permission",

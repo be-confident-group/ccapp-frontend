@@ -72,7 +72,9 @@
     "dailyReminder": "Recordatorio Diario",
     "dailyReminderSubtitle": "Recibe recordatorios para registrar tus viajes",
     "notificationSettings": "Configuración de Notificaciones",
-    "notificationSettingsSubtitle": "Administrar todas las notificaciones"
+    "notificationSettingsSubtitle": "Administrar todas las notificaciones",
+    "contactSupport": "Contactar Soporte",
+    "contactSupportSubtitle": "Reporta un problema o contacta a nuestro equipo"
   },
   "feedback": {
     "sendFeedback": "Enviar Comentarios",

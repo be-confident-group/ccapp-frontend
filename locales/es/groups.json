@@ -130,6 +130,27 @@
       "shareFailed": "No se pudo compartir el viaje"
     }
   },
+  "moderation": {
+    "postOptions": "Opciones de la publicación",
+    "report": "Reportar publicación",
+    "block": "Bloquear a {{name}}",
+    "cancel": "Cancelar",
+    "reportTitle": "Reportar publicación",
+    "reportReasonLabel": "Motivo",
+    "reasons": {
+      "spam": "Spam",
+      "harassment": "Acoso o intimidación",
+      "inappropriate": "Contenido inapropiado",
+      "misinformation": "Información falsa",
+      "other": "Otro"
+    },
+    "detailsLabel": "Detalles adicionales (opcional)",
+    "detailsPlaceholder": "Agrega cualquier detalle que nos ayude a revisar esto...",
+    "sendReport": "Enviar reporte",
+    "blockConfirmTitle": "¿Bloquear a {{name}}?",
+    "blockConfirmMessage": "Ya no verás publicaciones ni comentarios de {{name}}.",
+    "blockConfirmButton": "Bloquear"
+  },
   "notificationPreferences": {
     "title": "Preferencias de notificaciones",
     "likes": {

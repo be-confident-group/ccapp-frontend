@@ -5,3 +5,5 @@ export { PhotoGallery } from './PhotoGallery';
 export { UserAvatar } from './UserAvatar';
 export { PostActions } from './PostActions';
 export { GroupSelectorModal } from './GroupSelectorModal';
+export { PostModerationSheet } from './PostModerationSheet';
+export type { ModerationTarget } from './PostModerationSheet';

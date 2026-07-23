@@ -28,6 +28,17 @@ export const PRIVACY_POLICY_URL = 'https://www.radzi.com/privacy';
 export const TERMS_OF_SERVICE_URL = 'https://www.radzi.com/terms';
 
 // ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+
+/**
+ * Published contact address for support requests and content reports
+ * (App Store Guideline 1.2 requires this to be reachable in-app).
+ * Confirm this inbox exists and is monitored before shipping.
+ */
+export const SUPPORT_EMAIL = 'support@radzi.com';
+
+// ---------------------------------------------------------------------------
 // Dev-time warnings for placeholder values
 // ---------------------------------------------------------------------------
 if (__DEV__) {

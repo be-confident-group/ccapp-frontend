@@ -72,7 +72,9 @@
     "dailyReminder": "Daily Reminder",
     "dailyReminderSubtitle": "Get reminded to log your rides",
     "notificationSettings": "Notification Settings",
-    "notificationSettingsSubtitle": "Manage all notifications"
+    "notificationSettingsSubtitle": "Manage all notifications",
+    "contactSupport": "Contact Support",
+    "contactSupportSubtitle": "Report a problem or reach our team"
   },
   "feedback": {
     "sendFeedback": "Send Feedback",

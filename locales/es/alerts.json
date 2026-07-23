@@ -23,7 +23,8 @@
     "generic": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "network": "Error de red. Por favor, verifica tu conexión.",
     "appStore": "No se puede abrir la tienda de aplicaciones",
-    "invalidDateFormat": "La fecha de nacimiento debe estar en formato AAAA-MM-DD."
+    "invalidDateFormat": "La fecha de nacimiento debe estar en formato AAAA-MM-DD.",
+    "mailUnavailable": "No pudimos abrir tu app de correo. Por favor escribe a {{email}} directamente."
   },
   "deleteConfirm": {
     "title": "Eliminar",
@@ -60,6 +61,16 @@
   "auth": {
     "profileLoadFailedTitle": "Perfil no disponible",
     "profileLoadFailedMessage": "No se pudo cargar tu perfil. Algunas funciones pueden estar limitadas."
+  },
+  "moderation": {
+    "reportOpenedTitle": "Reporte listo para enviar",
+    "reportOpenedMessage": "Abrimos tu app de correo con los detalles completados — pulsa enviar para que nuestro equipo lo revise.",
+    "reportFailedTitle": "No se pudo abrir Mail",
+    "reportFailedMessage": "Envía un correo a {{email}} con el motivo y los detalles de la publicación.",
+    "blockedTitle": "Usuario bloqueado",
+    "blockedMessage": "Ya no verás su contenido.",
+    "contentBlockedTitle": "Mantengamos un buen ambiente",
+    "contentBlockedMessage": "Tu comentario contiene lenguaje que no está permitido en Radzi. Por favor edítalo e inténtalo de nuevo."
   },
   "backgroundPermission": {
     "title": "Permiso de seguimiento en segundo plano",

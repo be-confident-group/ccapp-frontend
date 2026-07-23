@@ -21,6 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import { useCreatePost } from '@/lib/hooks/usePosts';
 import { pickAndProcessMultipleImages } from '@/lib/utils/imageHelpers';
+import { containsObjectionableContent } from '@/lib/utils/contentFilter';
 import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import type { PostCreateRequest } from '@/types/feed';
 
@@ -66,12 +67,16 @@ export default function CreatePostScreen() {
       newErrors.title = t('posts.errors.titleRequired', 'Title is required');
     } else if (title.trim().length < 3) {
       newErrors.title = t('posts.errors.titleTooShort', 'Title must be at least 3 characters');
+    } else if (containsObjectionableContent(title)) {
+      newErrors.title = t('posts.errors.titleObjectionable');
     }
 
     if (!text.trim()) {
       newErrors.text = t('posts.errors.textRequired', 'Post content is required');
     } else if (text.trim().length < 10) {
       newErrors.text = t('posts.errors.textTooShort', 'Post content must be at least 10 characters');
+    } else if (containsObjectionableContent(text)) {
+      newErrors.text = t('posts.errors.textObjectionable');
     }
 
     setErrors(newErrors);
