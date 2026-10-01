@@ -6,7 +6,6 @@ import { LocationPermissionPrompt } from '@/components/maps/LocationPermissionPr
 import { MapBottomSheet } from '@/components/maps/MapBottomSheet';
 import { MapContainer } from '@/components/maps/MapContainer';
 import { MapControls } from '@/components/maps/MapControls';
-import { MapLayer } from '@/components/maps/MapLayerSelector';
 import { MapView } from '@/components/maps/MapView';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
 import { FeedbackMarkers } from '@/components/maps/FeedbackMarkers';
@@ -16,7 +15,7 @@ import { RoadSectionDetailSheet } from '@/components/maps/RoadSectionDetailSheet
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useMapMode } from '@/lib/hooks/useMapMode';
-import { useMapLayer } from '@/lib/hooks/useMapLayer';
+import { useMapLayer, type MapLayerPreference } from '@/lib/hooks/useMapLayer';
 import { useMapFeedback } from '@/lib/hooks/useMapFeedback';
 import { useGlobalFeedback } from '@/lib/hooks/useGlobalFeedback';
 import { usePersonalRoadSections, useCommunityRoadSections } from '@/lib/hooks/useRoadSections';
@@ -25,6 +24,7 @@ import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
@@ -86,7 +86,7 @@ export default function MapsScreen() {
   } | null>(null);
 
   // Use persistent map layer hook
-  const { selectedLayer, setSelectedLayer } = useMapLayer(isDark);
+  const { selectedLayer, preference: layerPreference, setPreference: setLayerPreference } = useMapLayer(isDark);
 
   const [, setIsBottomSheetExpanded] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -95,6 +95,8 @@ export default function MapsScreen() {
   const [selectedFeedback, setSelectedFeedback] = useState<MapFeedback | GlobalFeedback | null>(null);
   const [selectedRoadSection, setSelectedRoadSection] = useState<RoadSectionPersonal | RoadSectionCommunity | null>(null);
   const mapViewRef = useRef<any>(null);
+  // Camera heading for the compass; a shared value so rotating the map doesn't re-render.
+  const heading = useSharedValue(0);
 
   // Fetch trips from backend (including active trips that weren't properly stopped)
   const { data: backendTrips, refetch } = useTrips();
@@ -199,9 +201,9 @@ export default function MapsScreen() {
   }, [setViewMode]);
 
   // Handle layer change from user interaction
-  const handleLayerChange = useCallback((layer: MapLayer) => {
-    setSelectedLayer(layer);
-  }, [setSelectedLayer]);
+  const handleLayerChange = useCallback((layer: MapLayerPreference) => {
+    setLayerPreference(layer);
+  }, [setLayerPreference]);
 
   const handleFindLocation = useCallback(() => {
     if (mapViewRef.current) {
@@ -277,6 +279,9 @@ export default function MapsScreen() {
           followUserLocation={false}
           selectedLayer={selectedLayer}
           onLongPress={handleMapLongPress}
+          onHeadingChange={(value) => {
+            heading.value = value;
+          }}
         >
           {/* Render recent trips (journeys) in heatmap mode */}
           {viewMode === 'heatmap' && recentTrips.map((trip) => (
@@ -308,11 +313,13 @@ export default function MapsScreen() {
         <MapControls
           viewMode={viewMode}
           feedbackMode={feedbackMode}
-          selectedLayer={selectedLayer}
+          layerPreference={layerPreference}
           onViewModeChange={handleViewModeChange}
           onFeedbackModeChange={setFeedbackMode}
           onLayerChange={handleLayerChange}
           onFindLocation={handleFindLocation}
+          heading={heading}
+          onCompassPress={() => mapViewRef.current?.resetNorth()}
           on3DToggle={() => {}}
           is3DEnabled={false}
         />

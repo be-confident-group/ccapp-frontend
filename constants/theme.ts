@@ -64,6 +64,14 @@ export interface ThemeColors {
   // Overlays
   overlay: string;
   backdrop: string;
+
+  // Liquid glass surfaces (floating bars, glass buttons)
+  glassFallback: string; // opaque-ish fill where real glass/blur is unavailable
+  glassBorder: string;
+  glassHighlight: string; // active-item bubble inside a glass surface
+  glassTint: string; // active icon/label on glass (brand teal, lifted in dark mode)
+  glassInactive: string; // inactive icon/label on glass
+  glassActiveFill: string; // solid active segment / icon chip on glass (white content)
 }
 
 export const Colors: Record<ColorScheme, ThemeColors> = {
@@ -113,6 +121,14 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     // Overlays
     overlay: 'rgba(0, 0, 0, 0.5)',
     backdrop: 'rgba(0, 0, 0, 0.3)',
+
+    // Liquid glass
+    glassFallback: 'rgba(255, 255, 255, 0.94)',
+    glassBorder: 'rgba(0, 0, 0, 0.06)',
+    glassHighlight: 'rgba(0, 0, 0, 0.07)',
+    glassTint: '#0d4d63',
+    glassInactive: '#4A5258',
+    glassActiveFill: '#0d4d63',
   },
   dark: {
     // Brand colors
@@ -160,6 +176,14 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
     // Overlays
     overlay: 'rgba(0, 0, 0, 0.7)',
     backdrop: 'rgba(0, 0, 0, 0.5)',
+
+    // Liquid glass
+    glassFallback: 'rgba(30, 30, 34, 0.94)',
+    glassBorder: 'rgba(255, 255, 255, 0.10)',
+    glassHighlight: 'rgba(255, 255, 255, 0.14)',
+    glassTint: '#5EC4DD',
+    glassInactive: '#C7CCD1',
+    glassActiveFill: '#1A7F9C',
   },
 };
 

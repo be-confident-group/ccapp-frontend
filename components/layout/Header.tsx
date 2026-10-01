@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
+import { BlurView } from 'expo-blur';
+import Animated, { Extrapolation, interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
+import { GlassButton } from '@/components/ui/GlassButton';
+
+const BUTTON_SIZE = 40;
+const BACKDROP_FADE_DISTANCE = 24;
 
 export type HeaderVariant = 'standard' | 'minimal';
 
@@ -15,6 +22,8 @@ interface HeaderProps {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
   style?: ViewStyle;
+  /** Scroll offset of the content under the header; fades in a blur backdrop + hairline. */
+  scrollY?: SharedValue<number>;
 }
 
 export default function Header({
@@ -25,8 +34,28 @@ export default function Header({
   rightElement,
   leftElement,
   style,
+  scrollY,
 }: HeaderProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { t } = useTranslation('common');
+
+  // Opacity is animated on a plain wrapper around BlurView, never on a GlassSurface.
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: scrollY
+      ? interpolate(scrollY.value, [0, BACKDROP_FADE_DISTANCE], [0, 1], Extrapolation.CLAMP)
+      : 0,
+  }));
+
+  const backdrop = scrollY ? (
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, backdropStyle]}>
+      <BlurView
+        intensity={60}
+        tint={isDark ? 'dark' : 'light'}
+        style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassFallback, opacity: 0.85 }]}
+      />
+      <View style={[styles.hairline, { backgroundColor: colors.glassBorder }]} />
+    </Animated.View>
+  ) : null;
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -36,18 +65,17 @@ export default function Header({
     }
   };
 
+  const backButtonEl = (
+    <GlassButton onPress={handleBackPress} accessibilityLabel={t('buttons.back')} size={BUTTON_SIZE}>
+      <ChevronLeftIcon size={22} color={colors.glassInactive} />
+    </GlassButton>
+  );
+
   if (variant === 'minimal') {
     return (
       <View style={[styles.minimalContainer, style]}>
-        {showBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
-        )}
+        {backdrop}
+        {showBack && backButtonEl}
         {rightElement && <View style={styles.rightElement}>{rightElement}</View>}
       </View>
     );
@@ -55,15 +83,10 @@ export default function Header({
 
   return (
     <View style={[styles.container, style]}>
+      {backdrop}
       <View style={styles.leftSection}>
         {showBack ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
+          backButtonEl
         ) : leftElement ? (
           leftElement
         ) : (
@@ -115,15 +138,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
   },
-  backButton: {
-    padding: 4,
+  hairline: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: StyleSheet.hairlineWidth,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
   },
   placeholder: {
-    width: 28,
+    width: BUTTON_SIZE,
   },
   rightElement: {
     marginLeft: 'auto',

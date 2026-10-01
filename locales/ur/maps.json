@@ -52,5 +52,104 @@
     "noHistoryMessage": "Start tracking your rides to see them here",
     "noFeedback": "No feedback yet",
     "noFeedbackMessage": "Rate routes to see your feedback here"
+  },
+  "controls": {
+    "community": "کمیونٹی کی رائے",
+    "myFeedback": "میری رائے",
+    "global": "عالمی ہیٹ میپ",
+    "myHeatmap": "میرا ہیٹ میپ",
+    "layers": "نقشے کا انداز",
+    "findLocation": "میرا مقام تلاش کریں",
+    "resetNorth": "شمال کی طرف کریں"
+  },
+  "mapStyles": {
+    "title": "نقشے کا انداز",
+    "auto": {
+      "label": "ڈیفالٹ",
+      "description": "آپ کی لائٹ یا ڈارک تھیم کے مطابق"
+    },
+    "streets": {
+      "label": "سڑکیں",
+      "description": "معیاری نقشہ"
+    },
+    "outdoors": {
+      "label": "بیرونی",
+      "description": "زمینی خدوخال کے ساتھ"
+    },
+    "satellite": {
+      "label": "سیٹلائٹ",
+      "description": "سیٹلائٹ تصاویر"
+    }
+  },
+  "bottomSheet": {
+    "recentJourneys": "حالیہ سفر",
+    "tripCount_one": "{{count}} سفر",
+    "tripCount_other": "{{count}} سفر",
+    "seeAllTrips": "تمام سفر دیکھیں",
+    "noTrips": "ابھی کوئی سفر نہیں",
+    "noTripsHint": "اپنے سفر یہاں دیکھنے کے لیے ٹریکنگ شروع کریں",
+    "distance": "فاصلہ",
+    "time": "وقت",
+    "todayAt": "آج، {{time}}",
+    "yesterdayAt": "کل، {{time}}",
+    "daysAgoAt": "{{count}} دن پہلے، {{time}}",
+    "noRouteData": "راستے کا ڈیٹا نہیں",
+    "shortTrip": "مختصر سفر",
+    "kmRoute": "{{distance}} کلومیٹر راستہ",
+    "routeUnavailable": "راستے کا ڈیٹا دستیاب نہیں",
+    "tripName": {
+      "walk": "پیدل سفر",
+      "run": "دوڑ",
+      "cycle": "سائیکل سفر",
+      "drive": "گاڑی کا سفر"
+    }
+  },
+  "reportIssue": {
+    "title": "مسئلہ رپورٹ کریں",
+    "submit": "رپورٹ جمع کریں",
+    "category": "زمرہ",
+    "titleLabel": "عنوان",
+    "titlePlaceholder": "مثلاً، مین اسٹریٹ پر بڑا گڑھا",
+    "descriptionLabel": "تفصیل (اختیاری)",
+    "descriptionPlaceholder": "مزید تفصیلات فراہم کریں...",
+    "location": "مقام",
+    "titleRequired": "عنوان ضروری ہے",
+    "titleRequiredMessage": "براہ کرم اپنی رپورٹ کا عنوان درج کریں۔",
+    "errorTitle": "خرابی",
+    "locationMissing": "مقام کا ڈیٹا موجود نہیں۔",
+    "successTitle": "کامیابی",
+    "successMessage": "آپ کی رپورٹ جمع ہو گئی ہے۔ شکریہ!",
+    "ok": "ٹھیک ہے",
+    "submitFailed": "رپورٹ جمع نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+    "categories": {
+      "road_damage": {
+        "label": "سڑک کو نقصان",
+        "description": "گڑھے، دراڑیں، ملبہ"
+      },
+      "traffic_light": {
+        "label": "ٹریفک لائٹ",
+        "description": "سگنل کے مسائل"
+      },
+      "safety_issue": {
+        "label": "حفاظتی مسئلہ",
+        "description": "خطرناک حالات"
+      },
+      "other": {
+        "label": "دیگر",
+        "description": "دیگر مسائل"
+      }
+    }
+  },
+  "trip_detail": {
+    "reclassified_title": "سفر کی قسم خودکار طور پر اپ ڈیٹ ہو گئی",
+    "reclassified_body": "رفتار کی بنیاد پر {{from}} سے {{to}} میں بدلا گیا — کیا یہ درست ہے؟",
+    "confirm_prompt": "کیا سفر کی قسم درست ہے؟",
+    "confirm": "تصدیق کریں",
+    "not_my_trip": "یہ میرا سفر نہیں",
+    "distance": "فاصلہ",
+    "duration": "دورانیہ",
+    "not_synced": "سنک نہیں ہوا",
+    "available": "دستیاب",
+    "entry_type": "اندراج کی قسم"
   }
 }

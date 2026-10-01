@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
+import { GlassButton } from '@/components/ui/GlassButton';
 import { Spacing } from '@/constants/theme';
 
 interface LeaderboardHeaderProps {
@@ -12,16 +14,13 @@ interface LeaderboardHeaderProps {
 
 export function LeaderboardHeader({ title }: LeaderboardHeaderProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation('common');
 
   return (
-    <View style={[styles.header, { borderBottomColor: colors.border }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <ChevronLeftIcon size={24} color={colors.text} />
-      </TouchableOpacity>
+    <View style={styles.header}>
+      <GlassButton onPress={() => router.back()} accessibilityLabel={t('buttons.back')}>
+        <ChevronLeftIcon size={22} color={colors.glassTint} />
+      </GlassButton>
 
       <ThemedText style={styles.headerTitle}>{title}</ThemedText>
 
@@ -36,20 +35,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
 });

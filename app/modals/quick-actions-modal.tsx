@@ -1,256 +1,234 @@
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/contexts/ThemeContext';
-import { router } from 'expo-router';
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   MegaphoneIcon,
   PencilSquareIcon,
+  PlusIcon,
   StarIcon,
-  XMarkIcon,
   UserGroupIcon,
 } from 'react-native-heroicons/solid';
 import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  SharedValue,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
   withDelay,
-  Easing,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
+
+import { ThemedText } from '@/components/themed-text';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import {
+  TAB_BAR_ACTION_SIZE,
+  TAB_BAR_MARGIN,
+  useTabBarBottomOffset,
+} from '@/contexts/TabBarContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type ActionItem = {
   icon: React.ComponentType<{ size?: number; color?: string }>;
   title: string;
-  onPress: () => void;
+  color: string;
+  href: Href;
 };
 
+const OPEN_SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
+const CLOSE_DURATION = 180;
+// Delay between items; the one nearest the button appears first.
+const STAGGER = 35;
+const MENU_GAP = 12;
+const MENU_RADIUS = 28;
+
+/**
+ * Quick actions menu that grows out of the "+" bubble in the tab bar: the
+ * bubble stays in place and turns into a close button, while a glass menu
+ * scales up from its corner. Closing reverses it back into the button.
+ */
 export default function QuickActionsModal() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const bottom = useTabBarBottomOffset();
+  const isClosing = useRef(false);
 
-  const opacity = useSharedValue(0);
-  const scale1 = useSharedValue(0);
-  const scale2 = useSharedValue(0);
-  const scale3 = useSharedValue(0);
-  const scale4 = useSharedValue(0);
-  const closeButtonScale = useSharedValue(0);
+  const actions: ActionItem[] = [
+    { icon: PencilSquareIcon, title: t('common:quickActionsMenu.logRide'), color: colors.glassActiveFill, href: '/home/manual-entry' },
+    { icon: StarIcon, title: t('common:quickActionsMenu.rateRoutes'), color: colors.accent, href: '/home/unrated-trips' },
+    { icon: UserGroupIcon, title: t('common:quickActionsMenu.createGroup'), color: colors.glassActiveFill, href: '/clubs/create' },
+    { icon: MegaphoneIcon, title: t('common:quickActionsMenu.shareUpdate'), color: colors.glassActiveFill, href: '/posts/share-trip' },
+  ];
 
-  // Animate in on mount
+  // 0 = collapsed into the "+" button, 1 = fully open.
+  const progress = useSharedValue(0);
+  const items = [useSharedValue(0), useSharedValue(0), useSharedValue(0), useSharedValue(0)];
+
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 180, easing: Easing.out(Easing.ease) });
-    scale1.value = withDelay(36, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
-    scale2.value = withDelay(72, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
-    scale3.value = withDelay(108, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
-    scale4.value = withDelay(144, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
-    closeButtonScale.value = withDelay(180, withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) }));
+    progress.value = withSpring(1, OPEN_SPRING);
+    // Stagger from the bottom item (nearest the button) upwards.
+    items.forEach((item, i) => {
+      item.value = withDelay((items.length - 1 - i) * STAGGER + 60, withSpring(1, OPEN_SPRING));
+    });
+    // Shared values are stable refs; run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleClose = () => {
-    router.back();
+  const close = (then?: () => void) => {
+    if (isClosing.current) return;
+    isClosing.current = true;
+    const timing = { duration: CLOSE_DURATION, easing: Easing.in(Easing.cubic) };
+    progress.value = withTiming(0, timing);
+    items.forEach((item) => {
+      item.value = withTiming(0, { ...timing, duration: CLOSE_DURATION * 0.7 });
+    });
+    setTimeout(() => {
+      router.back();
+      then?.();
+    }, CLOSE_DURATION);
+  };
+
+  const handleAction = (href: Href) => {
+    if (process.env.EXPO_OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    close(() => router.push(href));
   };
 
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
+    opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
   }));
 
-  const button1Style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale1.value }],
-    opacity: scale1.value,
+  // Grow from the bottom-left corner, right where the "+" bubble sits.
+  const menuStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [MENU_GAP + TAB_BAR_ACTION_SIZE / 2, 0]) },
+      { scale: interpolate(progress.value, [0, 1], [0.05, 1]) },
+    ],
   }));
 
-  const button2Style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale2.value }],
-    opacity: scale2.value,
+  // "+" rotates into an "×".
+  const closeIconStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(progress.value, [0, 1], [0, 135])}deg` }],
   }));
-
-  const button3Style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale3.value }],
-    opacity: scale3.value,
-  }));
-
-  const button4Style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale4.value }],
-    opacity: scale4.value,
-  }));
-
-  const closeButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: closeButtonScale.value }],
-    opacity: closeButtonScale.value,
-  }));
-
-  const actions: ActionItem[] = [
-    {
-      icon: PencilSquareIcon,
-      title: 'Log Ride Manually',
-      onPress: () => {
-        router.back(); // Close the modal immediately
-        setTimeout(() => {
-          router.push('/home/manual-entry');
-        }, 100); // Small delay to ensure modal is closed
-      },
-    },
-    {
-      icon: StarIcon,
-      title: 'Rate My Routes',
-      onPress: () => {
-        router.back(); // Close the modal immediately
-        setTimeout(() => {
-          router.push('/home/unrated-trips');
-        }, 100); // Small delay to ensure modal is closed
-      },
-    },
-    {
-      icon: UserGroupIcon,
-      title: 'Create Group',
-      onPress: () => {
-        router.back(); // Close the modal immediately
-        setTimeout(() => {
-          router.push('/clubs/create');
-        }, 100); // Small delay to ensure modal is closed
-      },
-    },
-    {
-      icon: MegaphoneIcon,
-      title: 'Share Update',
-      onPress: () => {
-        router.back();
-        setTimeout(() => {
-          router.push('/posts/share-trip');
-        }, 100);
-      },
-    },
-  ];
 
   return (
     <View style={styles.container}>
-      {/* Backdrop */}
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backdrop }, backdropStyle]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} />
       </Animated.View>
 
-      {/* Floating Action Buttons */}
-      <View style={styles.buttonsContainer}>
-        {/* First Action Button */}
-        <Animated.View style={[button1Style]}>
-          <TouchableOpacity
-            style={[styles.floatingButton, { backgroundColor: colors.card }]}
-            onPress={actions[0].onPress}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
-              <PencilSquareIcon size={24} color="#fff" />
-            </View>
-            <ThemedText style={styles.floatingButtonText}>{actions[0].title}</ThemedText>
-          </TouchableOpacity>
-        </Animated.View>
+      <Animated.View
+        style={[
+          styles.menu,
+          { bottom: bottom + TAB_BAR_ACTION_SIZE + MENU_GAP, shadowColor: colors.shadow },
+          menuStyle,
+        ]}
+      >
+        <GlassSurface borderRadius={MENU_RADIUS} />
+        {actions.map((action, i) => (
+          <MenuRow key={action.title} action={action} appear={items[i]} onPress={() => handleAction(action.href)} />
+        ))}
+      </Animated.View>
 
-        {/* Second Action Button - Rate My Routes */}
-        <Animated.View style={[button2Style]}>
-          <TouchableOpacity
-            style={[styles.floatingButton, { backgroundColor: colors.card }]}
-            onPress={actions[1].onPress}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.floatingIconContainer, { backgroundColor: colors.accent }]}>
-              <StarIcon size={24} color="#fff" />
-            </View>
-            <ThemedText style={styles.floatingButtonText}>{actions[1].title}</ThemedText>
-          </TouchableOpacity>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('common:quickActionsMenu.close')}
+        onPress={() => close()}
+        style={[styles.closeButton, { bottom, shadowColor: colors.shadow }]}
+      >
+        <GlassSurface borderRadius={TAB_BAR_ACTION_SIZE / 2} interactive />
+        <Animated.View style={closeIconStyle}>
+          <PlusIcon size={28} color={colors.glassTint} />
         </Animated.View>
-
-        {/* Third Action Button - Create Group */}
-        <Animated.View style={[button3Style]}>
-          <TouchableOpacity
-            style={[styles.floatingButton, { backgroundColor: colors.card }]}
-            onPress={actions[2].onPress}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
-              <UserGroupIcon size={24} color="#fff" />
-            </View>
-            <ThemedText style={styles.floatingButtonText}>{actions[2].title}</ThemedText>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Fourth Action Button - Share Update */}
-        <Animated.View style={[button4Style]}>
-          <TouchableOpacity
-            style={[styles.floatingButton, { backgroundColor: colors.card }]}
-            onPress={actions[3].onPress}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.floatingIconContainer, { backgroundColor: colors.primary }]}>
-              <MegaphoneIcon size={24} color="#fff" />
-            </View>
-            <ThemedText style={styles.floatingButtonText}>{actions[3].title}</ThemedText>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Close Button */}
-        <Animated.View style={[closeButtonStyle]}>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: colors.primary }]}
-            onPress={handleClose}
-            activeOpacity={0.8}
-          >
-            <XMarkIcon size={28} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+      </Pressable>
     </View>
+  );
+}
+
+function MenuRow({ action, appear, onPress }: { action: ActionItem; appear: SharedValue<number>; onPress: () => void }) {
+  const Icon = action.icon;
+  const pressed = useSharedValue(0);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(appear.value, [0, 1], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(appear.value, [0, 1], [14, 0]) },
+      { scale: interpolate(pressed.value, [0, 1], [1, 0.96]) },
+    ],
+  }));
+
+  return (
+    <Animated.View style={style}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        onPressIn={() => {
+          pressed.value = withSpring(1, OPEN_SPRING);
+        }}
+        onPressOut={() => {
+          pressed.value = withSpring(0, OPEN_SPRING);
+        }}
+        style={styles.row}
+      >
+        <View style={[styles.rowIcon, { backgroundColor: action.color }]}>
+          <Icon size={22} color="#fff" />
+        </View>
+        <ThemedText style={styles.rowText}>{action.title}</ThemedText>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  menu: {
+    position: 'absolute',
+    left: TAB_BAR_MARGIN,
+    minWidth: 240,
+    padding: 8,
+    borderRadius: MENU_RADIUS,
+    transformOrigin: 'left bottom',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  buttonsContainer: {
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 100,
-  },
-  floatingButton: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-    borderRadius: 22,
-    minWidth: 216,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 20,
   },
-  floatingIconContainer: {
+  rowIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 13,
+    marginRight: 12,
   },
-  floatingButtonText: {
-    fontSize: 14,
+  rowText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   closeButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
+    position: 'absolute',
+    left: TAB_BAR_MARGIN,
+    width: TAB_BAR_ACTION_SIZE,
+    height: TAB_BAR_ACTION_SIZE,
+    borderRadius: TAB_BAR_ACTION_SIZE / 2,
     alignItems: 'center',
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 10,
   },
 });

@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet, ActionSheetIOS, Platform, Alert } f
 import { ChevronDownIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
+import { GlassTextSegments } from '@/components/ui/GlassTextSegments';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import type { MainTab, RidesWalksSubFilter, GenderSubFilter } from '@/types/leaderboard';
 
@@ -82,44 +83,12 @@ export function CategoryTabsWithFilter({
   return (
     <View style={styles.container}>
       {/* Main Tabs */}
-      <View
-        style={[
-          styles.tabsContainer,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        {TABS.map((tab) => {
-          const isSelected = selectedTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.tab,
-                isSelected && {
-                  backgroundColor: colors.primary,
-                },
-              ]}
-              onPress={() => onTabChange(tab.key)}
-              activeOpacity={0.7}
-            >
-              <ThemedText
-                style={[
-                  styles.tabText,
-                  {
-                    color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                    fontWeight: isSelected ? '600' : '400',
-                  },
-                ]}
-              >
-                {tab.label}
-              </ThemedText>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <GlassTextSegments
+        stretch
+        value={selectedTab}
+        onChange={onTabChange}
+        items={TABS}
+      />
 
       {/* Filter Dropdown */}
       <TouchableOpacity
@@ -147,22 +116,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BorderRadius.sm,
-  },
-  tabText: {
-    fontSize: 14,
   },
   filterButton: {
     flexDirection: 'row',

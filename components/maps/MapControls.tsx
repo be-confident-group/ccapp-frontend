@@ -2,20 +2,26 @@ import { Spacing } from '@/constants/theme';
 import type { FeedbackMode, MapViewMode } from '@/types/mapMode';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapActionButtons } from './MapActionButtons';
-import { MapLayer, MapLayerSelector } from './MapLayerSelector';
+import { MapCompass } from './MapCompass';
+import type { MapLayerPreference } from '@/lib/hooks/useMapLayer';
+import { MapLayerSelector, type MenuAnchor } from './MapLayerSelector';
 import { MapModeToggle } from './MapModeToggle';
 import { MapSubModeToggle } from './MapSubModeToggle';
 
 interface MapControlsProps {
   viewMode: MapViewMode;
   feedbackMode: FeedbackMode;
-  selectedLayer: MapLayer;
+  layerPreference: MapLayerPreference;
   onViewModeChange: (mode: MapViewMode) => void;
   onFeedbackModeChange: (mode: FeedbackMode) => void;
-  onLayerChange: (layer: MapLayer) => void;
+  onLayerChange: (layer: MapLayerPreference) => void;
   onFindLocation: () => void;
+  /** Map camera heading, driving the compass needle. */
+  heading: SharedValue<number>;
+  onCompassPress: () => void;
   on3DToggle: () => void;
   is3DEnabled?: boolean;
 }
@@ -23,17 +29,20 @@ interface MapControlsProps {
 export function MapControls({
   viewMode,
   feedbackMode,
-  selectedLayer,
+  layerPreference,
   onViewModeChange,
   onFeedbackModeChange,
   onLayerChange,
   onFindLocation,
+  heading,
+  onCompassPress,
   on3DToggle,
   is3DEnabled = false,
 }: MapControlsProps) {
   const insets = useSafeAreaInsets();
 
-  const [showLayerSelector, setShowLayerSelector] = React.useState(false);
+  // Frame of the layers button while the style menu is open; null when closed.
+  const [layerMenuAnchor, setLayerMenuAnchor] = React.useState<MenuAnchor | null>(null);
 
   // Consistent spacing between all elements
   const buttonGap = Spacing.sm; // 8px gap
@@ -59,20 +68,26 @@ export function MapControls({
         {/* Layers and Location Buttons */}
         <View style={{ marginTop: buttonGap }}>
           <MapActionButtons
-            onLayersPress={() => setShowLayerSelector(true)}
+            onLayersPress={setLayerMenuAnchor}
             onFindLocation={onFindLocation}
           />
+        </View>
+
+        <View style={{ marginTop: buttonGap }}>
+          <MapCompass heading={heading} onPress={onCompassPress} />
         </View>
       </View>
 
       {/* Layer selector modal */}
-      {showLayerSelector && (
+      {layerMenuAnchor && (
         <MapLayerSelector
-          selectedLayer={selectedLayer}
+          anchor={layerMenuAnchor}
+          selectedLayer={layerPreference}
           onLayerChange={(layer) => {
             onLayerChange(layer);
-            setShowLayerSelector(false);
+            setLayerMenuAnchor(null);
           }}
+          onClose={() => setLayerMenuAnchor(null)}
         />
       )}
     </>

@@ -1,10 +1,10 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { GlobeAltIcon, UserIcon } from 'react-native-heroicons/outline';
+
+import { GlassSegmentedControl } from '@/components/ui/GlassSegmentedControl';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { FeedbackMode, HeatmapMode } from '@/types/mapMode';
-import { MAP_MODE_LABELS } from '@/types/mapMode';
-import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { BorderRadius } from '@/constants/theme';
 
 interface MapSubModeToggleProps {
   mode: 'heatmap' | 'feedback';
@@ -13,85 +13,34 @@ interface MapSubModeToggleProps {
 }
 
 export function MapSubModeToggle({ mode, activeSubMode, onSubModeChange }: MapSubModeToggleProps) {
-  const { colors, isDark } = useTheme();
-  const containerBackground = isDark ? colors.card : '#F5F5F5';
-  const pressedBackground = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-  const inactiveIconColor = isDark ? colors.textSecondary : '#666666';
+  const { t } = useTranslation('maps');
+  const { colors } = useTheme();
 
-  const subModes = mode === 'heatmap'
-    ? [
-        { key: 'global' as HeatmapMode, icon: 'public', label: MAP_MODE_LABELS.heatmapMode.global },
-        { key: 'personal' as HeatmapMode, icon: 'person', label: MAP_MODE_LABELS.heatmapMode.personal },
-      ]
-    : [
-        { key: 'community' as FeedbackMode, icon: 'public', label: MAP_MODE_LABELS.feedbackMode.community },
-        { key: 'personal' as FeedbackMode, icon: 'person', label: MAP_MODE_LABELS.feedbackMode.personal },
-      ];
+  const subModes: { key: HeatmapMode | FeedbackMode; icon: typeof GlobeAltIcon; label: string }[] =
+    mode === 'heatmap'
+      ? [
+          { key: 'global', icon: GlobeAltIcon, label: t('controls.global') },
+          { key: 'personal', icon: UserIcon, label: t('controls.myHeatmap') },
+        ]
+      : [
+          { key: 'community', icon: GlobeAltIcon, label: t('controls.community') },
+          { key: 'personal', icon: UserIcon, label: t('controls.myFeedback') },
+        ];
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: containerBackground,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {subModes.map((subMode) => {
-        const isActive = activeSubMode === subMode.key;
-
-        return (
-          <Pressable
-            key={subMode.key}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${subMode.label} ${mode === 'heatmap' ? 'heatmap' : 'feedback'} mode`}
-            onPress={() => onSubModeChange(subMode.key)}
-            android_ripple={{ color: colors.accent + '20', borderless: false }}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: isActive
-                  ? colors.accent
-                  : pressed
-                  ? pressedBackground
-                  : 'transparent',
-                borderColor: isActive ? colors.accent : 'transparent',
-              },
-            ]}
-          >
-            <MaterialIcons
-              name={subMode.icon as any}
-              size={20}
-              color={isActive ? '#000000' : inactiveIconColor}
-            />
-          </Pressable>
-        );
-      })}
-    </View>
+    <GlassSegmentedControl
+      orientation="vertical"
+      value={activeSubMode}
+      onChange={onSubModeChange}
+      activeColor={colors.accent}
+      segmentWidth={36}
+      segmentHeight={36}
+      segments={subModes.map(({ key, icon: Icon, label }) => ({
+        key,
+        accessibilityLabel: label,
+        // Dark icon on the gold highlight for contrast in both themes.
+        render: (active) => <Icon size={20} color={active ? '#000000' : colors.glassInactive} />,
+      }))}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'column',
-    borderRadius: BorderRadius.md,
-    padding: 4,
-    gap: 6,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  button: {
-    width: 33,
-    height: 33,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-});

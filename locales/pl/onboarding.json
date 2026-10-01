@@ -78,7 +78,8 @@
     "notifications": {
       "title": "Powiadomienia wyłączone",
       "subtitle": "Przydatne do alertów śledzenia w tle"
-    }
+    },
+    "dismiss": "Zamknij"
   },
   "locationPrompt": {
     "title": "Wymagany dostęp do lokalizacji",

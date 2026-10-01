@@ -137,13 +137,13 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
       ref={mapRef}
       style={[styles.map, style]}
       styleURL={mapStyleURL}
-      compassEnabled={true}
-      compassPosition={{ bottom: 135, right: 16 }}
-      compassFadeWhenNorth={false}
+      // The glass MapCompass in MapControls replaces the native compass.
+      compassEnabled={false}
+      // Offsets clear the map bottom sheet peek, which now sits above the floating tab bar.
       scaleBarEnabled={true}
-      scaleBarPosition={{ bottom: 110, left: 8 }}
+      scaleBarPosition={{ bottom: 190, left: 8 }}
       logoEnabled={true}
-      logoPosition={{ bottom: 140, left: 8 }}
+      logoPosition={{ bottom: 220, left: 8 }}
       attributionEnabled={false}
       onCameraChanged={(state) => {
         if (onHeadingChange && state.properties.heading !== undefined) {

@@ -23,7 +23,8 @@
     "maps": "نقشے",
     "groups": "گروپس",
     "you": "آپ",
-    "quickActions": "فوری اقدامات"
+    "quickActions": "فوری اقدامات",
+    "feed": "فیڈ"
   },
   "status": {
     "loading": "لوڈ ہو رہا ہے...",
@@ -87,5 +88,27 @@
     "week_other": "{{count}} weeks ago",
     "month_one": "1 month ago",
     "month_other": "{{count}} months ago"
+  },
+  "quickActionsMenu": {
+    "logRide": "سواری دستی طور پر درج کریں",
+    "rateRoutes": "میرے راستوں کی درجہ بندی کریں",
+    "createGroup": "گروپ بنائیں",
+    "shareUpdate": "اپ ڈیٹ شیئر کریں",
+    "close": "بند کریں"
+  },
+  "headerActions": {
+    "leaderboards": "لیڈر بورڈز",
+    "myClubs": "میرے کلب"
+  },
+  "trophyDetails": {
+    "earned": "حاصل شدہ",
+    "notEarned": "حاصل نہیں ہوا",
+    "progress": "پیش رفت"
+  },
+  "weatherDetails": {
+    "feelsLike": "محسوس ہوتا ہے",
+    "humidity": "نمی",
+    "windSpeed": "ہوا کی رفتار",
+    "lastUpdated": "آخری اپ ڈیٹ: {{time}}"
   }
 }

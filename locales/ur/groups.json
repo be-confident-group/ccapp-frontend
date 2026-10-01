@@ -121,5 +121,15 @@
       "label": "Join Requests",
       "subtitle": "When someone requests to join your group"
     }
+  },
+  "leaderboards": {
+    "gender": {
+      "all": "سب",
+      "male": "مرد",
+      "female": "خواتین"
+    }
+  },
+  "photoViewer": {
+    "counter": "{{current}} / {{total}}"
   }
 }

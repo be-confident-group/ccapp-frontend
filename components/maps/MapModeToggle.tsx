@@ -1,9 +1,10 @@
+import React from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { GlassSegmentedControl } from '@/components/ui/GlassSegmentedControl';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { MapViewMode } from '@/types/mapMode';
-import { MAP_MODE_LABELS } from '@/types/mapMode';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { BorderRadius } from '@/constants/theme';
 
 interface MapModeToggleProps {
   activeMode: MapViewMode;
@@ -11,84 +12,32 @@ interface MapModeToggleProps {
 }
 
 export function MapModeToggle({ activeMode, onModeChange }: MapModeToggleProps) {
-  const { colors, isDark } = useTheme();
-  const containerBackground = isDark ? colors.card : '#F5F5F5';
-  const inactiveTextColor = isDark ? colors.textSecondary : '#4A4A4A';
-  const pressedBackground = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+  const { t } = useTranslation('maps');
+  const { colors } = useTheme();
 
-  const modes: { key: MapViewMode; label: string }[] = [
-    { key: 'heatmap', label: MAP_MODE_LABELS.viewMode.heatmap },
-    { key: 'feedback', label: MAP_MODE_LABELS.viewMode.feedback },
-  ];
+  const modes: MapViewMode[] = ['heatmap', 'feedback'];
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: containerBackground,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {modes.map((mode) => {
-        const isActive = activeMode === mode.key;
-
-        return (
-          <Pressable
-            key={mode.key}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${mode.label} mode`}
-            onPress={() => onModeChange(mode.key)}
-            android_ripple={{ color: colors.primary + '20', borderless: false }}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: isActive
-                  ? colors.primary
-                  : pressed
-                  ? pressedBackground
-                  : 'transparent',
-                borderColor: isActive ? colors.primary : 'transparent',
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.label,
-                {
-                  color: isActive ? '#FFFFFF' : inactiveTextColor,
-                },
-              ]}
-            >
-              {mode.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <GlassSegmentedControl
+      value={activeMode}
+      onChange={onModeChange}
+      activeColor={colors.glassActiveFill}
+      segmentWidth={98}
+      segmentHeight={36}
+      segments={modes.map((mode) => ({
+        key: mode,
+        accessibilityLabel: t(`tabs.${mode}`),
+        render: (active) => (
+          <Text style={[styles.label, { color: active ? '#FFFFFF' : colors.glassInactive }]}>
+            {t(`tabs.${mode}`)}
+          </Text>
+        ),
+      }))}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.md,
-    padding: 4,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    gap: 4,
-  },
-  button: {
-    paddingVertical: 9,
-    paddingHorizontal: 22,
-    borderRadius: BorderRadius.sm,
-    minWidth: 98,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
   label: {
     fontSize: 14,
     fontWeight: '600',

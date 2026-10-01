@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Alert, ScrollView, Linking, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Alert, Linking, Platform, ActivityIndicator } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useTabBarInset, useTabBarScrollHandler } from '@/contexts/TabBarContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -74,6 +76,8 @@ export default function YouScreen() {
   const { signOut, user: contextUser } = useAuth();
   const isDebugBuild = isDebugEnabled();
   const { colors, isDark, toggleTheme } = useTheme();
+  const tabBarScroll = useTabBarScrollHandler();
+  const tabBarInset = useTabBarInset();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
   const { isTracking, toggleTracking } = useTracking();
@@ -305,10 +309,12 @@ export default function YouScreen() {
             </ThemedText>
           </View>
         ) : (
-          <ScrollView
+          <Animated.ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarInset }]}
             showsVerticalScrollIndicator={false}
+            onScroll={tabBarScroll}
+            scrollEventThrottle={16}
           >
             {/* Profile Header */}
             <View style={styles.profileHeader}>
@@ -586,7 +592,7 @@ export default function YouScreen() {
               style={{ borderColor: colors.error }}
             />
           </View>
-          </ScrollView>
+          </Animated.ScrollView>
         )}
 
         {/* Edit Profile Modal */}

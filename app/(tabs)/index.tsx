@@ -3,11 +3,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-import { Modal, ScrollView, StyleSheet, TouchableOpacity, View, Image } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import {
   ArrowsPointingOutIcon,
   ChevronDownIcon,
@@ -15,8 +14,28 @@ import {
   TrophyIcon,
   UsersIcon
 } from 'react-native-heroicons/outline';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  BoltIcon,
+  ClockIcon,
+  CloudIcon,
+  StarIcon,
+  UserIcon,
+} from 'react-native-heroicons/solid';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import * as Haptics from 'expo-haptics';
+import { useTabBarInset, useTabBarScrollHandler } from '@/contexts/TabBarContext';
 import { useTranslation } from 'react-i18next';
+import { GlassActionGroup } from '@/components/ui/GlassActionGroup';
+import { TrackingMenu, type AnchorFrame } from '@/components/home/TrackingMenu';
 import { useTracking } from '@/contexts/TrackingContext';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
@@ -29,9 +48,74 @@ import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import { useQueryClient } from '@tanstack/react-query';
 import { registerTripSyncCallback } from '@/lib/services/TripManager';
 
+// Header row height (matches the 44px glass action pill) and its gap below the status bar.
+const HEADER_HEIGHT = 44;
+const HEADER_TOP_GAP = 8;
+// Scroll distance over which the greeting fades away and the top edge fades in.
+const GREETING_FADE_DISTANCE = 48;
+// Scroll offset at which the tracking tile reaches the header and docks into it.
+const TRACKING_DOCK_AT = HEADER_HEIGHT + Spacing.md + 8;
+const DOCK_SPRING = { damping: 14, stiffness: 180, mass: 0.8 };
+
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  // Fixed equal column widths so both tile rows line up regardless of their text.
+  const tileColumnWidth = Math.floor((windowWidth - Spacing.lg * 2 - Spacing.md) / 2);
+  const tileWideStyle = { width: tileColumnWidth };
+  const tileNarrowStyle = { width: tileColumnWidth };
+  const scrollY = useSharedValue(0);
+  const tabBarScroll = useTabBarScrollHandler(scrollY);
+
+  const greetingStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, GREETING_FADE_DISTANCE], [1, 0], Extrapolation.CLAMP),
+    transform: [
+      { scale: interpolate(scrollY.value, [-80, 0, GREETING_FADE_DISTANCE], [1.08, 1, 0.94], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  // 0 = tracking lives in its tile, 1 = docked as a glass button beside the action pill.
+  const trackingDock = useSharedValue(0);
+  useAnimatedReaction(
+    () => (scrollY.value > TRACKING_DOCK_AT ? 1 : 0),
+    (docked, previous) => {
+      if (docked !== previous) trackingDock.value = withSpring(docked, DOCK_SPRING);
+    }
+  );
+
+  // The tile shrinks and fades as it "lifts off" towards the header.
+  const trackingTileStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, TRACKING_DOCK_AT], [1, 0.2], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(scrollY.value, [0, TRACKING_DOCK_AT], [1, 0.92], Extrapolation.CLAMP) }],
+  }));
+
+  // The docked capsule bubbles out of the action pill's left edge as a circle,
+  // then stretches left to fill the header. Its right edge is the transform
+  // origin, so scaleX grows it leftwards. Scale instead of opacity: glass stops
+  // rendering at opacity 0; only the (non-glass) content fades.
+  const dockWidth = useSharedValue(0);
+  const dockedTrackingStyle = useAnimatedStyle(() => {
+    const circleScaleX = dockWidth.value > 0 ? HEADER_HEIGHT / dockWidth.value : 1;
+    return {
+      transform: [
+        { translateX: interpolate(trackingDock.value, [0, 0.35], [Spacing.sm + HEADER_HEIGHT / 2, 0], Extrapolation.CLAMP) },
+        { scaleX: interpolate(trackingDock.value, [0, 0.35, 1], [0.01, circleScaleX, 1], Extrapolation.CLAMP) },
+        { scaleY: interpolate(trackingDock.value, [0, 0.35, 1], [0.01, 1, 1], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+  const dockedContentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(trackingDock.value, [0.6, 1], [0, 1], Extrapolation.CLAMP),
+  }));
+  const dockedPress = useSharedValue(1);
+  const dockedPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: dockedPress.value }] }));
+
+  const scrollEdgeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [GREETING_FADE_DISTANCE / 2, GREETING_FADE_DISTANCE], [0, 1], Extrapolation.CLAMP),
+  }));
+  const tabBarInset = useTabBarInset();
   const { formatDistance, formatWeight, formatTemperature, distanceUnit, weightUnit, kmToDistance, kgToWeight } = useUnits();
   const { isTracking, toggleTracking } = useTracking();
   const { weather, loading: weatherLoading } = useWeather();
@@ -43,9 +127,8 @@ export default function HomeScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const toggleRef = useRef<any>(null);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number; width: number }>({ x: 0, y: 0, width: 0 });
-  const weatherIconName =
-    (weather?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ?? 'weather-partly-cloudy';
+  const dockedTrackingRef = useRef<View>(null);
+  const [menuAnchor, setMenuAnchor] = useState<AnchorFrame>({ x: 0, y: 0, width: 0, height: 0 });
 
   // Fetch completed trips from backend
   const { data: backendTrips, refetch: refetchTrips } = useTrips({ status: 'completed' });
@@ -152,10 +235,11 @@ export default function HomeScreen() {
     }, [loadUserData, refetchTrips])
   );
 
-  const openMenu = () => {
-    if (toggleRef.current && toggleRef.current.measureInWindow) {
-      toggleRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setMenuPos({ x, y: y + height + 8, width });
+  // Opens the tracking menu anchored to whichever control was tapped (tile or docked button).
+  const openMenu = (anchorRef: { current: any } = toggleRef) => {
+    if (anchorRef.current && anchorRef.current.measureInWindow) {
+      anchorRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setMenuAnchor({ x, y, width, height });
         setIsMenuOpen(true);
       });
     } else {
@@ -164,80 +248,46 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
-          <ThemedText type="subtitle" style={styles.headerDate}>
-            {userProfile?.name ? `Hi, ${userProfile.name}!` : 'Hi there!'}
-          </ThemedText>
-
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.headerIcon} onPress={() => router.push('/feed/leaderboards')} activeOpacity={0.7}>
-              <TrophyIcon size={28} color={colors.icon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon} onPress={() => router.push('/clubs/my-clubs')} activeOpacity={0.7}>
-              <UsersIcon size={28} color={colors.icon} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Dropdown Menu for Tracking State */}
-        <Modal visible={isMenuOpen} transparent animationType="fade" onRequestClose={() => setIsMenuOpen(false)}>
-          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setIsMenuOpen(false)}>
-            <View style={[styles.menuContainer, { top: menuPos.y, left: menuPos.x, width: Math.max(menuPos.width, 320), backgroundColor: colors.card }, styles.buttonShadow]}>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  if (!isTracking) toggleTracking();
-                  setIsMenuOpen(false);
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.menuIcon, { backgroundColor: colors.trackingActive }]}>
-                  <MaterialIcons name="directions-run" size={18} color="#fff" />
-                </View>
-                <View style={styles.menuTextCol}>
-                  <ThemedText style={styles.menuTitle}>{t('home:header.tracking.on')}</ThemedText>
-                  <ThemedText style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{t('home:header.tracking.subtitle')}</ThemedText>
-                </View>
-              </TouchableOpacity>
+        <TrackingMenu
+          visible={isMenuOpen}
+          anchor={menuAnchor}
+          isTracking={isTracking}
+          onClose={() => setIsMenuOpen(false)}
+          onSelect={(tracking) => {
+            if (tracking !== isTracking) toggleTracking();
+          }}
+        />
 
-              <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  if (isTracking) toggleTracking();
-                  setIsMenuOpen(false);
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.menuIcon, { backgroundColor: '#9CA3AF' }]}>
-                  <Ionicons name="man" size={18} color="#fff" />
-                </View>
-                <View style={styles.menuTextCol}>
-                  <ThemedText style={styles.menuTitle}>{t('home:header.tracking.off')}</ThemedText>
-                  <ThemedText style={[styles.menuSubtitle, { color: colors.textSecondary }]}>No background tracking</ThemedText>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        <ScrollView
+        <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + HEADER_TOP_GAP, paddingBottom: tabBarInset },
+          ]}
           showsVerticalScrollIndicator={false}
+          onScroll={tabBarScroll}
+          scrollEventThrottle={16}
         >
+          {/* Greeting scrolls away with the content; the action pill stays floating. */}
+          <Animated.View style={[styles.headerContainer, greetingStyle]}>
+            <ThemedText type="subtitle" style={styles.headerDate} numberOfLines={1}>
+              {userProfile?.name ? t('home:header.greeting', { name: userProfile.name }) : t('home:header.greetingAnonymous')}
+            </ThemedText>
+          </Animated.View>
+
           {/* Top Tiles (2x2 grid) */}
           <View style={styles.topTiles}>
             <View style={styles.tileRow}>
               {/* Background Tracking Toggle */}
+              <Animated.View style={[tileWideStyle, trackingTileStyle]}>
               <TouchableOpacity
                 ref={toggleRef}
-                style={[styles.tile, styles.tileWide, styles.buttonShadow, { backgroundColor: colors.card }]}
-                onPress={openMenu}
+                style={[styles.tile, styles.buttonShadow, { backgroundColor: colors.card }]}
+                onPress={() => openMenu()}
                 activeOpacity={0.8}
               >
                 <View
@@ -247,13 +297,13 @@ export default function HomeScreen() {
                   ]}
                 >
                   {isTracking ? (
-                    <MaterialIcons name="directions-run" size={16} color="#FFFFFF" />
+                    <BoltIcon size={16} color="#FFFFFF" />
                   ) : (
-                    <Ionicons name="man" size={16} color="#FFFFFF" />
+                    <UserIcon size={16} color="#FFFFFF" />
                   )}
                 </View>
                 <View style={styles.tileTextContainer}>
-                  <ThemedText style={styles.tileTitle}>
+                  <ThemedText style={styles.tileTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     {isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
                   </ThemedText>
                   <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -262,18 +312,19 @@ export default function HomeScreen() {
                 </View>
                 <ChevronDownIcon size={16} color={colors.icon} />
               </TouchableOpacity>
+              </Animated.View>
 
               {/* Weather Display */}
               <TouchableOpacity
-                style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}
+                style={[styles.tile, tileNarrowStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => setIsWeatherModalOpen(true)}
                 activeOpacity={0.8}
               >
                 <View style={[styles.tileIcon, { backgroundColor: '#E0F2FE' }]}>
-                  <MaterialCommunityIcons name={weatherIconName} size={16} color="#0284C7" />
+                  <CloudIcon size={16} color="#0284C7" />
                 </View>
                 <View style={styles.tileTextContainer}>
-                  <ThemedText style={styles.tileTitle}>
+                  <ThemedText style={styles.tileTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     {weatherLoading ? '--' : weather?.temperature ? formatTemperature(weather.temperature, 0) : '--'}
                   </ThemedText>
                   <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -285,15 +336,15 @@ export default function HomeScreen() {
 
             <View style={styles.tileRow}>
               <TouchableOpacity
-                style={[styles.tile, styles.tileWide, styles.buttonShadow, { backgroundColor: colors.card }]}
+                style={[styles.tile, tileWideStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => router.push('/home/unrated-trips')}
                 activeOpacity={0.8}
               >
                 <View style={[styles.tileIcon, { backgroundColor: colors.accent }]}>
-                  <MaterialCommunityIcons name="star" size={18} color="#FFFFFF" />
+                  <StarIcon size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.tileTextContainer}>
-                  <ThemedText style={styles.tileTitle}>Rate My Routes</ThemedText>
+                  <ThemedText style={styles.tileTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Rate My Routes</ThemedText>
                   <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                     {unratedTripsCount > 0 ? `${unratedTripsCount} trips to rate` : 'All rated!'}
                   </ThemedText>
@@ -301,15 +352,15 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.tile, styles.tileNarrow, styles.buttonShadow, { backgroundColor: colors.card }]}
+                style={[styles.tile, tileNarrowStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => router.push('/home/trip-history')}
                 activeOpacity={0.8}
               >
                 <View style={[styles.tileIcon, { backgroundColor: colors.primary }]}>
-                  <MaterialIcons name="history" size={18} color="#FFFFFF" />
+                  <ClockIcon size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.tileTextContainer}>
-                  <ThemedText style={styles.tileTitle}>Trip History</ThemedText>
+                  <ThemedText style={styles.tileTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Trip History</ThemedText>
                   <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                     Past trips
                   </ThemedText>
@@ -631,7 +682,68 @@ export default function HomeScreen() {
             </View>
           </View> */}
 
-        </ScrollView>
+        </Animated.ScrollView>
+
+        {/* Scroll edge: fades in once content slides under the status bar and pill. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.scrollEdge, { height: insets.top + HEADER_HEIGHT + HEADER_TOP_GAP * 2 }, scrollEdgeStyle]}
+        >
+          <LinearGradient
+            colors={[colors.background, colors.background, `${colors.background}00`]}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+
+        <View pointerEvents="box-none" style={[styles.floatingActions, { top: insets.top + HEADER_TOP_GAP }]}>
+          <Animated.View
+            ref={dockedTrackingRef}
+            collapsable={false}
+            onLayout={(e) => {
+              dockWidth.value = e.nativeEvent.layout.width;
+            }}
+            style={[styles.dockedTracking, { shadowColor: colors.shadow }, dockedTrackingStyle]}
+          >
+            <Animated.View style={[styles.dockedTrackingInner, dockedPressStyle]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
+                onPress={() => openMenu(dockedTrackingRef)}
+                onPressIn={() => {
+                  dockedPress.value = withSpring(0.94, { damping: 15, stiffness: 400 });
+                  if (process.env.EXPO_OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                onPressOut={() => {
+                  dockedPress.value = withSpring(1, { damping: 15, stiffness: 400 });
+                }}
+                style={styles.dockedTrackingContent}
+              >
+                <GlassSurface borderRadius={HEADER_HEIGHT / 2} interactive />
+                <Animated.View style={[styles.dockedTrackingRow, dockedContentStyle]}>
+                  <View
+                    style={[
+                      styles.dockedTrackingIcon,
+                      { backgroundColor: isTracking ? colors.trackingActive : '#9CA3AF' },
+                    ]}
+                  >
+                    {isTracking ? <BoltIcon size={16} color="#FFFFFF" /> : <UserIcon size={16} color="#FFFFFF" />}
+                  </View>
+                  <ThemedText style={styles.dockedTrackingLabel} numberOfLines={1}>
+                    {isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
+                  </ThemedText>
+                  <ChevronDownIcon size={14} color={colors.glassInactive} />
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
+          </Animated.View>
+          <GlassActionGroup
+            actions={[
+              { key: 'leaderboards', icon: TrophyIcon, accessibilityLabel: t('common:headerActions.leaderboards'), onPress: () => router.push('/feed/leaderboards') },
+              { key: 'clubs', icon: UsersIcon, accessibilityLabel: t('common:headerActions.myClubs'), onPress: () => router.push('/clubs/my-clubs') },
+            ]}
+          />
+        </View>
 
         {/* Weather Details Modal */}
         <WeatherDetailsModal
@@ -647,7 +759,7 @@ export default function HomeScreen() {
           trophy={selectedTrophy}
         />
       </ThemedView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -659,26 +771,68 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    height: HEADER_HEIGHT,
+    justifyContent: 'center',
+    // Keep the greeting clear of the floating action pill.
+    paddingRight: 112,
+    transformOrigin: 'left center',
   },
   headerDate: {
     fontSize: 22,
-    fontWeight: '600',
+    lineHeight: 28,
+    fontWeight: '700',
   },
-  headerIcons: {
+  scrollEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  // Spans the header: the docked tracking capsule fills the space left of the pill.
+  floatingActions: {
+    position: 'absolute',
+    left: Spacing.lg,
+    right: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.sm,
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
+  dockedTracking: {
+    flex: 1,
+    height: HEADER_HEIGHT,
+    borderRadius: HEADER_HEIGHT / 2,
+    // Grow out of the pill's edge, i.e. from the right.
+    transformOrigin: 'right center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  dockedTrackingInner: {
+    flex: 1,
+  },
+  dockedTrackingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingLeft: 7,
+    paddingRight: 14,
+  },
+  dockedTrackingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  dockedTrackingIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dockedTrackingLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
   },
   topTiles: {
     paddingTop: Spacing.md,
@@ -690,19 +844,13 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   tile: {
-    minHeight: 48,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
     gap: 8,
-  },
-  tileWide: {
-    flex: 3, // 60%
-  },
-  tileNarrow: {
-    flex: 2, // 40%
   },
   tileIcon: {
     width: 32,
@@ -1041,45 +1189,6 @@ const styles = StyleSheet.create({
   //   fontSize: 14,
   //   lineHeight: 20,
   // },
-  // Dropdown styles
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  menuContainer: {
-    position: 'absolute',
-    borderRadius: 16,
-    paddingVertical: 4,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 10,
-  },
-  menuDivider: {
-    height: 1,
-    marginHorizontal: 12,
-    marginVertical: 2,
-  },
-  menuIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuTextCol: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  menuSubtitle: {
-    fontSize: 12,
-  },
   // Quick Actions (legacy)
   actionButton: {
     flex: 1,

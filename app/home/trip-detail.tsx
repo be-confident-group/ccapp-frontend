@@ -5,21 +5,49 @@
  */
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { formatDistance, formatDuration, formatSpeed } from '@/lib/utils/geoCalculations';
-import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import { getTripTypeColor, getTripTypeName } from '@/types/trip';
 import { MapStyles } from '@/config/mapbox';
 import { useMapLayer } from '@/lib/hooks/useMapLayer';
-import Mapbox, { Camera, LineLayer, ShapeSource } from '@rnmapbox/maps';
+import Mapbox, { Camera, CircleLayer, LineLayer, ShapeSource } from '@rnmapbox/maps';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, useEffect } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon, ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ArrowsRightLeftIcon,
+  BoltIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  LifebuoyIcon,
+  TrashIcon,
+  TruckIcon,
+  UserIcon,
+} from 'react-native-heroicons/outline';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import Button from '@/components/ui/Button';
+import { TripTypeTile } from '@/components/trips/TripTypeTile';
 import { useTrip, useDeleteTrip, useUpdateTrip } from '@/lib/hooks/useTrips';
 import { database } from '@/lib/database';
 import type { Trip } from '@/lib/database/db';
@@ -31,6 +59,16 @@ import { formatDate } from '@/lib/i18n/formatters';
 import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
 import { isDebugEnabled } from '@/lib/utils/debugAccess';
 
+const SHEET_OVERLAP = 28;
+const BUTTON_SIZE = 44;
+const TRIP_TYPES: TripType[] = ['walk', 'run', 'cycle', 'drive'];
+
+const TRIP_TYPE_ICONS: Record<TripType, typeof UserIcon> = {
+  walk: UserIcon,
+  run: BoltIcon,
+  cycle: LifebuoyIcon,
+  drive: TruckIcon,
+};
 
 export default function TripDetailScreen() {
   const { id, local } = useLocalSearchParams<{ id: string; local?: string }>();
@@ -187,6 +225,62 @@ export default function TripDetailScreen() {
     return null;
   }, [backendTrip, localTrip, isLocalTrip]);
 
+  // --- Presentation: hero / scroll / entrance animation (hooks must precede early returns) ---
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const hasRoute = (tripDetails?.route.length ?? 0) > 0;
+  const heroHeight = hasRoute ? Math.round(windowHeight * 0.42) : insets.top + 72;
+  const pillHideOffset = insets.top + BUTTON_SIZE + 24;
+  const scrollY = useSharedValue(0);
+  const sheetProgress = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  useEffect(() => {
+    sheetProgress.value = withSpring(1, { damping: 18, stiffness: 140 });
+  }, [sheetProgress]);
+
+  const heroAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [-heroHeight, 0, heroHeight],
+          [-heroHeight / 2, 0, heroHeight * 0.5],
+          Extrapolation.CLAMP,
+        ),
+      },
+      {
+        scale: interpolate(scrollY.value, [-heroHeight, 0], [2, 1], Extrapolation.CLAMP),
+      },
+    ],
+  }));
+
+  const pillAnimatedStyle = useAnimatedStyle(() => {
+    const start = heroHeight - insets.top - 120;
+    const p = interpolate(scrollY.value, [start, start + 60], [0, 1], Extrapolation.CLAMP);
+    return {
+      transform: [
+        { translateY: (1 - p) * -pillHideOffset },
+        { scale: 0.9 + 0.1 * p },
+      ],
+    };
+  });
+
+  const statusBackdropStyle = useAnimatedStyle(() => {
+    const start = heroHeight - insets.top - 100;
+    return {
+      opacity: interpolate(scrollY.value, [start, start + 60], [0, 1], Extrapolation.CLAMP),
+    };
+  });
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sheetProgress.value,
+    transform: [{ translateY: (1 - sheetProgress.value) * 24 }],
+  }));
+
   function handleDelete() {
     Alert.alert(
       'Delete Trip',
@@ -266,11 +360,9 @@ export default function TripDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-        <ThemedView style={styles.container}>
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </ThemedView>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -278,11 +370,9 @@ export default function TripDetailScreen() {
   if (!tripDetails) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-        <ThemedView style={styles.container}>
-          <View style={styles.centered}>
-            <ThemedText>Trip not found</ThemedText>
-          </View>
-        </ThemedView>
+        <View style={styles.centered}>
+          <ThemedText>Trip not found</ThemedText>
+        </View>
       </SafeAreaView>
     );
   }
@@ -292,6 +382,7 @@ export default function TripDetailScreen() {
   const tripColor = getTripTypeColor(trip.type);
   const tripName = getTripTypeName(trip.type);
   const date = new Date(trip.start_time);
+  const TripIcon = TRIP_TYPE_ICONS[trip.type as TripType] ?? UserIcon;
 
   // Convert selected layer to Mapbox style URL
   const getStyleURL = (): string => {
@@ -323,11 +414,42 @@ export default function TripDetailScreen() {
     },
   } : null;
 
-  // Calculate center and bounds
-  const center = route.length > 0 ? [
-    route[Math.floor(route.length / 2)].longitude,
-    route[Math.floor(route.length / 2)].latitude,
-  ] : [-122.4194, 37.7749];
+  // Start / end markers
+  const endpointsGeoJSON = route.length > 0 ? {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: { kind: 'start' },
+        geometry: { type: 'Point' as const, coordinates: [route[0].longitude, route[0].latitude] },
+      },
+      {
+        type: 'Feature' as const,
+        properties: { kind: 'end' },
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [route[route.length - 1].longitude, route[route.length - 1].latitude],
+        },
+      },
+    ],
+  } : null;
+
+  // Route bounds for fitting the camera
+  let routeBounds: { ne: [number, number]; sw: [number, number] } | null = null;
+  if (route.length > 0) {
+    let minLng = route[0].longitude;
+    let maxLng = route[0].longitude;
+    let minLat = route[0].latitude;
+    let maxLat = route[0].latitude;
+    for (const c of route) {
+      if (c.longitude < minLng) minLng = c.longitude;
+      if (c.longitude > maxLng) maxLng = c.longitude;
+      if (c.latitude < minLat) minLat = c.latitude;
+      if (c.latitude > maxLat) maxLat = c.latitude;
+    }
+    const eps = 0.0005; // keeps a single-point / tiny route from zooming to the max level
+    routeBounds = { ne: [maxLng + eps, maxLat + eps], sw: [minLng - eps, minLat - eps] };
+  }
 
   // Helper to reload local trip after a note save
   async function reloadLocalTrip() {
@@ -344,332 +466,373 @@ export default function TripDetailScreen() {
     }
   }
 
+  const cardStyle = { backgroundColor: colors.backgroundSecondary };
+  const hasElevationGain = trip.elevation_gain != null && trip.elevation_gain !== 0;
+  const hasElevationLoss = localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0;
+
+  const renderDiagRow = (label: string, value: string, small = false) => (
+    <View style={styles.infoRow}>
+      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}</ThemedText>
+      <ThemedText style={[styles.infoValue, small && { fontSize: 11 }]} numberOfLines={1}>
+        {value}
+      </ThemedText>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <ThemedView style={styles.container}>
-        {/* Header — above ScrollView */}
-        <View style={[styles.pageHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="never"
+        bounces
+      >
+        {/* Hero map — full bleed, stretchy + parallax */}
+        <Animated.View
+          style={[
+            styles.hero,
+            { height: heroHeight, backgroundColor: colors.card },
+            heroAnimatedStyle,
+          ]}
+        >
+          {routeBounds && (
+            <Mapbox.MapView
+              style={StyleSheet.absoluteFill}
+              styleURL={mapStyle}
+              zoomEnabled
+              scrollEnabled={false}
+              pitchEnabled={false}
+              rotateEnabled={false}
+              compassEnabled={false}
+              logoEnabled={false}
+              attributionEnabled
+              attributionPosition={{ bottom: SHEET_OVERLAP + 8, left: 8 }}
+            >
+              <Camera
+                bounds={{
+                  ne: routeBounds.ne,
+                  sw: routeBounds.sw,
+                  paddingTop: insets.top + 60,
+                  paddingBottom: 60,
+                  paddingLeft: 40,
+                  paddingRight: 40,
+                }}
+                animationDuration={0}
+              />
 
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            {tripName}
-          </ThemedText>
-
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <MaterialCommunityIcons name="delete" size={24} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* 1. Map */}
-          {route.length > 0 && (
-            <View style={styles.mapContainer}>
-              <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
-                <Mapbox.MapView
-                  style={styles.map}
-                  styleURL={mapStyle}
-                  zoomEnabled={true}
-                  scrollEnabled={true}
-                  compassEnabled={false}
-                  logoEnabled={false}
-                >
-                  <Camera
-                    zoomLevel={13}
-                    centerCoordinate={center as [number, number]}
-                    animationDuration={0}
+              {routeGeoJSON && (
+                <ShapeSource id="routeSource" shape={routeGeoJSON}>
+                  <LineLayer
+                    id="routeLine"
+                    style={{
+                      lineColor: tripColor,
+                      lineWidth: 6,
+                      lineCap: 'round',
+                      lineJoin: 'round',
+                      lineOpacity: 0.9,
+                    }}
                   />
+                </ShapeSource>
+              )}
 
-                  {routeGeoJSON && (
-                    <ShapeSource id="routeSource" shape={routeGeoJSON ?? undefined}>
-                      <LineLayer
-                        id="routeLine"
-                        style={{
-                          lineColor: tripColor,
-                          lineWidth: 6,
-                          lineCap: 'round',
-                          lineJoin: 'round',
-                          lineOpacity: 0.9,
-                        }}
-                      />
-                    </ShapeSource>
-                  )}
-                </Mapbox.MapView>
+              {endpointsGeoJSON && (
+                <ShapeSource id="endpointsSource" shape={endpointsGeoJSON}>
+                  <CircleLayer
+                    id="endpointsCircle"
+                    style={{
+                      circleRadius: 7,
+                      circleColor: ['match', ['get', 'kind'], 'start', '#34C759', tripColor],
+                      circleStrokeColor: '#FFFFFF',
+                      circleStrokeWidth: 2.5,
+                    }}
+                  />
+                </ShapeSource>
+              )}
+            </Mapbox.MapView>
+          )}
+        </Animated.View>
+
+        {/* Content sheet */}
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: colors.background,
+              minHeight: windowHeight,
+              paddingBottom: insets.bottom + 32,
+            },
+            sheetAnimatedStyle,
+          ]}
+        >
+          {/* Title block */}
+          <View style={styles.titleRow}>
+            <View style={[styles.titleIcon, { backgroundColor: tripColor + '22' }]}>
+              <TripIcon size={22} color={tripColor} />
+            </View>
+            <View style={styles.titleText}>
+              <ThemedText style={styles.titleName} numberOfLines={1}>
+                {tripName}
+              </ThemedText>
+              <ThemedText style={[styles.titleDate, { color: colors.textSecondary }]}>
+                {formatDate(date, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Auto-reclassification notice — backend changed the trip type due to speed */}
+          {trip.auto_reclassified_from != null && (
+            <View style={[styles.card, styles.reclassifyBanner, { backgroundColor: '#FF9800' + '1F' }]}>
+              <ArrowsRightLeftIcon size={20} color="#FF9800" />
+              <View style={styles.flex1}>
+                <ThemedText style={[styles.reclassifyTitle, { color: '#FF9800' }]}>
+                  {t('trip_detail.reclassified_title', { defaultValue: 'Trip type updated automatically' })}
+                </ThemedText>
+                <ThemedText style={[styles.reclassifyBody, { color: colors.textSecondary }]}>
+                  {t('trip_detail.reclassified_body', {
+                    from: getTripTypeName(trip.auto_reclassified_from as TripType),
+                    to: getTripTypeName(trip.type as TripType),
+                    defaultValue:
+                      'Changed from {{from}} to {{to}} based on speed — does that match what you remember?',
+                  })}
+                </ThemedText>
               </View>
             </View>
           )}
 
-          <View style={styles.content}>
-            {/* 2. Date subtitle */}
-            <ThemedText style={[styles.dateSubtitle, { color: colors.textSecondary }]}>
-              {formatDate(date, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </ThemedText>
+          {/* Confirmation card — shown when trip hasn't been reviewed yet */}
+          {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
+            <View style={[styles.card, cardStyle]}>
+              <ThemedText style={styles.confirmPrompt}>
+                {t('trip_detail.confirm_prompt', { defaultValue: 'Is this trip type right?' })}
+              </ThemedText>
 
-            {/* Auto-reclassification notice — backend changed the trip type due to speed */}
-            {trip.auto_reclassified_from != null && (
-              <View style={[styles.reclassifyBanner, { backgroundColor: '#FF9800' + '18', borderColor: '#FF9800' + '60' }]}>
-                <MaterialCommunityIcons name="swap-horizontal" size={20} color="#FF9800" />
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={[styles.reclassifyTitle, { color: '#FF9800' }]}>
-                    Trip type updated automatically
-                  </ThemedText>
-                  <ThemedText style={[styles.reclassifyBody, { color: colors.textSecondary }]}>
-                    Changed from {getTripTypeName(trip.auto_reclassified_from as TripType)} to {getTripTypeName(trip.type as TripType)} based on speed — does that match what you remember?
-                  </ThemedText>
-                </View>
+              <View style={styles.typeSelector}>
+                {TRIP_TYPES.map((type) => (
+                  <TripTypeTile
+                    key={type}
+                    label={getTripTypeName(type)}
+                    color={getTripTypeColor(type)}
+                    icon={TRIP_TYPE_ICONS[type]}
+                    selected={(confirmTypeOverride ?? backendTrip.type) === type}
+                    onPress={() => setConfirmTypeOverride(type)}
+                  />
+                ))}
               </View>
-            )}
 
-            {/* Confirmation card — shown when trip hasn't been reviewed yet */}
-            {backendTrip && backendTrip.user_confirmed === null && !confirmedLocally && (
-              <View style={[styles.confirmCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-                {/* Type selector */}
-                <View style={styles.typeSelector}>
-                  {(['walk', 'run', 'cycle', 'drive'] as TripType[]).map((type) => {
-                    const selected = (confirmTypeOverride ?? backendTrip.type) === type;
-                    const tColor = getTripTypeColor(type);
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.typeOption,
-                          {
-                            backgroundColor: selected ? tColor + '25' : colors.background,
-                            borderColor: selected ? tColor : colors.border,
-                          },
-                        ]}
-                        onPress={() => setConfirmTypeOverride(type)}
-                        activeOpacity={0.7}
-                      >
-                        <MaterialCommunityIcons
-                          name={getTripTypeIcon(type) as any}
-                          size={18}
-                          color={selected ? tColor : colors.textSecondary}
-                        />
-                        <ThemedText
-                          style={[
-                            styles.typeOptionText,
-                            { color: selected ? tColor : colors.textSecondary },
-                          ]}
-                        >
-                          {getTripTypeName(type)}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Confirm / Not my trip */}
-                <View style={styles.confirmActions}>
-                  {updateTrip.isPending ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.confirmBtn, { backgroundColor: '#4CAF50' + '20', borderColor: '#4CAF50' }]}
-                        onPress={handleConfirmTrip}
-                        activeOpacity={0.7}
-                      >
-                        <MaterialCommunityIcons name="check" size={16} color="#4CAF50" />
-                        <ThemedText style={[styles.confirmBtnText, { color: '#4CAF50' }]}>Confirm</ThemedText>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.confirmBtn, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
-                        onPress={handleNotMyTrip}
-                        activeOpacity={0.7}
-                      >
-                        <MaterialCommunityIcons name="close" size={16} color="#EF4444" />
-                        <ThemedText style={[styles.confirmBtnText, { color: '#EF4444' }]}>Not my trip</ThemedText>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* 3. Headline stats row */}
-            <View style={[styles.headlineRow, { backgroundColor: colors.backgroundSecondary }]}>
-              <View style={styles.headlineStat}>
-                <ThemedText style={[styles.headlineLabel, { color: colors.textSecondary }]}>Distance</ThemedText>
-                <ThemedText style={styles.headlineValue}>{formatDistance(trip.distance, unitSystem)}</ThemedText>
-              </View>
-              <View style={[styles.headlineDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.headlineStat}>
-                <ThemedText style={[styles.headlineLabel, { color: colors.textSecondary }]}>Duration</ThemedText>
-                <ThemedText style={styles.headlineValue}>{formatDuration(trip.duration)}</ThemedText>
+              <View style={styles.confirmActions}>
+                {updateTrip.isPending ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <Button
+                      title={t('trip_detail.confirm', { defaultValue: 'Confirm' })}
+                      variant="primary"
+                      size="medium"
+                      onPress={handleConfirmTrip}
+                      icon={<CheckIcon size={18} color="#fff" />}
+                      style={styles.flex1}
+                    />
+                    <Button
+                      title={t('trip_detail.not_my_trip', { defaultValue: 'Not my trip' })}
+                      variant="outline"
+                      size="medium"
+                      onPress={handleNotMyTrip}
+                      style={styles.flex1}
+                    />
+                  </>
+                )}
               </View>
             </View>
+          )}
 
-            {/* 4. Speed grid: 2-column */}
-            <View style={[styles.speedGrid, { backgroundColor: colors.backgroundSecondary }]}>
-              <View style={styles.speedItem}>
+          {/* Stats — 2x2 grid */}
+          <View style={[styles.card, styles.statsCard, cardStyle]}>
+            <View style={styles.statsRow}>
+              <View style={[styles.statCell, styles.statCellLeft, { borderColor: colors.border }]}>
                 <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  {t('trip_detail.distance', { defaultValue: 'Distance' })}
+                </ThemedText>
+                <ThemedText style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatDistance(trip.distance, unitSystem)}
+                </ThemedText>
+              </View>
+              <View style={styles.statCell}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  {t('trip_detail.duration', { defaultValue: 'Duration' })}
+                </ThemedText>
+                <ThemedText style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatDuration(trip.duration)}
+                </ThemedText>
+              </View>
+            </View>
+            <View style={[styles.statsRow, styles.statsRowSecond, { borderColor: colors.border }]}>
+              <View style={[styles.statCell, styles.statCellLeft, { borderColor: colors.border }]}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]} numberOfLines={1}>
                   {t('trip_detail.avg_moving_speed')}
                 </ThemedText>
-                <ThemedText style={styles.statValue}>
+                <ThemedText style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
                   {formatSpeed(localTrip?.moving_avg_speed_kmh != null
                     ? localTrip.moving_avg_speed_kmh / 3.6
                     : trip.avg_speed, unitSystem)}
                 </ThemedText>
               </View>
-              <View style={styles.speedItem}>
-                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+              <View style={styles.statCell}>
+                <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]} numberOfLines={1}>
                   {t('trip_detail.max_speed')}
                 </ThemedText>
-                <ThemedText style={styles.statValue}>
+                <ThemedText style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
                   {trip.max_speed != null ? formatSpeed(trip.max_speed, unitSystem) : '—'}
                 </ThemedText>
               </View>
             </View>
-
-            {/* 5. Elevation row */}
-            {((localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0) ||
-              (trip.elevation_gain != null && trip.elevation_gain !== 0)) && (
-              <View style={[styles.elevationRow, { backgroundColor: colors.backgroundSecondary }]}>
-                {trip.elevation_gain != null && trip.elevation_gain !== 0 && (
-                  <ThemedText style={styles.elevationText}>
-                    {'↗ '}{t('trip_detail.elevation_gain', { m: Math.round(trip.elevation_gain) })}
-                  </ThemedText>
-                )}
-                {trip.elevation_gain != null && trip.elevation_gain !== 0 &&
-                  localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0 && (
-                  <ThemedText style={[styles.elevationSep, { color: colors.textSecondary }]}> · </ThemedText>
-                )}
-                {localTrip?.elevation_loss_m != null && localTrip.elevation_loss_m !== 0 && (
-                  <ThemedText style={styles.elevationText}>
-                    {'↘ '}{t('trip_detail.elevation_loss', { m: Math.round(localTrip.elevation_loss_m) })}
-                  </ThemedText>
-                )}
-              </View>
-            )}
-
-            {/* 6. CO₂ row */}
-            {trip.co2_saved != null && trip.co2_saved > 0 && (
-              <View style={[styles.co2Row, { backgroundColor: colors.backgroundSecondary }]}>
-                <ThemedText style={styles.co2Text}>
-                  {'🌱 '}{t('trip_detail.co2_saved', { kg: trip.co2_saved.toFixed(2) })}
-                </ThemedText>
-              </View>
-            )}
-
-            {/* 7. Notes section */}
-            <View style={[styles.sectionCard, { backgroundColor: colors.backgroundSecondary }]}>
-              <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                {t('trip_detail.notes_title')}
-              </ThemedText>
-              <TripNoteEditor
-                tripId={trip.id}
-                initialValue={trip.user_note ?? trip.notes}
-                onSaved={reloadLocalTrip}
-              />
-            </View>
-
-            {/* 8. Beta Diagnostics drawer */}
-            {isDebugBuild && (
-              <View style={[styles.infoCard, { backgroundColor: colors.backgroundSecondary, marginTop: Spacing.sm }]}>
-                <TouchableOpacity
-                  style={styles.infoRow}
-                  onPress={() => setShowDiagnostics(!showDiagnostics)}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                    {t('trip_detail.beta_diagnostics')}
-                  </ThemedText>
-                  {showDiagnostics
-                    ? <ChevronUpIcon size={18} color={colors.textSecondary} />
-                    : <ChevronDownIcon size={18} color={colors.textSecondary} />
-                  }
-                </TouchableOpacity>
-
-                {showDiagnostics && (
-                  <>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.trip_id')}
-                      </ThemedText>
-                      <ThemedText style={[styles.infoValue, { fontSize: 11 }]} numberOfLines={1}>
-                        {trip.id}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.backend_id')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {tripId > 0 ? String(tripId) : 'Not synced'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.gps_points')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>{locationCount}</ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.imu_samples')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {localTrip?.ml_confidence != null ? 'Available' : '—'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.classification_source')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {trip.classification_source ?? localTrip?.classification_source ?? '—'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        Entry Type
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {trip.is_manual
-                          ? t('trip_detail.entry_manual')
-                          : t('trip_detail.entry_automatic')}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.status')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>{trip.status}</ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                        {t('trip_detail.avg_speed_backend')}
-                      </ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {localTrip?.backend_avg_speed_kmh != null
-                          ? formatSpeed(localTrip.backend_avg_speed_kmh / 3.6, unitSystem)
-                          : '—'}
-                      </ThemedText>
-                    </View>
-                    {(trip.validation_log ?? localTrip?.validation_log) != null && (
-                      <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                        <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
-                          {t('trip_detail.validation_log')}
-                        </ThemedText>
-                        <ThemedText style={[styles.infoValue, { marginTop: 4, fontSize: 11 }]}>
-                          {trip.validation_log ?? localTrip?.validation_log}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </>
-                )}
-              </View>
-            )}
           </View>
-        </ScrollView>
-      </ThemedView>
-    </SafeAreaView>
+
+          {/* Elevation */}
+          {(hasElevationGain || hasElevationLoss) && (
+            <View style={[styles.slimCard, cardStyle]}>
+              {hasElevationGain && (
+                <ThemedText style={styles.slimText}>
+                  {'↗ '}{t('trip_detail.elevation_gain', { m: Math.round(trip.elevation_gain as number) })}
+                </ThemedText>
+              )}
+              {hasElevationGain && hasElevationLoss && (
+                <ThemedText style={[styles.slimText, { color: colors.textSecondary }]}> · </ThemedText>
+              )}
+              {hasElevationLoss && (
+                <ThemedText style={styles.slimText}>
+                  {'↘ '}{t('trip_detail.elevation_loss', { m: Math.round(localTrip?.elevation_loss_m as number) })}
+                </ThemedText>
+              )}
+            </View>
+          )}
+
+          {/* CO₂ */}
+          {trip.co2_saved != null && trip.co2_saved > 0 && (
+            <View style={[styles.slimCard, cardStyle]}>
+              <ThemedText style={styles.slimText}>
+                {'🌱 '}{t('trip_detail.co2_saved', { kg: trip.co2_saved.toFixed(2) })}
+              </ThemedText>
+            </View>
+          )}
+
+          {/* Notes */}
+          <View style={[styles.card, cardStyle]}>
+            <ThemedText style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              {t('trip_detail.notes_title')}
+            </ThemedText>
+            <TripNoteEditor
+              tripId={trip.id}
+              initialValue={trip.user_note ?? trip.notes}
+              onSaved={reloadLocalTrip}
+            />
+          </View>
+
+          {/* Beta Diagnostics drawer */}
+          {isDebugBuild && (
+            <View style={[styles.card, cardStyle]}>
+              <TouchableOpacity
+                style={styles.infoRow}
+                onPress={() => setShowDiagnostics(!showDiagnostics)}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.sectionLabel, styles.noMargin, { color: colors.textSecondary }]}>
+                  {t('trip_detail.beta_diagnostics')}
+                </ThemedText>
+                {showDiagnostics
+                  ? <ChevronUpIcon size={18} color={colors.textSecondary} />
+                  : <ChevronDownIcon size={18} color={colors.textSecondary} />
+                }
+              </TouchableOpacity>
+
+              {showDiagnostics && (
+                <>
+                  {renderDiagRow(t('trip_detail.trip_id'), String(trip.id), true)}
+                  {renderDiagRow(
+                    t('trip_detail.backend_id'),
+                    tripId > 0 ? String(tripId) : t('trip_detail.not_synced', { defaultValue: 'Not synced' }),
+                  )}
+                  {renderDiagRow(t('trip_detail.gps_points'), String(locationCount))}
+                  {renderDiagRow(
+                    t('trip_detail.imu_samples'),
+                    localTrip?.ml_confidence != null ? t('trip_detail.available', { defaultValue: 'Available' }) : '—',
+                  )}
+                  {renderDiagRow(
+                    t('trip_detail.classification_source'),
+                    String(trip.classification_source ?? localTrip?.classification_source ?? '—'),
+                  )}
+                  {renderDiagRow(
+                    t('trip_detail.entry_type', { defaultValue: 'Entry Type' }),
+                    trip.is_manual ? t('trip_detail.entry_manual') : t('trip_detail.entry_automatic'),
+                  )}
+                  {renderDiagRow(t('trip_detail.status'), String(trip.status))}
+                  {renderDiagRow(
+                    t('trip_detail.avg_speed_backend'),
+                    localTrip?.backend_avg_speed_kmh != null
+                      ? formatSpeed(localTrip.backend_avg_speed_kmh / 3.6, unitSystem)
+                      : '—',
+                  )}
+                  {(trip.validation_log ?? localTrip?.validation_log) != null && (
+                    <View style={[styles.infoRow, styles.infoRowColumn]}>
+                      <ThemedText style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                        {t('trip_detail.validation_log')}
+                      </ThemedText>
+                      <ThemedText style={[styles.infoValue, styles.validationLog]}>
+                        {trip.validation_log ?? localTrip?.validation_log}
+                      </ThemedText>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
+        </Animated.View>
+      </Animated.ScrollView>
+
+      {/* Status-bar backdrop (fades in once the hero scrolls away) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.statusBackdrop,
+          { height: insets.top, backgroundColor: colors.background },
+          statusBackdropStyle,
+        ]}
+      />
+
+      {/* Compact glass title pill — slides down once the hero is gone */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.pillWrap,
+          { top: insets.top + 8, left: 16 + BUTTON_SIZE + 8, right: 16 + BUTTON_SIZE + 8 },
+        ]}
+      >
+        <Animated.View style={[styles.pill, pillAnimatedStyle]}>
+          <GlassSurface borderRadius={BUTTON_SIZE / 2} />
+          <ThemedText style={styles.pillText} numberOfLines={1}>
+            {tripName}
+          </ThemedText>
+        </Animated.View>
+      </View>
+
+      {/* Floating glass controls */}
+      <GlassButton
+        onPress={() => router.back()}
+        accessibilityLabel={t('common:buttons.back')}
+        size={BUTTON_SIZE}
+        style={[styles.floating, { top: insets.top + 8, left: 16 }]}
+      >
+        <ChevronLeftIcon size={22} color={colors.glassInactive} />
+      </GlassButton>
+      <GlassButton
+        onPress={handleDelete}
+        accessibilityLabel={t('common:buttons.delete')}
+        size={BUTTON_SIZE}
+        style={[styles.floating, { top: insets.top + 8, right: 16 }]}
+      >
+        <TrashIcon size={20} color={colors.error} />
+      </GlassButton>
+    </View>
   );
 }
 
@@ -680,162 +843,151 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  flex1: {
+    flex: 1,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
-  mapContainer: {
-    height: 300,
+  hero: {
     width: '100%',
-    padding: Spacing.md,
+    zIndex: 0,
   },
-  mapWrapper: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+  sheet: {
+    marginTop: -SHEET_OVERLAP,
+    borderTopLeftRadius: SHEET_OVERLAP,
+    borderTopRightRadius: SHEET_OVERLAP,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 20,
+    gap: 12,
+    zIndex: 1,
   },
-  map: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  dateSubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  // Headline stats row
-  headlineRow: {
+  // Title block
+  titleRow: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: Spacing.sm,
-    alignItems: 'stretch',
+    alignItems: 'center',
+    gap: 12,
   },
-  headlineStat: {
-    flex: 1,
+  titleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 0,
-    minHeight: 64,
   },
-  headlineLabel: {
-    fontSize: 12,
-    marginBottom: 10,
+  titleText: {
+    flex: 1,
   },
-  headlineValue: {
-    fontSize: 24,
+  titleName: {
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '700',
   },
-  headlineDivider: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginHorizontal: Spacing.sm,
-  },
-  // Speed grid
-  speedGrid: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: Spacing.md,
-  },
-  speedItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  statLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Elevation row
-  elevationRow: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  elevationText: {
+  titleDate: {
     fontSize: 14,
+    lineHeight: 20,
+  },
+  // Cards
+  card: {
+    borderRadius: 20,
+    padding: 16,
+  },
+  slimCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: BorderRadius.lg,
+    padding: 14,
+  },
+  slimText: {
+    fontSize: 15,
     fontWeight: '500',
   },
-  elevationSep: {
-    fontSize: 14,
-  },
-  // CO₂ row
-  co2Row: {
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  co2Text: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  // Notes / generic section card
-  sectionCard: {
-    borderRadius: 12,
-    padding: Spacing.md,
-  },
-  sectionTitle: {
+  sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: Spacing.xs,
+    marginBottom: 8,
   },
-  // Info card (diagnostics)
-  infoCard: {
+  noMargin: {
+    marginBottom: 0,
+  },
+  // Reclassify
+  reclassifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  reclassifyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  reclassifyBody: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  // Confirm
+  confirmPrompt: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Stats
+  statsCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  statsRow: {
+    flexDirection: 'row',
+  },
+  statsRowSecond: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  statCell: {
+    flex: 1,
     padding: 16,
-    borderRadius: 12,
   },
+  statCellLeft: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  statLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700',
+  },
+  // Diagnostics
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
+  },
+  infoRowColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   infoLabel: {
     fontSize: 14,
@@ -846,68 +998,40 @@ const styles = StyleSheet.create({
     maxWidth: '60%',
     textAlign: 'right',
   },
-  confirmCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 4,
+  validationLog: {
+    marginTop: 4,
+    fontSize: 11,
+    maxWidth: '100%',
+    textAlign: 'left',
   },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+  // Floating chrome
+  floating: {
+    position: 'absolute',
+    zIndex: 10,
   },
-  typeOption: {
-    flex: 1,
-    flexDirection: 'row',
+  statusBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+  },
+  pillWrap: {
+    position: 'absolute',
+    alignItems: 'center',
+    zIndex: 6,
+  },
+  pill: {
+    height: BUTTON_SIZE,
+    maxWidth: '100%',
+    paddingHorizontal: 18,
+    borderRadius: BUTTON_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1.5,
   },
-  typeOptionText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  confirmActions: {
-    flexDirection: 'row',
-    gap: 10,
-    minHeight: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  confirmBtnText: {
-    fontSize: 13,
+  pillText: {
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
-  },
-  reclassifyBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 12,
-  },
-  reclassifyTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  reclassifyBody: {
-    fontSize: 12,
-    lineHeight: 17,
   },
 });

@@ -23,7 +23,8 @@
     "maps": "Mapy",
     "groups": "Grupy",
     "you": "Ty",
-    "quickActions": "Szybkie akcje"
+    "quickActions": "Szybkie akcje",
+    "feed": "Aktualności"
   },
   "status": {
     "loading": "Ładowanie...",
@@ -87,5 +88,27 @@
     "week_other": "{{count}} weeks ago",
     "month_one": "1 month ago",
     "month_other": "{{count}} months ago"
+  },
+  "quickActionsMenu": {
+    "logRide": "Dodaj przejazd ręcznie",
+    "rateRoutes": "Oceń moje trasy",
+    "createGroup": "Utwórz grupę",
+    "shareUpdate": "Udostępnij aktualizację",
+    "close": "Zamknij"
+  },
+  "headerActions": {
+    "leaderboards": "Rankingi",
+    "myClubs": "Moje kluby"
+  },
+  "trophyDetails": {
+    "earned": "Zdobyte",
+    "notEarned": "Niezdobyte",
+    "progress": "Postęp"
+  },
+  "weatherDetails": {
+    "feelsLike": "Odczuwalna",
+    "humidity": "Wilgotność",
+    "windSpeed": "Prędkość wiatru",
+    "lastUpdated": "Ostatnia aktualizacja: {{time}}"
   }
 }

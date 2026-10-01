@@ -239,6 +239,11 @@
     },
     "empty": {
       "noData": "No data for this period"
+    },
+    "gender": {
+      "all": "All",
+      "male": "Male",
+      "female": "Female"
     }
   },
   "moderation": {
@@ -280,5 +285,8 @@
       "label": "Join Requests",
       "subtitle": "When someone requests to join your group"
     }
+  },
+  "photoViewer": {
+    "counter": "{{current}} / {{total}}"
   }
 }

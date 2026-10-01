@@ -1,25 +1,95 @@
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import { useTabBarInset } from '@/contexts/TabBarContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
-import { MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import React, { useCallback, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { ClockIcon } from 'react-native-heroicons/outline';
+import {
+  ArrowPathIcon,
+  ArrowRightIcon,
+  BoltIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  MapIcon,
+  TruckIcon,
+  UserIcon,
+} from 'react-native-heroicons/outline';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { getTripTypeColor, type TripType } from '@/types/trip';
 import { formatDurationHuman, parseRouteData } from '@/lib/utils/geoCalculations';
 import type { Trip } from '@/lib/database/db';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MIN_TRANSLATE_Y = 140; // Minimum height when collapsed
-const MAX_TRANSLATE_Y = SCREEN_HEIGHT * 0.75; // Maximum height when expanded
+const EXPANDED_Y = SCREEN_HEIGHT * 0.25; // Sheet top when expanded
+const PEEK_HEADER_HEIGHT = 68; // grabber + "Recent Journeys" row, must clear the tab bar
+const SIDE_INSET = 8;
+const TOP_RADIUS = 30;
+const RUBBER_DIM = 120;
+const PRESS_SPRING = { damping: 18, stiffness: 320, mass: 0.6 };
+
+const TRIP_ICONS = {
+  walk: UserIcon,
+  run: BoltIcon,
+  cycle: ArrowPathIcon,
+  drive: TruckIcon,
+} as const;
+
+/** iOS-style rubber band: resistance grows the further past the limit you drag. */
+function rubberBand(over: number): number {
+  'worklet';
+  return (1 - 1 / ((over * 0.55) / RUBBER_DIM + 1)) * RUBBER_DIM;
+}
+
+function lightHaptic() {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+}
+
+/** Wraps children in a spring press-scale; haptic fires on press-in when requested. */
+function PressScale({
+  children,
+  onPress,
+  style,
+  pressedScale = 0.97,
+  haptic = false,
+  accessibilityLabel,
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
+  pressedScale?: number;
+  haptic?: boolean;
+  accessibilityLabel?: string;
+}) {
+  const scale = useSharedValue(1);
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={[style, aStyle]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        onPressIn={() => {
+          scale.value = withSpring(pressedScale, PRESS_SPRING);
+          if (haptic) lightHaptic();
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, PRESS_SPRING);
+        }}
+        onPress={onPress}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 interface MapBottomSheetProps {
   onTripPress?: (tripId: string) => void;
@@ -31,11 +101,16 @@ interface MapBottomSheetProps {
 export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, trips = [] }: MapBottomSheetProps) {
   const { colors, isDark } = useTheme();
   const { formatDistance } = useUnits();
-  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const tabBarInset = useTabBarInset();
   const router = useRouter();
-  const translateY = useSharedValue(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom);
-  const [isExpanded, setIsExpanded] = useState(false);
 
+  // Collapsed: the header row sits fully above the floating tab bar.
+  const collapsedY = SCREEN_HEIGHT - tabBarInset - PEEK_HEADER_HEIGHT;
+
+  const translateY = useSharedValue(collapsedY);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const expandedSV = useSharedValue(false);
   const context = useSharedValue({ y: 0 });
 
   const handleExpandChange = useCallback((expanded: boolean) => {
@@ -50,27 +125,34 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
       context.value = { y: translateY.value };
     })
     .onUpdate((event) => {
-      translateY.value = Math.max(
-        SCREEN_HEIGHT - MAX_TRANSLATE_Y,
-        Math.min(context.value.y + event.translationY, SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom)
-      );
+      const raw = context.value.y + event.translationY;
+      if (raw < EXPANDED_Y) {
+        translateY.value = EXPANDED_Y - rubberBand(EXPANDED_Y - raw);
+      } else if (raw > collapsedY) {
+        translateY.value = collapsedY + rubberBand(raw - collapsedY);
+      } else {
+        translateY.value = raw;
+      }
     })
     .onEnd((event) => {
       'worklet';
-      const shouldExpand = event.velocityY < -500 || translateY.value < SCREEN_HEIGHT - MAX_TRANSLATE_Y / 2;
+      // Project where the sheet would land with its current momentum.
+      const projected = translateY.value + event.velocityY * 0.15;
+      const midpoint = (EXPANDED_Y + collapsedY) / 2;
+      const shouldExpand =
+        event.velocityY < -500 || (event.velocityY <= 500 && projected < midpoint);
 
-      if (shouldExpand) {
-        translateY.value = withSpring(SCREEN_HEIGHT - MAX_TRANSLATE_Y, {
-          damping: 50,
-          stiffness: 400,
-        });
-        runOnJS(handleExpandChange)(true);
-      } else {
-        translateY.value = withSpring(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom, {
-          damping: 50,
-          stiffness: 400,
-        });
-        runOnJS(handleExpandChange)(false);
+      translateY.value = withSpring(shouldExpand ? EXPANDED_Y : collapsedY, {
+        damping: 30,
+        stiffness: 260,
+        mass: 1,
+        velocity: event.velocityY,
+      });
+
+      if (shouldExpand !== expandedSV.value) {
+        expandedSV.value = shouldExpand;
+        runOnJS(lightHaptic)();
+        runOnJS(handleExpandChange)(shouldExpand);
       }
     });
 
@@ -81,13 +163,9 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
   });
 
   const handleTripPress = (tripId: string) => {
-    console.log('[MapBottomSheet] Trip pressed:', tripId);
-
     // Collapse the bottom sheet
-    translateY.value = withSpring(SCREEN_HEIGHT - MIN_TRANSLATE_Y - insets.bottom, {
-      damping: 50,
-      stiffness: 400,
-    });
+    translateY.value = withSpring(collapsedY, { damping: 30, stiffness: 260 });
+    expandedSV.value = false;
     handleExpandChange(false);
 
     if (onTripPress) {
@@ -96,7 +174,6 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
   };
 
   const handleSeeAllTrips = () => {
-    console.log('[MapBottomSheet] Navigating to trip history');
     router.push('/home/trip-history');
   };
 
@@ -106,59 +183,63 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
     const now = new Date();
     const diffMs = now.getTime() - tripDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const time = tripDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
     if (diffDays === 0) {
-      return `Today, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return t('maps:bottomSheet.todayAt', { time, defaultValue: 'Today, {{time}}' });
     } else if (diffDays === 1) {
-      return `Yesterday, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return t('maps:bottomSheet.yesterdayAt', { time, defaultValue: 'Yesterday, {{time}}' });
     } else if (diffDays < 7) {
-      return `${diffDays} days ago, ${tripDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-    } else {
-      return tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      return t('maps:bottomSheet.daysAgoAt', {
+        count: diffDays,
+        time,
+        defaultValue: '{{count}} days ago, {{time}}',
+      });
     }
+    return tripDate.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
   // Helper function to get trip route description
   const getTripRouteDescription = (trip: Trip): string => {
-    if (!trip.route_data) return 'No route data';
+    if (!trip.route_data) {
+      return t('maps:bottomSheet.noRouteData', { defaultValue: 'No route data' });
+    }
 
     try {
       const route = parseRouteData(trip.route_data);
-      if (route.length < 2) return 'Short trip';
+      if (route.length < 2) {
+        return t('maps:bottomSheet.shortTrip', { defaultValue: 'Short trip' });
+      }
 
       // For now, just show distance - could be enhanced with geocoding
       const distanceKm = (trip.distance || 0) / 1000;
-      return `${distanceKm.toFixed(1)} km route`;
+      return t('maps:bottomSheet.kmRoute', {
+        distance: distanceKm.toFixed(1),
+        defaultValue: '{{distance}} km route',
+      });
     } catch {
-      return 'Route data unavailable';
+      return t('maps:bottomSheet.routeUnavailable', { defaultValue: 'Route data unavailable' });
     }
   };
 
-  // Get icon name for trip type
-  const getIconName = (type: TripType): keyof typeof MaterialIcons.glyphMap => {
-    const iconMap: Record<TripType, keyof typeof MaterialIcons.glyphMap> = {
-      walk: 'directions-walk',
-      run: 'directions-run',
-      cycle: 'directions-bike',
-      drive: 'directions-car',
-    };
-    return iconMap[type];
-  };
+  const getTripName = (type: TripType): string =>
+    t(`maps:bottomSheet.tripName.${type}`, {
+      defaultValue: `${type.charAt(0).toUpperCase() + type.slice(1)} Trip`,
+    });
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View
-        style={[
-          styles.bottomSheetContainer,
-          rBottomSheetStyle,
-          {
-            backgroundColor: isDark ? colors.card : '#FFFFFF',
-          },
-        ]}
-      >
+      <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
+        <GlassSurface borderRadius={TOP_RADIUS} />
+
         {/* Drag Handle */}
         <View style={styles.handleContainer}>
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          <View style={[styles.handle, { backgroundColor: colors.glassInactive }]} />
         </View>
 
         {/* Content */}
@@ -167,105 +248,112 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Recent Journeys
+                {t('maps:bottomSheet.recentJourneys', { defaultValue: 'Recent Journeys' })}
               </Text>
               <Text style={[styles.tripCount, { color: colors.textSecondary }]}>
-                {`${trips.length} trips`}
+                {t('maps:bottomSheet.tripCount', {
+                  count: trips.length,
+                  defaultValue: '{{count}} trips',
+                  defaultValue_one: '{{count}} trip',
+                })}
               </Text>
             </View>
-            <Pressable
-              style={[styles.seeAllButton, { backgroundColor: colors.primary }]}
-              onPress={handleSeeAllTrips}
-              android_ripple={{ color: '#ffffff20' }}
-            >
-              <Text style={styles.seeAllButtonText}>See All Trips</Text>
-              <MaterialIcons name="arrow-forward" size={16} color="#ffffff" />
-            </Pressable>
+            <PressScale onPress={handleSeeAllTrips} haptic pressedScale={0.94}>
+              <View style={styles.seeAllButton}>
+                <GlassSurface borderRadius={16} interactive />
+                <Text style={[styles.seeAllButtonText, { color: colors.text }]}>
+                  {t('maps:bottomSheet.seeAllTrips', { defaultValue: 'See All Trips' })}
+                </Text>
+                <ArrowRightIcon size={14} color={colors.text} />
+              </View>
+            </PressScale>
           </View>
 
           {/* Recent Trips List */}
           <ScrollView
             style={styles.tripsList}
+            contentContainerStyle={{ paddingBottom: tabBarInset + 24 }}
             showsVerticalScrollIndicator={!isExpanded}
             scrollEnabled={isExpanded}
           >
             {trips.length === 0 ? (
               <View style={styles.emptyState}>
-                <MaterialIcons name="route" size={48} color={colors.textMuted} />
+                <MapIcon size={48} color={colors.textMuted} />
                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  No trips yet
+                  {t('maps:bottomSheet.noTrips', { defaultValue: 'No trips yet' })}
                 </Text>
                 <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                  Start tracking to see your journeys here
+                  {t('maps:bottomSheet.noTripsHint', {
+                    defaultValue: 'Start tracking to see your journeys here',
+                  })}
                 </Text>
               </View>
             ) : (
-              trips.map((trip, index) => {
+              trips.map((trip) => {
                 const tripColor = getTripTypeColor(trip.type);
                 const isSelected = selectedTripId === trip.id;
+                const TripIcon = TRIP_ICONS[trip.type];
 
                 return (
-                  <Pressable
+                  <PressScale
                     key={trip.id}
-                    style={[
-                      styles.tripCard,
-                      {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8F9FA',
-                        borderColor: isSelected ? tripColor : colors.border,
-                        borderWidth: isSelected ? 2 : 1,
-                      },
-                      index === 0 && !isExpanded && styles.firstTripCard,
-                    ]}
                     onPress={() => handleTripPress(trip.id)}
-                    android_ripple={{ color: colors.primary + '10' }}
+                    style={styles.tripCardWrap}
+                    pressedScale={0.98}
                   >
-                    {/* Icon */}
-                    <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
-                      <MaterialIcons name={getIconName(trip.type)} size={24} color={tripColor} />
-                    </View>
+                    <View
+                      style={[
+                        styles.tripCard,
+                        {
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.85)',
+                          borderColor: isSelected ? tripColor : colors.border,
+                          borderWidth: isSelected ? 2 : 1,
+                        },
+                      ]}
+                    >
+                      {/* Icon */}
+                      <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
+                        <TripIcon size={24} color={tripColor} />
+                      </View>
 
-                    {/* Trip Info */}
-                    <View style={styles.tripInfo}>
-                      <Text style={[styles.tripName, { color: colors.text }]}>
-                        {trip.type.charAt(0).toUpperCase() + trip.type.slice(1)} Trip
-                      </Text>
-                      <Text style={[styles.tripRoute, { color: colors.textSecondary }]}>
-                        {getTripRouteDescription(trip)}
-                      </Text>
-                      <View style={styles.tripMeta}>
-                        <View style={styles.metaItem}>
-                          <ClockIcon size={14} color={colors.textMuted} />
-                          <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                            {formatTripDate(trip.start_time)}
-                          </Text>
+                      {/* Trip Info */}
+                      <View style={styles.tripInfo}>
+                        <Text style={[styles.tripName, { color: colors.text }]}>
+                          {getTripName(trip.type)}
+                        </Text>
+                        <Text style={[styles.tripRoute, { color: colors.textSecondary }]}>
+                          {getTripRouteDescription(trip)}
+                        </Text>
+                        <View style={styles.tripMeta}>
+                          <View style={styles.metaItem}>
+                            <ClockIcon size={14} color={colors.textMuted} />
+                            <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                              {formatTripDate(trip.start_time)}
+                            </Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
 
-                    {/* Stats */}
-                    <View style={styles.tripStats}>
-                      <Text style={[styles.statValue, { color: colors.text }]}>
-                        {formatDistance((trip.distance || 0) / 1000)}
-                      </Text>
-                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        distance
-                      </Text>
-                      <Text style={[styles.statValue, { color: colors.text, marginTop: 8 }]}>
-                        {formatDurationHuman(trip.duration || 0)}
-                      </Text>
-                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                        time
-                      </Text>
-                    </View>
+                      {/* Stats */}
+                      <View style={styles.tripStats}>
+                        <Text style={[styles.statValue, { color: colors.text }]}>
+                          {formatDistance((trip.distance || 0) / 1000)}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                          {t('maps:bottomSheet.distance', { defaultValue: 'distance' })}
+                        </Text>
+                        <Text style={[styles.statValue, { color: colors.text, marginTop: 8 }]}>
+                          {formatDurationHuman(trip.duration || 0)}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                          {t('maps:bottomSheet.time', { defaultValue: 'time' })}
+                        </Text>
+                      </View>
 
-                    {/* Chevron */}
-                    <MaterialIcons
-                      name="chevron-right"
-                      size={20}
-                      color={colors.textMuted}
-                      style={styles.chevron}
-                    />
-                  </Pressable>
+                      {/* Chevron */}
+                      <ChevronRightIcon size={18} color={colors.textMuted} style={styles.chevron} />
+                    </View>
+                  </PressScale>
                 );
               })
             )}
@@ -280,36 +368,30 @@ const styles = StyleSheet.create({
   bottomSheetContainer: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    left: SIDE_INSET,
+    right: SIDE_INSET,
     height: SCREEN_HEIGHT,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 15,
     zIndex: 200,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 36,
+    height: 5,
+    borderRadius: 3,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -327,35 +409,28 @@ const styles = StyleSheet.create({
   seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
+    paddingHorizontal: 14,
+    height: 32,
+    borderRadius: 16,
+    gap: 6,
   },
   seeAllButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#ffffff',
   },
   tripsList: {
     flex: 1,
+  },
+  tripCardWrap: {
+    marginBottom: 12,
   },
   tripCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderRadius: 16,
-    marginBottom: 12,
     borderWidth: 1,
     gap: 12,
-  },
-  firstTripCard: {
-    // Highlight first card when collapsed
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   tripIcon: {
     width: 48,

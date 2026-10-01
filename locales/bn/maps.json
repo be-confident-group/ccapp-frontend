@@ -52,5 +52,104 @@
     "noHistoryMessage": "Start tracking your rides to see them here",
     "noFeedback": "No feedback yet",
     "noFeedbackMessage": "Rate routes to see your feedback here"
+  },
+  "controls": {
+    "community": "কমিউনিটি মতামত",
+    "myFeedback": "আমার মতামত",
+    "global": "গ্লোবাল হিটম্যাপ",
+    "myHeatmap": "আমার হিটম্যাপ",
+    "layers": "ম্যাপের স্টাইল",
+    "findLocation": "আমার অবস্থান খুঁজুন",
+    "resetNorth": "উত্তর দিকে ফেরান"
+  },
+  "mapStyles": {
+    "title": "ম্যাপের স্টাইল",
+    "auto": {
+      "label": "ডিফল্ট",
+      "description": "আপনার লাইট বা ডার্ক থিমের সাথে মেলে"
+    },
+    "streets": {
+      "label": "রাস্তা",
+      "description": "সাধারণ ম্যাপ"
+    },
+    "outdoors": {
+      "label": "আউটডোর",
+      "description": "ভূখণ্ডসহ টপোগ্রাফিক"
+    },
+    "satellite": {
+      "label": "স্যাটেলাইট",
+      "description": "স্যাটেলাইট চিত্র"
+    }
+  },
+  "bottomSheet": {
+    "recentJourneys": "সাম্প্রতিক যাত্রা",
+    "tripCount_one": "{{count}}টি ট্রিপ",
+    "tripCount_other": "{{count}}টি ট্রিপ",
+    "seeAllTrips": "সব ট্রিপ দেখুন",
+    "noTrips": "এখনও কোনো ট্রিপ নেই",
+    "noTripsHint": "আপনার যাত্রা দেখতে ট্র্যাকিং শুরু করুন",
+    "distance": "দূরত্ব",
+    "time": "সময়",
+    "todayAt": "আজ, {{time}}",
+    "yesterdayAt": "গতকাল, {{time}}",
+    "daysAgoAt": "{{count}} দিন আগে, {{time}}",
+    "noRouteData": "রুটের তথ্য নেই",
+    "shortTrip": "ছোট ট্রিপ",
+    "kmRoute": "{{distance}} কিমি রুট",
+    "routeUnavailable": "রুটের তথ্য পাওয়া যায়নি",
+    "tripName": {
+      "walk": "হাঁটা",
+      "run": "দৌড়",
+      "cycle": "সাইকেল যাত্রা",
+      "drive": "গাড়ি যাত্রা"
+    }
+  },
+  "reportIssue": {
+    "title": "সমস্যা জানান",
+    "submit": "রিপোর্ট জমা দিন",
+    "category": "বিভাগ",
+    "titleLabel": "শিরোনাম",
+    "titlePlaceholder": "যেমন, মেইন স্ট্রিটে বড় গর্ত",
+    "descriptionLabel": "বিবরণ (ঐচ্ছিক)",
+    "descriptionPlaceholder": "অতিরিক্ত বিবরণ দিন...",
+    "location": "অবস্থান",
+    "titleRequired": "শিরোনাম প্রয়োজন",
+    "titleRequiredMessage": "আপনার রিপোর্টের একটি শিরোনাম দিন।",
+    "errorTitle": "ত্রুটি",
+    "locationMissing": "অবস্থানের তথ্য নেই।",
+    "successTitle": "সফল",
+    "successMessage": "আপনার রিপোর্ট জমা হয়েছে। ধন্যবাদ!",
+    "ok": "ঠিক আছে",
+    "submitFailed": "রিপোর্ট জমা দেওয়া যায়নি। আবার চেষ্টা করুন।",
+    "categories": {
+      "road_damage": {
+        "label": "রাস্তার ক্ষতি",
+        "description": "গর্ত, ফাটল, ধ্বংসাবশেষ"
+      },
+      "traffic_light": {
+        "label": "ট্রাফিক লাইট",
+        "description": "সিগন্যালের সমস্যা"
+      },
+      "safety_issue": {
+        "label": "নিরাপত্তা সমস্যা",
+        "description": "বিপজ্জনক অবস্থা"
+      },
+      "other": {
+        "label": "অন্যান্য",
+        "description": "অন্যান্য সমস্যা"
+      }
+    }
+  },
+  "trip_detail": {
+    "reclassified_title": "ট্রিপের ধরন স্বয়ংক্রিয়ভাবে আপডেট হয়েছে",
+    "reclassified_body": "গতির ভিত্তিতে {{from}} থেকে {{to}} করা হয়েছে — এটা কি ঠিক?",
+    "confirm_prompt": "ট্রিপের ধরন কি ঠিক আছে?",
+    "confirm": "নিশ্চিত করুন",
+    "not_my_trip": "এটি আমার ট্রিপ নয়",
+    "distance": "দূরত্ব",
+    "duration": "সময়কাল",
+    "not_synced": "সিঙ্ক হয়নি",
+    "available": "উপলব্ধ",
+    "entry_type": "এন্ট্রির ধরন"
   }
 }

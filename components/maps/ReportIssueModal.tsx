@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { XMarkIcon } from 'react-native-heroicons/outline';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { GlassSheet } from '@/components/ui/GlassSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TextInput, Button } from '@/components/ui';
 import { useCreateMapFeedback } from '@/lib/hooks/useMapFeedback';
@@ -36,6 +29,7 @@ interface ReportIssueModalProps {
 
 export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<MapFeedbackCategory>('road_damage');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -44,12 +38,12 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Title Required', 'Please enter a title for your report.');
+      Alert.alert(t('maps:reportIssue.titleRequired', 'Title Required'), t('maps:reportIssue.titleRequiredMessage', 'Please enter a title for your report.'));
       return;
     }
 
     if (!coordinates) {
-      Alert.alert('Error', 'Location data is missing.');
+      Alert.alert(t('maps:reportIssue.errorTitle', 'Error'), t('maps:reportIssue.locationMissing', 'Location data is missing.'));
       return;
     }
 
@@ -68,9 +62,9 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
         description: description.trim(),
       });
 
-      Alert.alert('Success', 'Your report has been submitted. Thank you!', [
+      Alert.alert(t('maps:reportIssue.successTitle', 'Success'), t('maps:reportIssue.successMessage', 'Your report has been submitted. Thank you!'), [
         {
-          text: 'OK',
+          text: t('maps:reportIssue.ok', 'OK'),
           onPress: () => {
             // Reset form
             setTitle('');
@@ -82,7 +76,7 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
       ]);
     } catch (error) {
       console.error('Error submitting report:', error);
-      Alert.alert('Error', 'Failed to submit your report. Please try again.');
+      Alert.alert(t('maps:reportIssue.errorTitle', 'Error'), t('maps:reportIssue.submitFailed', 'Failed to submit your report. Please try again.'));
     }
   };
 
@@ -95,146 +89,103 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
   };
 
   return (
-    <Modal
+    <GlassSheet
       visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={t('maps:reportIssue.title', 'Report Issue')}
+      footer={
+        <Button
+          title={t('maps:reportIssue.submit', 'Submit Report')}
+          onPress={handleSubmit}
+          variant="primary"
+          size="large"
+          fullWidth
+          loading={createFeedbackMutation.isPending}
+        />
+      }
     >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Report Issue</Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <XMarkIcon size={24} color={colors.text} />
+      {/* Category Selection */}
+      <View style={styles.section}>
+        <Text style={[styles.label, { color: colors.text }]}>
+          {t('maps:reportIssue.category', 'Category')}
+        </Text>
+        <View style={styles.categoryGrid}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.value}
+              onPress={() => setSelectedCategory(cat.value)}
+              style={[
+                styles.categoryButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                selectedCategory === cat.value && {
+                  backgroundColor: colors.primary + '20',
+                  borderColor: colors.primary,
+                  borderWidth: 2,
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.categoryIcon}>{cat.icon}</Text>
+              <Text style={[styles.categoryLabel, { color: colors.text }]}>
+                {t(`maps:reportIssue.categories.${cat.value}.label`, cat.label)}
+              </Text>
+              <Text
+                style={[styles.categoryDescription, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {t(`maps:reportIssue.categories.${cat.value}.description`, cat.description)}
+              </Text>
             </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-            {/* Category Selection */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Category</Text>
-              <View style={styles.categoryGrid}>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.value}
-                    onPress={() => setSelectedCategory(cat.value)}
-                    style={[
-                      styles.categoryButton,
-                      { backgroundColor: colors.card, borderColor: colors.border },
-                      selectedCategory === cat.value && {
-                        backgroundColor: colors.primary + '20',
-                        borderColor: colors.primary,
-                        borderWidth: 2,
-                      },
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                    <Text style={[styles.categoryLabel, { color: colors.text }]}>
-                      {cat.label}
-                    </Text>
-                    <Text
-                      style={[styles.categoryDescription, { color: colors.textSecondary }]}
-                      numberOfLines={1}
-                    >
-                      {cat.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Title Input */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Title</Text>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="e.g., Large pothole on Main Street"
-                maxLength={100}
-              />
-            </View>
-
-            {/* Description Input */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Description (Optional)</Text>
-              <TextInput
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Provide additional details..."
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                style={styles.descriptionInput}
-                maxLength={500}
-              />
-            </View>
-
-            {/* Location Info */}
-            {coordinates && (
-              <View style={[styles.locationInfo, { backgroundColor: colors.card }]}>
-                <Text style={[styles.locationLabel, { color: colors.textSecondary }]}>
-                  Location
-                </Text>
-                <Text style={[styles.locationText, { color: colors.text }]}>
-                  {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Submit Button */}
-          <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-            <Button
-              title="Submit Report"
-              onPress={handleSubmit}
-              variant="primary"
-              size="large"
-              fullWidth
-              loading={createFeedbackMutation.isPending}
-            />
-          </View>
+          ))}
         </View>
       </View>
-    </Modal>
+
+      {/* Title Input */}
+      <View style={styles.section}>
+        <Text style={[styles.label, { color: colors.text }]}>
+          {t('maps:reportIssue.titleLabel', 'Title')}
+        </Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder={t('maps:reportIssue.titlePlaceholder', 'e.g., Large pothole on Main Street')}
+          maxLength={100}
+        />
+      </View>
+
+      {/* Description Input */}
+      <View style={styles.section}>
+        <Text style={[styles.label, { color: colors.text }]}>
+          {t('maps:reportIssue.descriptionLabel', 'Description (Optional)')}
+        </Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder={t('maps:reportIssue.descriptionPlaceholder', 'Provide additional details...')}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          style={styles.descriptionInput}
+          maxLength={500}
+        />
+      </View>
+
+      {/* Location Info */}
+      {coordinates && (
+        <View style={[styles.locationInfo, { backgroundColor: colors.card }]}>
+          <Text style={[styles.locationLabel, { color: colors.textSecondary }]}>
+            {t('maps:reportIssue.location', 'Location')}
+          </Text>
+          <Text style={[styles.locationText, { color: colors.text }]}>
+            {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
+          </Text>
+        </View>
+      )}
+    </GlassSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
-    minHeight: 500, // Ensure minimum height for content
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-  },
   section: {
     marginBottom: 20,
   },
@@ -284,9 +235,5 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 13,
     fontFamily: 'monospace',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
   },
 });

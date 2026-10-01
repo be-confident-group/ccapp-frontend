@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { View, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { GlassTextSegments } from '@/components/ui/GlassTextSegments';
+import { Spacing } from '@/constants/theme';
 import type { MainTab } from '@/types/leaderboard';
 
 interface CategoryTabsProps {
@@ -10,73 +10,27 @@ interface CategoryTabsProps {
   onTabChange: (tab: MainTab) => void;
 }
 
-const TABS: { key: MainTab; label: string }[] = [
-  { key: 'rides', label: 'Rides' },
-  { key: 'walks', label: 'Walks' },
-  { key: 'gender', label: 'Gender' },
-];
-
 export function CategoryTabs({ selectedTab, onTabChange }: CategoryTabsProps) {
-  const { colors } = useTheme();
+  const { t } = useTranslation('groups');
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {TABS.map((tab) => {
-        const isSelected = selectedTab === tab.key;
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tab,
-              isSelected && {
-                backgroundColor: colors.primary,
-              },
-            ]}
-            onPress={() => onTabChange(tab.key)}
-            activeOpacity={0.7}
-          >
-            <ThemedText
-              style={[
-                styles.tabText,
-                {
-                  color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                  fontWeight: isSelected ? '600' : '400',
-                },
-              ]}
-            >
-              {tab.label}
-            </ThemedText>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.container}>
+      <GlassTextSegments
+        stretch
+        value={selectedTab}
+        onChange={onTabChange}
+        items={[
+          { key: 'rides', label: t('leaderboards.tabs.rides', 'Rides') },
+          { key: 'walks', label: t('leaderboards.tabs.walks', 'Walks') },
+          { key: 'gender', label: t('leaderboards.tabs.gender', 'Gender') },
+        ]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     marginHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BorderRadius.sm,
-  },
-  tabText: {
-    fontSize: 14,
   },
 });

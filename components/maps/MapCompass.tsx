@@ -1,91 +1,74 @@
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
+
+import { GlassButton } from '@/components/ui/GlassButton';
 import { useTheme } from '@/contexts/ThemeContext';
-import { MaterialIcons } from '@expo/vector-icons';
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+
+const SIZE = 44;
+const NEEDLE_WIDTH = 6;
+const NEEDLE_LENGTH = 11;
 
 interface MapCompassProps {
-  heading?: number; // Compass heading in degrees (0 = North)
-  onPress?: () => void; // Optional callback to reset to north
-  fadeWhenNorth?: boolean; // Fade out when facing north (default: true)
+  /** Map camera heading in degrees (0 = north). A shared value so the needle
+   *  follows the camera on the UI thread without re-rendering the screen. */
+  heading: SharedValue<number>;
+  /** Called on tap, e.g. to rotate the map back to north. */
+  onPress: () => void;
 }
 
-export function MapCompass({ heading = 0, onPress, fadeWhenNorth = true }: MapCompassProps) {
+/** Glass compass button whose needle always points to map north. */
+export function MapCompass({ heading, onPress }: MapCompassProps) {
+  const { t } = useTranslation('maps');
   const { colors } = useTheme();
-  const rotation = useSharedValue(0);
 
-  useEffect(() => {
-    // Rotate compass icon opposite to heading so North always points up
-    rotation.value = withTiming(-heading, {
-      duration: 300,
-    });
-  }, [heading]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    // Calculate opacity based on how close to north (0 degrees)
-    // When heading is 0, opacity should be low (0.3)
-    // When heading is far from 0, opacity should be 1
-    let opacity = 1;
-    if (fadeWhenNorth) {
-      const headingAbs = Math.abs(rotation.value % 360);
-      const distanceFromNorth = Math.min(headingAbs, 360 - headingAbs);
-      // Fade out when within 15 degrees of north
-      opacity = interpolate(
-        distanceFromNorth,
-        [0, 15], // 0-15 degrees from north
-        [0.3, 1], // fade to 30% opacity
-        'clamp'
-      );
-    }
-
-    return {
-      transform: [{ rotate: `${rotation.value}deg` }],
-      opacity,
-    };
-  });
-
-  const handlePress = () => {
-    if (onPress) {
-      onPress();
-    }
-  };
+  const dialStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-heading.value}deg` }],
+  }));
 
   return (
-    <Pressable
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-      onPress={handlePress}
-      android_ripple={{ color: colors.primary + '20' }}
-    >
-      <Animated.View style={animatedStyle}>
-        <MaterialIcons name="explore" size={24} color={colors.primary} />
+    <GlassButton onPress={onPress} accessibilityLabel={t('controls.resetNorth')} size={SIZE}>
+      <Animated.View style={[styles.dial, dialStyle]}>
+        <Text style={[styles.north, { color: colors.error }]}>N</Text>
+        <View style={[styles.needleNorth, { borderBottomColor: colors.error }]} />
+        <View style={[styles.needleSouth, { borderTopColor: colors.glassInactive }]} />
       </Animated.View>
-    </Pressable>
+    </GlassButton>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
+  dial: {
+    width: SIZE,
+    height: SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  north: {
+    position: 'absolute',
+    top: 1,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  // Triangles drawn with borders: a red north half and a muted south half.
+  needleNorth: {
+    width: 0,
+    height: 0,
+    marginTop: 6,
+    borderLeftWidth: NEEDLE_WIDTH,
+    borderRightWidth: NEEDLE_WIDTH,
+    borderBottomWidth: NEEDLE_LENGTH,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  needleSouth: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: NEEDLE_WIDTH,
+    borderRightWidth: NEEDLE_WIDTH,
+    borderTopWidth: NEEDLE_LENGTH,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
   },
 });

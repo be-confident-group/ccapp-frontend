@@ -23,7 +23,8 @@
     "maps": "ম্যাপ",
     "groups": "গ্রুপ",
     "you": "আপনি",
-    "quickActions": "দ্রুত কাজ"
+    "quickActions": "দ্রুত কাজ",
+    "feed": "ফিড"
   },
   "status": {
     "loading": "লোড হচ্ছে...",
@@ -87,5 +88,27 @@
     "week_other": "{{count}} weeks ago",
     "month_one": "1 month ago",
     "month_other": "{{count}} months ago"
+  },
+  "quickActionsMenu": {
+    "logRide": "ম্যানুয়ালি রাইড লগ করুন",
+    "rateRoutes": "আমার রুট রেট করুন",
+    "createGroup": "গ্রুপ তৈরি করুন",
+    "shareUpdate": "আপডেট শেয়ার করুন",
+    "close": "বন্ধ করুন"
+  },
+  "headerActions": {
+    "leaderboards": "লিডারবোর্ড",
+    "myClubs": "আমার ক্লাব"
+  },
+  "trophyDetails": {
+    "earned": "অর্জিত",
+    "notEarned": "অর্জিত হয়নি",
+    "progress": "অগ্রগতি"
+  },
+  "weatherDetails": {
+    "feelsLike": "অনুভূত",
+    "humidity": "আর্দ্রতা",
+    "windSpeed": "বাতাসের গতি",
+    "lastUpdated": "সর্বশেষ আপডেট: {{time}}"
   }
 }

@@ -1,15 +1,19 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View, RefreshControl, ActivityIndicator, Modal, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
+import { useTabBarInset, useTabBarScrollHandler } from '@/contexts/TabBarContext';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
+import { Spacing, FontSizes } from '@/constants/theme';
+import { GlassTextSegments } from '@/components/ui/GlassTextSegments';
 import {
   FeedHeader,
   FeedPost,
+  PhotoViewer,
   PostModerationSheet,
 } from '@/components/feed';
 import type { ModerationTarget } from '@/components/feed';
@@ -54,6 +58,8 @@ const FEED_FILTERS: { key: FeedType; labelKey: string }[] = [
 export default function FeedScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+  const tabBarScroll = useTabBarScrollHandler();
+  const tabBarInset = useTabBarInset();
 
   const [feedType, setFeedType] = useState<FeedType>('all');
 
@@ -213,46 +219,28 @@ export default function FeedScreen() {
           onMyClubsPress={handleMyClubsPress}
         />
 
-        <View style={[styles.filterBar, { backgroundColor: colors.background }]}>
-          {FEED_FILTERS.map(({ key, labelKey }) => {
-            const selected = feedType === key;
-            return (
-              <TouchableOpacity
-                key={key}
-                onPress={() => setFeedType(key)}
-                activeOpacity={0.7}
-                style={[
-                  styles.filterPill,
-                  selected
-                    ? { backgroundColor: colors.primary }
-                    : { backgroundColor: colors.surface },
-                ]}
-              >
-                <ThemedText
-                  style={[
-                    styles.filterPillText,
-                    selected
-                      ? { color: '#FFFFFF' }
-                      : { color: colors.textSecondary },
-                  ]}
-                >
-                  {t(labelKey)}
-                </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.filterBar}>
+          <GlassTextSegments
+            items={FEED_FILTERS.map(({ key, labelKey }) => ({ key, label: t(labelKey) }))}
+            value={feedType}
+            onChange={setFeedType}
+            fontSize={FontSizes.sm}
+          />
         </View>
 
-        <FlatList
+        <Animated.FlatList
           data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
           ListFooterComponent={renderFooter}
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: tabBarInset },
             posts.length === 0 && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={tabBarScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -265,26 +253,12 @@ export default function FeedScreen() {
           ListEmptyComponent={renderEmptyState}
         />
       </ThemedView>
-      <Modal
+      <PhotoViewer
         visible={photoViewer != null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPhotoViewer(null)}
-      >
-        <TouchableOpacity
-          style={styles.photoViewerOverlay}
-          activeOpacity={1}
-          onPress={() => setPhotoViewer(null)}
-        >
-          {photoViewer && (
-            <Image
-              source={{ uri: photoViewer.photos[photoViewer.index] }}
-              style={styles.photoViewerImage}
-              resizeMode="contain"
-            />
-          )}
-        </TouchableOpacity>
-      </Modal>
+        photos={photoViewer?.photos ?? []}
+        initialIndex={photoViewer?.index ?? 0}
+        onClose={() => setPhotoViewer(null)}
+      />
       <PostModerationSheet
         visible={moderationTarget != null}
         target={moderationTarget}
@@ -305,16 +279,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  filterPill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-  },
-  filterPillText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '500',
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
@@ -343,15 +307,5 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  photoViewerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoViewerImage: {
-    width: '100%',
-    height: '70%',
   },
 });

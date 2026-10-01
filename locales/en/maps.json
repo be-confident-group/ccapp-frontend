@@ -134,6 +134,103 @@
     "entry_manual": "Manual",
     "status": "Status",
     "avg_speed_backend": "Avg Speed (backend)",
-    "notes_title": "Notes"
+    "notes_title": "Notes",
+    "reclassified_title": "Trip type updated automatically",
+    "reclassified_body": "Changed from {{from}} to {{to}} based on speed — does that match what you remember?",
+    "confirm_prompt": "Is this trip type right?",
+    "confirm": "Confirm",
+    "not_my_trip": "Not my trip",
+    "distance": "Distance",
+    "duration": "Duration",
+    "not_synced": "Not synced",
+    "available": "Available",
+    "entry_type": "Entry Type"
+  },
+  "controls": {
+    "community": "Community feedback",
+    "myFeedback": "My feedback",
+    "global": "Global heatmap",
+    "myHeatmap": "My heatmap",
+    "layers": "Map style",
+    "findLocation": "Find my location",
+    "resetNorth": "Reset to north"
+  },
+  "mapStyles": {
+    "title": "Map style",
+    "auto": {
+      "label": "Default",
+      "description": "Matches your light or dark theme"
+    },
+    "streets": {
+      "label": "Streets",
+      "description": "Standard map"
+    },
+    "outdoors": {
+      "label": "Outdoors",
+      "description": "Topographic with terrain"
+    },
+    "satellite": {
+      "label": "Satellite",
+      "description": "Satellite imagery"
+    }
+  },
+  "bottomSheet": {
+    "recentJourneys": "Recent Journeys",
+    "tripCount_one": "{{count}} trip",
+    "tripCount_other": "{{count}} trips",
+    "seeAllTrips": "See All Trips",
+    "noTrips": "No trips yet",
+    "noTripsHint": "Start tracking to see your journeys here",
+    "distance": "distance",
+    "time": "time",
+    "todayAt": "Today, {{time}}",
+    "yesterdayAt": "Yesterday, {{time}}",
+    "daysAgoAt": "{{count}} days ago, {{time}}",
+    "noRouteData": "No route data",
+    "shortTrip": "Short trip",
+    "kmRoute": "{{distance}} km route",
+    "routeUnavailable": "Route data unavailable",
+    "tripName": {
+      "walk": "Walk Trip",
+      "run": "Run Trip",
+      "cycle": "Cycle Trip",
+      "drive": "Drive Trip"
+    }
+  },
+  "reportIssue": {
+    "title": "Report Issue",
+    "submit": "Submit Report",
+    "category": "Category",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g., Large pothole on Main Street",
+    "descriptionLabel": "Description (Optional)",
+    "descriptionPlaceholder": "Provide additional details...",
+    "location": "Location",
+    "titleRequired": "Title Required",
+    "titleRequiredMessage": "Please enter a title for your report.",
+    "errorTitle": "Error",
+    "locationMissing": "Location data is missing.",
+    "successTitle": "Success",
+    "successMessage": "Your report has been submitted. Thank you!",
+    "ok": "OK",
+    "submitFailed": "Failed to submit your report. Please try again.",
+    "categories": {
+      "road_damage": {
+        "label": "Road Damage",
+        "description": "Potholes, cracks, debris"
+      },
+      "traffic_light": {
+        "label": "Traffic Light",
+        "description": "Signal issues"
+      },
+      "safety_issue": {
+        "label": "Safety Issue",
+        "description": "Dangerous conditions"
+      },
+      "other": {
+        "label": "Other",
+        "description": "Other issues"
+      }
+    }
   }
 }

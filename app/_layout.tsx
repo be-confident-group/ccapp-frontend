@@ -2,7 +2,7 @@
 // This ensures TaskManager.defineTask() executes before any location updates arrive
 import '@/lib/services/LocationTrackingService';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
-import { initTrackingConfig } from '@/lib/services/TrackingConfig';
+import { initTrackingConfig, refreshTrackingConfig } from '@/lib/services/TrackingConfig';
 
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
@@ -13,7 +13,7 @@ import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { UnitsProvider } from '@/contexts/UnitsContext';
 import { TrackingProvider } from '@/contexts/TrackingContext';
 import { QueryProvider } from '@/providers/QueryProvider';
@@ -90,6 +90,13 @@ function RootLayoutNav() {
     initTrackingConfig().catch(err => console.warn('[App] TrackingConfig init failed:', err));
   }, []);
 
+  // The tracking-config endpoint requires auth, so fetch it again once signed in.
+  const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    refreshTrackingConfig().catch(err => console.warn('[App] TrackingConfig refresh failed:', err));
+  }, [isAuthenticated]);
+
   // Cold-start: the app was launched by tapping a notification while killed.
   // addNotificationResponseReceivedListener does NOT fire in this case — we must
   // call getLastNotificationResponseAsync() to retrieve the tap.
@@ -137,7 +144,8 @@ function RootLayoutNav() {
           name="modals/quick-actions-modal"
           options={{
             presentation: 'transparentModal',
-            animation: 'fade',
+            // The menu animates itself out of the tab bar "+" button.
+            animation: 'none',
             headerShown: false,
           }}
         />

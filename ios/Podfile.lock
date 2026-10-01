@@ -233,6 +233,8 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (14.0.11):
     - ExpoModulesCore
+  - ExpoGlassEffect (0.1.10):
+    - ExpoModulesCore
   - ExpoHaptics (15.0.8):
     - ExpoModulesCore
   - ExpoHead (6.0.23):
@@ -2465,6 +2467,7 @@ DEPENDENCIES:
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
+  - ExpoGlassEffect (from `../node_modules/expo-glass-effect/ios`)
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
   - ExpoHead (from `../node_modules/expo-router/ios`)
   - ExpoImage (from `../node_modules/expo-image/ios`)
@@ -2627,6 +2630,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
+  ExpoGlassEffect:
+    :path: "../node_modules/expo-glass-effect/ios"
   ExpoHaptics:
     :path: "../node_modules/expo-haptics/ios"
   ExpoHead:
@@ -2850,6 +2855,7 @@ SPEC CHECKSUMS:
   ExpoCrypto: b6105ebaa15d6b38a811e71e43b52cd934945322
   ExpoFileSystem: 858a44267a3e6e9057e0888ad7c7cfbf55d52063
   ExpoFont: f543ce20a228dd702813668b1a07b46f51878d47
+  ExpoGlassEffect: 2fd78765fb4633fc2575779a521ca6adb3488881
   ExpoHaptics: d3a6375d8dcc3a1083d003bc2298ff654fafb536
   ExpoHead: 7e19b2272edf492262acf8afb391a295198a6b23
   ExpoImage: 686f972bff29525733aa13357f6691dc90aa03d8
@@ -2968,6 +2974,6 @@ SPEC CHECKSUMS:
   UMAppLoader: 145337733539f9af9b3dd97eeaa7f3bd97cacb23
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a
 
-PODFILE CHECKSUM: bc8eefd690b35d1c909ee21ae60d6c98d7875af1
+PODFILE CHECKSUM: 0f08c53084116ebbad230e7e31f3e421bef14edf
 
 COCOAPODS: 1.16.2

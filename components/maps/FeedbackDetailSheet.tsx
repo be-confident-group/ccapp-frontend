@@ -4,23 +4,13 @@
  */
 
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { MaterialIcons } from '@expo/vector-icons';
+import { GlassSheet } from '@/components/ui/GlassSheet';
 import type { MapFeedback } from '@/lib/api/mapFeedback';
 import type { GlobalFeedback } from '@/lib/api/globalFeedback';
 import { getCategoryIcon } from '@/lib/utils/feedbackHelpers';
 import { useTranslation } from 'react-i18next';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface FeedbackDetailSheetProps {
   feedback: MapFeedback | GlobalFeedback | null;
@@ -62,120 +52,62 @@ export function FeedbackDetailSheet({ feedback, visible, onClose }: FeedbackDeta
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-      >
-        <View
-          style={[
-            styles.container,
-            { backgroundColor: colors.card, borderTopColor: colors.border },
-          ]}
-          onStartShouldSetResponder={() => true}
-        >
-          {/* Handle bar */}
-          <View style={styles.handleContainer}>
-            <View style={[styles.handle, { backgroundColor: colors.textSecondary }]} />
-          </View>
+    <GlassSheet visible={visible} onClose={onClose}>
+    {/* Header with icon and category */}
+    <View style={styles.header}>
+      <Text style={styles.icon}>{categoryIcon}</Text>
+      <Text style={[styles.category, { color: colors.text }]}>
+        {categoryText}
+      </Text>
+    </View>
 
-          <ScrollView style={styles.content}>
-            {/* Header with icon and category */}
-            <View style={styles.header}>
-              <Text style={styles.icon}>{categoryIcon}</Text>
-              <Text style={[styles.category, { color: colors.text }]}>
-                {categoryText}
-              </Text>
-            </View>
+    {/* Personal feedback details */}
+    {isPersonal && (
+      <>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {feedback.title}
+        </Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>
+          {feedback.description}
+        </Text>
+        <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
+          {formatDate(feedback.created_at)}
+        </Text>
+      </>
+    )}
 
-            {/* Personal feedback details */}
-            {isPersonal && (
-              <>
-                <Text style={[styles.title, { color: colors.text }]}>
-                  {feedback.title}
-                </Text>
-                <Text style={[styles.description, { color: colors.textSecondary }]}>
-                  {feedback.description}
-                </Text>
-                <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
-                  {formatDate(feedback.created_at)}
-                </Text>
-              </>
-            )}
-
-            {/* Global feedback details */}
-            {!isPersonal && (
-              <>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t('maps:feedback.confidence.label', 'Confidence')}:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {t(`maps:feedback.confidence.${feedback.confidence_level}`, feedback.confidence_level)}{' '}
-                    {getConfidenceStars(feedback.confidence_level)}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t('maps:feedback.signal_strength', 'Signal Strength')}:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {Math.round(feedback.signal_strength * 100)}%
-                  </Text>
-                </View>
-
-                <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
-                  {t('maps:feedback.last_updated', 'Last updated')}: {formatDate(feedback.last_processed_at)}
-                </Text>
-              </>
-            )}
-          </ScrollView>
-
-          {/* Close button */}
-          <Pressable
-            style={[styles.closeButton, { backgroundColor: colors.primary }]}
-            onPress={onClose}
-          >
-            <MaterialIcons name="close" size={24} color="#FFFFFF" />
-          </Pressable>
+    {/* Global feedback details */}
+    {!isPersonal && (
+      <>
+        <View style={styles.infoRow}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            {t('maps:feedback.confidence.label', 'Confidence')}:
+          </Text>
+          <Text style={[styles.value, { color: colors.text }]}>
+            {t(`maps:feedback.confidence.${feedback.confidence_level}`, feedback.confidence_level)}{' '}
+            {getConfidenceStars(feedback.confidence_level)}
+          </Text>
         </View>
-      </Pressable>
-    </Modal>
+
+        <View style={styles.infoRow}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            {t('maps:feedback.signal_strength', 'Signal Strength')}:
+          </Text>
+          <Text style={[styles.value, { color: colors.text }]}>
+            {Math.round(feedback.signal_strength * 100)}%
+          </Text>
+        </View>
+
+        <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
+          {t('maps:feedback.last_updated', 'Last updated')}: {formatDate(feedback.last_processed_at)}
+        </Text>
+      </>
+    )}
+    </GlassSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    maxHeight: SCREEN_HEIGHT * 0.6,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    paddingBottom: 20,
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.3,
-  },
-  content: {
-    paddingHorizontal: 20,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -215,15 +147,5 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 13,
     marginTop: 8,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

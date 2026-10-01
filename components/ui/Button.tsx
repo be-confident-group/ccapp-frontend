@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   StyleSheet,
   ActivityIndicator,
@@ -8,9 +8,16 @@ import {
   TextStyle,
   View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { GlassSurface } from '@/components/ui/GlassSurface';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text' | 'danger';
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const PRESS_SPRING = { damping: 15, stiffness: 400 };
+const GLASS_RADIUS = 999;
+
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text' | 'danger' | 'glass';
 export type ButtonSize = 'small' | 'medium' | 'large';
 
 interface ButtonProps {
@@ -41,6 +48,22 @@ export default function Button({
   textStyle,
 }: ButtonProps) {
   const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const inactive = disabled || loading;
+
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = () => {
+    if (inactive) return;
+    scale.value = withSpring(0.96, PRESS_SPRING);
+    if (process.env.EXPO_OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, PRESS_SPRING);
+  };
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
@@ -81,6 +104,12 @@ export default function Button({
           ...baseStyle,
           backgroundColor: disabled ? colors.border : '#F44336',
         };
+      case 'glass':
+        return {
+          ...baseStyle,
+          borderRadius: GLASS_RADIUS,
+          backgroundColor: 'transparent',
+        };
       default:
         return baseStyle;
     }
@@ -110,6 +139,11 @@ export default function Button({
           ...baseTextStyle,
           color: disabled ? colors.textSecondary : colors.primary,
         };
+      case 'glass':
+        return {
+          ...baseTextStyle,
+          color: disabled ? colors.textSecondary : colors.glassTint,
+        };
       default:
         return baseTextStyle;
     }
@@ -120,7 +154,11 @@ export default function Button({
       return (
         <ActivityIndicator
           size={size === 'small' ? 'small' : 'small'}
-          color={variant === 'outline' || variant === 'text' ? colors.primary : '#fff'}
+          color={variant === 'outline' || variant === 'text'
+              ? colors.primary
+              : variant === 'glass'
+                ? colors.glassTint
+                : '#fff'}
         />
       );
     }
@@ -135,14 +173,18 @@ export default function Button({
   };
 
   return (
-    <TouchableOpacity
-      style={[getButtonStyle(), style]}
+    <AnimatedPressable
+      style={[getButtonStyle(), style, animatedStyle]}
       onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={inactive}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: inactive, busy: loading }}
     >
+      {variant === 'glass' && <GlassSurface borderRadius={GLASS_RADIUS} interactive />}
       {renderContent()}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 

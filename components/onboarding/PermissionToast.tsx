@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, {
+  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   BellIcon,
@@ -18,14 +19,17 @@ import {
 } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import Button from '@/components/ui/Button';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import { TAB_BAR_HEIGHT, useTabBarBottomOffset } from '@/contexts/TabBarContext';
 import { ThemedText } from '@/components/themed-text';
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
+import { FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   usePermissionToasts,
   type PermissionToastKey,
 } from '@/lib/hooks/usePermissionToasts';
 
-const TAB_BAR_HEIGHT = 80;
+const TOAST_RADIUS = 28;
+const SHOW_SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
 
 type IconComponent = React.ComponentType<{ size: number; color: string }>;
 
@@ -39,59 +43,63 @@ const ICONS: Record<PermissionToastKey, IconComponent> = {
 export function PermissionToast() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
-  const insets = useSafeAreaInsets();
+  const tabBarBottom = useTabBarBottomOffset();
   const { current, isRequesting, handleAllow, handleOpenSettings, handleDismiss } =
     usePermissionToasts();
 
   // Keep a local copy so the card content stays visible during the exit animation
   const [displayed, setDisplayed] = useState(current);
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
+  // 0 = hidden below, 1 = shown. Only transforms animate: opacity would break the glass.
+  const progress = useSharedValue(0);
 
   useEffect(() => {
     if (current) {
       setDisplayed(current);
-      opacity.value = withTiming(1, { duration: 250 });
-      translateY.value = withTiming(0, { duration: 250 });
+      progress.value = withSpring(1, SHOW_SPRING);
     } else {
-      opacity.value = withTiming(0, { duration: 200 }, (finished) => {
-        if (finished) runOnJS(setDisplayed)(null);
-      });
-      translateY.value = withTiming(20, { duration: 200 });
+      progress.value = withTiming(
+        0,
+        { duration: 200, easing: Easing.in(Easing.cubic) },
+        (finished) => {
+          if (finished) runOnJS(setDisplayed)(null);
+        }
+      );
     }
-  }, [current, opacity, translateY]);
+  }, [current, progress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [
+      { translateY: (1 - progress.value) * 140 },
+      { scale: 0.9 + 0.1 * progress.value },
+    ],
   }));
 
   if (!displayed) return null;
 
   const Icon = ICONS[displayed.key];
   const toastKey = displayed.key;
-  const bottomOffset = TAB_BAR_HEIGHT + insets.bottom + 12;
+  const bottomOffset = tabBarBottom + TAB_BAR_HEIGHT + 12;
 
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          shadowColor: colors.shadow,
           bottom: bottomOffset,
         },
         animatedStyle,
       ]}
     >
+      <GlassSurface borderRadius={TOAST_RADIUS} />
       {/* Icon box */}
       <View
         style={[
           styles.iconBox,
-          { backgroundColor: colors.primary + '1F' },
+          { backgroundColor: colors.glassHighlight },
         ]}
       >
-        <Icon size={18} color={colors.primary} />
+        <Icon size={18} color={colors.glassTint} />
       </View>
 
       {/* Text */}
@@ -120,10 +128,12 @@ export function PermissionToast() {
       {/* Dismiss */}
       <TouchableOpacity
         onPress={handleDismiss}
+        accessibilityRole="button"
+        accessibilityLabel={t('permissionToast.dismiss')}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={styles.dismiss}
       >
-        <XMarkIcon size={16} color={colors.textMuted} />
+        <XMarkIcon size={16} color={colors.glassInactive} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -138,11 +148,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    shadowColor: '#000',
+    paddingLeft: Spacing.md,
+    borderRadius: TOAST_RADIUS,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.18,
     shadowRadius: 12,
     elevation: 8,
     zIndex: 100,
@@ -150,7 +159,7 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 36,
     height: 36,
-    borderRadius: BorderRadius.md,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

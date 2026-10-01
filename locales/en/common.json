@@ -23,7 +23,8 @@
     "maps": "Maps",
     "groups": "Groups",
     "you": "You",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "feed": "Feed"
   },
   "status": {
     "loading": "Loading...",
@@ -100,5 +101,27 @@
     "motion_body": "Apple's activity sensor tells us whether you're walking, cycling, or in a vehicle — so we don't need to guess from GPS speed alone.",
     "grant": "Grant permissions",
     "skip": "Maybe later"
+  },
+  "quickActionsMenu": {
+    "logRide": "Log Ride Manually",
+    "rateRoutes": "Rate My Routes",
+    "createGroup": "Create Group",
+    "shareUpdate": "Share Update",
+    "close": "Close"
+  },
+  "headerActions": {
+    "leaderboards": "Leaderboards",
+    "myClubs": "My clubs"
+  },
+  "trophyDetails": {
+    "earned": "Earned",
+    "notEarned": "Not Earned",
+    "progress": "Progress"
+  },
+  "weatherDetails": {
+    "feelsLike": "Feels Like",
+    "humidity": "Humidity",
+    "windSpeed": "Wind Speed",
+    "lastUpdated": "Last updated: {{time}}"
   }
 }

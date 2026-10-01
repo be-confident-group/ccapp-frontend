@@ -169,5 +169,15 @@
       "label": "Solicitudes de unirse",
       "subtitle": "Cuando alguien solicita unirse a tu grupo"
     }
+  },
+  "leaderboards": {
+    "gender": {
+      "all": "Todos",
+      "male": "Hombres",
+      "female": "Mujeres"
+    }
+  },
+  "photoViewer": {
+    "counter": "{{current}} / {{total}}"
   }
 }

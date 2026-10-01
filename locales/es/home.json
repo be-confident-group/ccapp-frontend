@@ -5,8 +5,10 @@
     "tracking": {
       "on": "Seguimiento activado",
       "off": "Seguimiento desactivado",
-      "subtitle": "Viajes y caminatas"
-    }
+      "subtitle": "Viajes y caminatas",
+      "offSubtitle": "Sin seguimiento en segundo plano"
+    },
+    "greetingAnonymous": "¡Hola!"
   },
   "stats": {
     "walked": "km caminados",

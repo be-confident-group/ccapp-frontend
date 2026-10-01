@@ -2,20 +2,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Trophy } from '@/lib/api/trophies';
-import { XMarkIcon } from 'react-native-heroicons/outline';
+import { GlassSheet } from '@/components/ui/GlassSheet';
+import { useTranslation } from 'react-i18next';
 import React from 'react';
-import {
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  Image,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
-
-const { width } = Dimensions.get('window');
-const MODAL_WIDTH = Math.min(width - 48, 400);
+import { StyleSheet, View, Image } from 'react-native';
 
 interface TrophyDetailsModalProps {
   visible: boolean;
@@ -25,152 +15,82 @@ interface TrophyDetailsModalProps {
 
 export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   if (!trophy) return null;
 
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.backdrop}>
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={onClose}
+    <GlassSheet visible={visible} onClose={onClose}>
+        {/* Trophy Icon */}
+        <View style={styles.iconContainer}>
+          <Image
+            source={require('@/assets/images/page-icons/trophy.png')}
+            style={[
+              styles.trophyImage,
+              { opacity: trophy.is_earned ? 1 : 0.4 }
+            ]}
+          />
+        </View>
+
+        {/* Trophy Name */}
+        <ThemedText style={styles.trophyName}>{trophy.name}</ThemedText>
+
+        {/* Status Badge */}
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: trophy.is_earned
+                ? colors.primary + '20'
+                : colors.border,
+            },
+          ]}
         >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+          <ThemedText
+            style={[
+              styles.statusText,
+              {
+                color: trophy.is_earned ? colors.primary : colors.textSecondary,
+              },
+            ]}
           >
-            <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
-              {/* Close Button */}
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-              >
-                <XMarkIcon size={24} color={colors.icon} />
-              </TouchableOpacity>
+            {trophy.is_earned ? t('common:trophyDetails.earned', 'Earned') : t('common:trophyDetails.notEarned', 'Not Earned')}
+          </ThemedText>
+        </View>
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-              >
-                {/* Trophy Icon */}
-                <View style={styles.iconContainer}>
-                  <Image
-                    source={require('@/assets/images/page-icons/trophy.png')}
-                    style={[
-                      styles.trophyImage,
-                      { opacity: trophy.is_earned ? 1 : 0.4 }
-                    ]}
-                  />
-                </View>
+        {/* Description */}
+        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+          {trophy.description}
+        </ThemedText>
 
-                {/* Trophy Name */}
-                <ThemedText style={styles.trophyName}>{trophy.name}</ThemedText>
-
-                {/* Status Badge */}
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: trophy.is_earned
-                        ? colors.primary + '20'
-                        : colors.border,
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    style={[
-                      styles.statusText,
-                      {
-                        color: trophy.is_earned ? colors.primary : colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {trophy.is_earned ? 'Earned' : 'Not Earned'}
-                  </ThemedText>
-                </View>
-
-                {/* Description */}
-                <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                  {trophy.description}
-                </ThemedText>
-
-                {/* Progress Bar */}
-                {!trophy.is_earned && (
-                  <View style={styles.progressSection}>
-                    <View style={styles.progressHeader}>
-                      <ThemedText style={styles.progressLabel}>Progress</ThemedText>
-                      <ThemedText style={[styles.progressPercentage, { color: colors.primary }]}>
-                        {Math.round(trophy.progress)}%
-                      </ThemedText>
-                    </View>
-                    <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-                      <View
-                        style={[
-                          styles.progressBarFill,
-                          {
-                            backgroundColor: colors.primary,
-                            width: `${trophy.progress}%`,
-                          },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                )}
-
-              </ScrollView>
+        {/* Progress Bar */}
+        {!trophy.is_earned && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressHeader}>
+              <ThemedText style={styles.progressLabel}>{t('common:trophyDetails.progress', 'Progress')}</ThemedText>
+              <ThemedText style={[styles.progressPercentage, { color: colors.primary }]}>
+                {Math.round(trophy.progress)}%
+              </ThemedText>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+            <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    backgroundColor: colors.primary,
+                    width: `${trophy.progress}%`,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        )}
+    </GlassSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  backdropTouchable: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalContainer: {
-    width: MODAL_WIDTH,
-    borderRadius: 24,
-    padding: Spacing.xl,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 16,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  scrollContent: {
-    paddingTop: Spacing.md,
-  },
   iconContainer: {
     alignItems: 'center',
     marginBottom: Spacing.lg,

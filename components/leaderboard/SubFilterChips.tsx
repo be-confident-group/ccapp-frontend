@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import { Spacing } from '@/constants/theme';
 import type { MainTab, RidesWalksSubFilter, GenderSubFilter } from '@/types/leaderboard';
+
+const PRESS_SPRING = { damping: 15, stiffness: 400 };
+const CHIP_RADIUS = 16;
 
 interface SubFilterChipsProps {
   mainTab: MainTab;
@@ -11,87 +18,115 @@ interface SubFilterChipsProps {
   onFilterChange: (filter: RidesWalksSubFilter | GenderSubFilter) => void;
 }
 
-const RIDES_WALKS_FILTERS: { key: RidesWalksSubFilter; label: string }[] = [
-  { key: 'distance', label: 'Distance' },
-  { key: 'trips', label: 'Trips' },
+const RIDES_WALKS_FILTERS: { key: RidesWalksSubFilter; labelKey: string; fallback: string }[] = [
+  { key: 'distance', labelKey: 'leaderboards.filters.distance', fallback: 'Distance' },
+  { key: 'trips', labelKey: 'leaderboards.filters.trips', fallback: 'Trips' },
 ];
 
-const GENDER_FILTERS: { key: GenderSubFilter; label: string }[] = [
-  { key: 'male', label: 'Top Male' },
-  { key: 'female', label: 'Top Female' },
-  { key: 'new_male', label: 'New Male' },
-  { key: 'new_female', label: 'New Female' },
+const GENDER_FILTERS: { key: GenderSubFilter; labelKey: string; fallback: string }[] = [
+  { key: 'male', labelKey: 'leaderboards.filters.topMale', fallback: 'Top Male' },
+  { key: 'female', labelKey: 'leaderboards.filters.topFemale', fallback: 'Top Female' },
+  { key: 'new_male', labelKey: 'leaderboards.filters.newMale', fallback: 'New Male' },
+  { key: 'new_female', labelKey: 'leaderboards.filters.newFemale', fallback: 'New Female' },
 ];
+
+interface GlassChipProps {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}
+
+function GlassChip({ label, selected, onPress }: GlassChipProps) {
+  const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={[styles.chipShadow, { shadowColor: colors.shadow }, animatedStyle]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={label}
+        onPress={onPress}
+        onPressIn={() => {
+          scale.value = withSpring(0.94, PRESS_SPRING);
+          if (!selected && process.env.EXPO_OS !== 'web') {
+            Haptics.selectionAsync();
+          }
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, PRESS_SPRING);
+        }}
+        style={styles.chip}
+      >
+        <GlassSurface borderRadius={CHIP_RADIUS} interactive />
+        {selected && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.chipFill, { backgroundColor: colors.glassActiveFill }]}
+          />
+        )}
+        <ThemedText
+          style={[
+            styles.chipText,
+            { color: selected ? '#FFFFFF' : colors.glassInactive, fontWeight: selected ? '600' : '500' },
+          ]}
+        >
+          {label}
+        </ThemedText>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export function SubFilterChips({
   mainTab,
   selectedFilter,
   onFilterChange,
 }: SubFilterChipsProps) {
-  const { colors } = useTheme();
+  const { t } = useTranslation('groups');
 
   const filters = mainTab === 'gender' ? GENDER_FILTERS : RIDES_WALKS_FILTERS;
 
-  // Use segmented control style for all filters
   return (
-    <View
-      style={[
-        styles.segmentedContainer,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {filters.map((filter) => {
-        const isSelected = selectedFilter === filter.key;
-        return (
-          <TouchableOpacity
-            key={filter.key}
-            style={[
-              styles.segment,
-              isSelected && {
-                backgroundColor: colors.primary,
-              },
-            ]}
-            onPress={() => onFilterChange(filter.key)}
-            activeOpacity={0.7}
-          >
-            <ThemedText
-              style={[
-                styles.segmentText,
-                {
-                  color: isSelected ? '#FFFFFF' : colors.textSecondary,
-                  fontWeight: isSelected ? '600' : '400',
-                },
-              ]}
-            >
-              {filter.label}
-            </ThemedText>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.row}>
+      {filters.map((filter) => (
+        <GlassChip
+          key={filter.key}
+          label={t(filter.labelKey, filter.fallback)}
+          selected={selectedFilter === filter.key}
+          onPress={() => onFilterChange(filter.key)}
+        />
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  segmentedContainer: {
+  row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: Spacing.lg,
     marginVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    padding: 4,
+    gap: Spacing.sm,
   },
-  segment: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
+  chipShadow: {
+    borderRadius: CHIP_RADIUS,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  chip: {
+    height: CHIP_RADIUS * 2,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.sm,
   },
-  segmentText: {
-    fontSize: 14,
+  chipFill: {
+    borderRadius: CHIP_RADIUS,
+  },
+  chipText: {
+    fontSize: 13,
   },
 });

@@ -7,3 +7,4 @@ export { PostActions } from './PostActions';
 export { GroupSelectorModal } from './GroupSelectorModal';
 export { PostModerationSheet } from './PostModerationSheet';
 export type { ModerationTarget } from './PostModerationSheet';
+export { PhotoViewer } from './PhotoViewer';

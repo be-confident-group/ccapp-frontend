@@ -107,7 +107,8 @@
     "notifications": {
       "title": "Notifications turned off",
       "subtitle": "Useful for background tracking alerts"
-    }
+    },
+    "dismiss": "Dismiss"
   },
   "locationPrompt": {
     "title": "Location Access Needed",

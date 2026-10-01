@@ -107,7 +107,8 @@
     "notifications": {
       "title": "Notificaciones desactivadas",
       "subtitle": "Útil para alertas de seguimiento en segundo plano"
-    }
+    },
+    "dismiss": "Descartar"
   },
   "locationPrompt": {
     "title": "Acceso a la ubicación necesario",

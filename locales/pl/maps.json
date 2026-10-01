@@ -52,5 +52,104 @@
     "noHistoryMessage": "Start tracking your rides to see them here",
     "noFeedback": "No feedback yet",
     "noFeedbackMessage": "Rate routes to see your feedback here"
+  },
+  "controls": {
+    "community": "Opinie społeczności",
+    "myFeedback": "Moje opinie",
+    "global": "Globalna mapa cieplna",
+    "myHeatmap": "Moja mapa cieplna",
+    "layers": "Styl mapy",
+    "findLocation": "Znajdź moją lokalizację",
+    "resetNorth": "Ustaw na północ"
+  },
+  "mapStyles": {
+    "title": "Styl mapy",
+    "auto": {
+      "label": "Domyślny",
+      "description": "Dopasowuje się do jasnego lub ciemnego motywu"
+    },
+    "streets": {
+      "label": "Ulice",
+      "description": "Standardowa mapa"
+    },
+    "outdoors": {
+      "label": "Teren",
+      "description": "Topografia z ukształtowaniem terenu"
+    },
+    "satellite": {
+      "label": "Satelita",
+      "description": "Zdjęcia satelitarne"
+    }
+  },
+  "bottomSheet": {
+    "recentJourneys": "Ostatnie podróże",
+    "tripCount_one": "{{count}} przejazd",
+    "tripCount_other": "{{count}} przejazdów",
+    "seeAllTrips": "Zobacz wszystkie",
+    "noTrips": "Brak przejazdów",
+    "noTripsHint": "Zacznij śledzić, aby zobaczyć tu swoje podróże",
+    "distance": "dystans",
+    "time": "czas",
+    "todayAt": "Dziś, {{time}}",
+    "yesterdayAt": "Wczoraj, {{time}}",
+    "daysAgoAt": "{{count}} dni temu, {{time}}",
+    "noRouteData": "Brak danych trasy",
+    "shortTrip": "Krótki przejazd",
+    "kmRoute": "Trasa {{distance}} km",
+    "routeUnavailable": "Dane trasy niedostępne",
+    "tripName": {
+      "walk": "Spacer",
+      "run": "Bieg",
+      "cycle": "Przejazd rowerem",
+      "drive": "Jazda samochodem"
+    }
+  },
+  "reportIssue": {
+    "title": "Zgłoś problem",
+    "submit": "Wyślij zgłoszenie",
+    "category": "Kategoria",
+    "titleLabel": "Tytuł",
+    "titlePlaceholder": "np. Duża dziura na głównej ulicy",
+    "descriptionLabel": "Opis (opcjonalnie)",
+    "descriptionPlaceholder": "Podaj dodatkowe szczegóły...",
+    "location": "Lokalizacja",
+    "titleRequired": "Tytuł wymagany",
+    "titleRequiredMessage": "Wpisz tytuł zgłoszenia.",
+    "errorTitle": "Błąd",
+    "locationMissing": "Brak danych lokalizacji.",
+    "successTitle": "Gotowe",
+    "successMessage": "Zgłoszenie zostało wysłane. Dziękujemy!",
+    "ok": "OK",
+    "submitFailed": "Nie udało się wysłać zgłoszenia. Spróbuj ponownie.",
+    "categories": {
+      "road_damage": {
+        "label": "Uszkodzenie drogi",
+        "description": "Dziury, pęknięcia, gruz"
+      },
+      "traffic_light": {
+        "label": "Sygnalizacja",
+        "description": "Problemy z sygnalizacją"
+      },
+      "safety_issue": {
+        "label": "Problem z bezpieczeństwem",
+        "description": "Niebezpieczne warunki"
+      },
+      "other": {
+        "label": "Inne",
+        "description": "Inne problemy"
+      }
+    }
+  },
+  "trip_detail": {
+    "reclassified_title": "Typ przejazdu zaktualizowany automatycznie",
+    "reclassified_body": "Zmieniono z {{from}} na {{to}} na podstawie prędkości — czy to się zgadza?",
+    "confirm_prompt": "Czy typ przejazdu jest poprawny?",
+    "confirm": "Potwierdź",
+    "not_my_trip": "To nie mój przejazd",
+    "distance": "Dystans",
+    "duration": "Czas trwania",
+    "not_synced": "Niezsynchronizowane",
+    "available": "Dostępne",
+    "entry_type": "Typ wpisu"
   }
 }

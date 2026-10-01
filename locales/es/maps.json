@@ -134,6 +134,103 @@
     "entry_manual": "Manual",
     "status": "Estado",
     "avg_speed_backend": "Velocidad media (servidor)",
-    "notes_title": "Notas"
+    "notes_title": "Notas",
+    "reclassified_title": "Tipo de viaje actualizado automáticamente",
+    "reclassified_body": "Cambiado de {{from}} a {{to}} según la velocidad. ¿Coincide con lo que recuerdas?",
+    "confirm_prompt": "¿Es correcto este tipo de viaje?",
+    "confirm": "Confirmar",
+    "not_my_trip": "No es mi viaje",
+    "distance": "Distancia",
+    "duration": "Duración",
+    "not_synced": "No sincronizado",
+    "available": "Disponible",
+    "entry_type": "Tipo de registro"
+  },
+  "controls": {
+    "community": "Comentarios de la comunidad",
+    "myFeedback": "Mis comentarios",
+    "global": "Mapa de calor global",
+    "myHeatmap": "Mi mapa de calor",
+    "layers": "Estilo del mapa",
+    "findLocation": "Buscar mi ubicación",
+    "resetNorth": "Orientar al norte"
+  },
+  "mapStyles": {
+    "title": "Estilo del mapa",
+    "auto": {
+      "label": "Predeterminado",
+      "description": "Se adapta a tu tema claro u oscuro"
+    },
+    "streets": {
+      "label": "Calles",
+      "description": "Mapa estándar"
+    },
+    "outdoors": {
+      "label": "Exterior",
+      "description": "Topográfico con relieve"
+    },
+    "satellite": {
+      "label": "Satélite",
+      "description": "Imágenes de satélite"
+    }
+  },
+  "bottomSheet": {
+    "recentJourneys": "Viajes recientes",
+    "tripCount_one": "{{count}} viaje",
+    "tripCount_other": "{{count}} viajes",
+    "seeAllTrips": "Ver todos los viajes",
+    "noTrips": "Aún no hay viajes",
+    "noTripsHint": "Empieza a registrar para ver tus viajes aquí",
+    "distance": "distancia",
+    "time": "tiempo",
+    "todayAt": "Hoy, {{time}}",
+    "yesterdayAt": "Ayer, {{time}}",
+    "daysAgoAt": "Hace {{count}} días, {{time}}",
+    "noRouteData": "Sin datos de ruta",
+    "shortTrip": "Viaje corto",
+    "kmRoute": "Ruta de {{distance}} km",
+    "routeUnavailable": "Datos de ruta no disponibles",
+    "tripName": {
+      "walk": "Paseo",
+      "run": "Carrera",
+      "cycle": "Paseo en bici",
+      "drive": "Viaje en coche"
+    }
+  },
+  "reportIssue": {
+    "title": "Reportar problema",
+    "submit": "Enviar reporte",
+    "category": "Categoría",
+    "titleLabel": "Título",
+    "titlePlaceholder": "p. ej., Bache grande en la calle principal",
+    "descriptionLabel": "Descripción (opcional)",
+    "descriptionPlaceholder": "Añade más detalles...",
+    "location": "Ubicación",
+    "titleRequired": "Título obligatorio",
+    "titleRequiredMessage": "Introduce un título para tu reporte.",
+    "errorTitle": "Error",
+    "locationMissing": "Faltan los datos de ubicación.",
+    "successTitle": "Listo",
+    "successMessage": "Tu reporte se ha enviado. ¡Gracias!",
+    "ok": "Aceptar",
+    "submitFailed": "No se pudo enviar el reporte. Inténtalo de nuevo.",
+    "categories": {
+      "road_damage": {
+        "label": "Daños en la vía",
+        "description": "Baches, grietas, escombros"
+      },
+      "traffic_light": {
+        "label": "Semáforo",
+        "description": "Problemas de señal"
+      },
+      "safety_issue": {
+        "label": "Problema de seguridad",
+        "description": "Condiciones peligrosas"
+      },
+      "other": {
+        "label": "Otro",
+        "description": "Otros problemas"
+      }
+    }
   }
 }

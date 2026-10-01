@@ -5,8 +5,10 @@
     "tracking": {
       "on": "Tracking on",
       "off": "Tracking off",
-      "subtitle": "Rides & walks"
-    }
+      "subtitle": "Rides & walks",
+      "offSubtitle": "No background tracking"
+    },
+    "greetingAnonymous": "Hi there!"
   },
   "stats": {
     "walked": "km walked",
