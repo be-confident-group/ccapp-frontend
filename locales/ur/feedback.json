@@ -6,7 +6,13 @@
     "bugReport": "Bug Report",
     "featureRequest": "Feature Request",
     "generalFeedback": "General Feedback",
-    "other": "Other"
+    "other": "Other",
+    "bugReportShort": "خرابی",
+    "featureRequestShort": "خیال",
+    "generalFeedbackShort": "عمومی",
+    "bugReportDescription": "خرابی یا مسئلہ رپورٹ کریں",
+    "featureRequestDescription": "نئی خصوصیت تجویز کریں",
+    "generalFeedbackDescription": "اپنی رائے دیں"
   },
   "message": {
     "label": "Message",
@@ -19,10 +25,32 @@
   "submit": "Submit Feedback",
   "success": {
     "title": "Thank You!",
-    "message": "Your feedback has been submitted successfully."
+    "message": "Your feedback has been submitted successfully.",
+    "ok": "ٹھیک ہے"
   },
   "error": {
     "title": "Error",
     "message": "Unable to submit feedback. Please try again."
+  },
+  "subject": {
+    "label": "موضوع (اختیاری)",
+    "placeholder": "اپنی رائے کا مختصر خلاصہ"
+  },
+  "attachments": {
+    "label": "منسلکات (اختیاری)",
+    "hint": "آپ 3 تک تصاویر منسلک کر سکتے ہیں (صرف PNG یا JPG)",
+    "add": "تصویر شامل کریں",
+    "remove": "تصویر ہٹائیں",
+    "limitTitle": "حد پوری ہو گئی",
+    "limitMessage": "آپ 3 تک تصاویر منسلک کر سکتے ہیں۔",
+    "permissionTitle": "اجازت درکار ہے",
+    "permissionMessage": "تصاویر منسلک کرنے کے لیے فوٹو لائبریری کی اجازت دیں۔",
+    "invalidTypeTitle": "غلط فائل کی قسم",
+    "invalidTypeMessage": "براہ کرم PNG یا JPG تصویر منتخب کریں۔",
+    "pickError": "تصویر منتخب نہیں ہو سکی۔ دوبارہ کوشش کریں۔"
+  },
+  "validation": {
+    "messageRequiredTitle": "پیغام ضروری ہے",
+    "messageRequiredMessage": "براہ کرم اپنی رائے لکھیں۔"
   }
 }

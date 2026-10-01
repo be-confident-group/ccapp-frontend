@@ -1,34 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  AppStateStatus,
-  Platform,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, AppStateStatus, Platform, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  BellIcon,
-  BoltIcon,
-  CheckCircleIcon,
-  ChevronRightIcon,
-  ExclamationCircleIcon,
-  HeartIcon,
-  MapIcon,
-  MapPinIcon,
-  QuestionMarkCircleIcon,
-} from 'react-native-heroicons/outline';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import Header from '@/components/layout/Header';
-import Card from '@/components/ui/Card';
+import { BellIcon, BoltIcon, HeartIcon, MapIcon, MapPinIcon } from 'react-native-heroicons/solid';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { SettingsItem } from '@/components/profile/SettingsItem';
+import { SettingsScreen } from '@/components/settings/SettingsScreen';
 import Button from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   checkAll,
   openAppSettings,
@@ -56,6 +35,13 @@ const PERMISSION_ICONS: Record<PermissionKey, IconComponent> = {
   locationBackground: MapIcon,
   motion: BoltIcon,
   notifications: BellIcon,
+};
+
+const PERMISSION_TINTS: Record<PermissionKey, string> = {
+  locationForeground: '#007AFF',
+  locationBackground: '#5856D6',
+  motion: '#FF9500',
+  notifications: '#FF3B30',
 };
 
 const PERMISSION_REQUIRED: Record<PermissionKey, boolean> = {
@@ -128,236 +114,84 @@ export default function PermissionsScreen() {
     return t('permissionsScreen.notDetermined');
   }
 
-  function StatusIcon({ status }: { status: PermissionResult['status'] }) {
-    const size = 20;
-    if (status === 'granted') return <CheckCircleIcon size={size} color={colors.success} />;
-    if (status === 'denied') return <ExclamationCircleIcon size={size} color={colors.error} />;
-    return <QuestionMarkCircleIcon size={size} color={colors.textMuted} />;
-  }
-
   function needsSettings(key: PermissionKey, status: PermissionResult['status']): boolean {
     if (key === 'locationBackground' && Platform.OS === 'android') return true;
     return status === 'denied';
   }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      <Header title={t('permissionsScreen.title')} showBack />
-      <ThemedView style={styles.container}>
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : (
-          <View style={styles.content}>
-            <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {t('permissionsScreen.subtitle')}
-            </ThemedText>
+    <SettingsScreen title={t('permissionsScreen.title')} loading={loading}>
+      <Text style={[styles.intro, { color: colors.textSecondary }]}>
+        {t('permissionsScreen.subtitle')}
+      </Text>
+      <SettingsGroup>
+        {rows.map(({ key, translationKey }, index) => {
+          const status = statuses[key];
+          const isGranted = status === 'granted';
+          const required = PERMISSION_REQUIRED[key];
+          const PermIcon = PERMISSION_ICONS[key];
+          const opensSettings = needsSettings(key, status);
 
-            {rows.map(({ key, translationKey }) => {
-              const status = statuses[key];
-              const isGranted = status === 'granted';
-              const isRequesting = requesting === key;
-              const required = PERMISSION_REQUIRED[key];
-              const PermIcon = PERMISSION_ICONS[key];
-              const opensSettings = needsSettings(key, status);
+          return (
+            <SettingsItem
+              key={key}
+              grouped
+              icon={<PermIcon size={18} color="#FFFFFF" />}
+              iconColor={PERMISSION_TINTS[key]}
+              title={t(`permissionsScreen.${translationKey}.name`)}
+              isLast={index === rows.length - 1}
+              rightElement={
+                isGranted ? undefined : (
+                  <Button
+                    title={
+                      opensSettings
+                        ? t('permissionsScreen.openSettings')
+                        : t('permissionsScreen.request')
+                    }
+                    onPress={() => (opensSettings ? openAppSettings() : handleRequest(key))}
+                    variant="glass"
+                    size="small"
+                    loading={requesting === key}
+                  />
+                )
+              }
+              bottomElement={
+                <View style={styles.details}>
+                  <Text style={[styles.status, { color: statusColor(status) }]}>
+                    {statusLabel(status)}
+                    <Text style={{ color: colors.textSecondary }}>
+                      {' · '}
+                      {required ? t('permissions.required') : t('permissions.optional')}
+                    </Text>
+                  </Text>
+                  <Text style={[styles.description, { color: colors.textSecondary }]}>
+                    {t(`permissionsScreen.${translationKey}.description`)}
+                  </Text>
+                </View>
+              }
+            />
+          );
+        })}
+      </SettingsGroup>
 
-              return (
-                <Card key={key} variant="outlined" style={styles.card}>
-                  <View style={styles.row}>
-                    {/* Permission icon box */}
-                    <View
-                      style={[
-                        styles.iconBox,
-                        { backgroundColor: colors.primary + '1F' },
-                      ]}
-                    >
-                      <PermIcon size={20} color={colors.primary} />
-                    </View>
-
-                    {/* Text */}
-                    <View style={styles.rowText}>
-                      <View style={styles.nameRow}>
-                        <ThemedText style={styles.rowLabel}>
-                          {t(`permissionsScreen.${translationKey}.name`)}
-                        </ThemedText>
-                        {/* Required / Optional chip */}
-                        <View
-                          style={[
-                            styles.chip,
-                            {
-                              backgroundColor: required
-                                ? colors.primary + '20'
-                                : colors.textMuted + '20',
-                            },
-                          ]}
-                        >
-                          <ThemedText
-                            style={[
-                              styles.chipText,
-                              { color: required ? colors.primary : colors.textMuted },
-                            ]}
-                          >
-                            {required
-                              ? t('permissions.required')
-                              : t('permissions.optional')}
-                          </ThemedText>
-                        </View>
-                      </View>
-                      <ThemedText style={[styles.rowDescription, { color: colors.textMuted }]}>
-                        {t(`permissionsScreen.${translationKey}.description`)}
-                      </ThemedText>
-                      <View style={styles.statusRow}>
-                        <StatusIcon status={status} />
-                        <ThemedText
-                          style={[styles.statusText, { color: statusColor(status) }]}
-                        >
-                          {statusLabel(status)}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    {/* Action button — only when not yet granted */}
-                    {!isGranted && (
-                      <Button
-                        title={
-                          opensSettings
-                            ? t('permissionsScreen.openSettings')
-                            : t('permissionsScreen.request')
-                        }
-                        onPress={() =>
-                          opensSettings ? openAppSettings() : handleRequest(key)
-                        }
-                        variant="outline"
-                        size="small"
-                        loading={isRequesting}
-                        style={styles.actionButton}
-                      />
-                    )}
-                  </View>
-                </Card>
-              );
-            })}
-
-            {/* Tracking Health link */}
-            <TouchableOpacity
-              onPress={() => router.push('/settings/tracking-health')}
-              style={[styles.healthLink, { borderColor: colors.border }]}
-            >
-              <View style={[styles.healthIconBox, { backgroundColor: colors.primary + '1F' }]}>
-                <HeartIcon size={18} color={colors.primary} />
-              </View>
-              <View style={styles.healthLinkText}>
-                <ThemedText style={styles.healthLinkTitle}>
-                  {t('trackingHealth.title', { ns: 'profile' })}
-                </ThemedText>
-                <ThemedText style={[styles.healthLinkSubtitle, { color: colors.textMuted }]}>
-                  {t('trackingHealth.subtitle', { ns: 'profile' })}
-                </ThemedText>
-              </View>
-              <ChevronRightIcon size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </ThemedView>
-    </SafeAreaView>
+      <SettingsGroup index={1}>
+        <SettingsItem
+          grouped
+          isLast
+          icon={<HeartIcon size={18} color="#FFFFFF" />}
+          iconColor="#34C759"
+          title={t('trackingHealth.title', { ns: 'profile' })}
+          subtitle={t('trackingHealth.subtitle', { ns: 'profile' })}
+          onPress={() => router.push('/settings/tracking-health')}
+        />
+      </SettingsGroup>
+    </SettingsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  subtitle: {
-    fontSize: FontSizes.sm,
-    lineHeight: 20,
-    marginBottom: Spacing.xs,
-  },
-  card: {
-    marginVertical: 0,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 2,
-  },
-  rowText: {
-    flex: 1,
-    gap: 3,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    flexWrap: 'wrap',
-  },
-  rowLabel: {
-    fontSize: FontSizes.md,
-    fontWeight: FontWeights.semibold,
-  },
-  chip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-  },
-  chipText: {
-    fontSize: 10,
-    fontWeight: FontWeights.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  rowDescription: {
-    fontSize: FontSizes.xs,
-    lineHeight: 17,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  statusText: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.medium,
-  },
-  actionButton: {
-    alignSelf: 'center',
-    flexShrink: 0,
-  },
-  healthLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.xs,
-  },
-  healthIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  healthLinkText: { flex: 1 },
-  healthLinkTitle: { fontSize: FontSizes.md, fontWeight: FontWeights.semibold },
-  healthLinkSubtitle: { fontSize: FontSizes.xs, lineHeight: 17, marginTop: 2 },
+  intro: { fontSize: 13, lineHeight: 18, paddingHorizontal: 32, marginBottom: 16 },
+  details: { paddingLeft: 42, gap: 2 },
+  status: { fontSize: 13, fontWeight: '600' },
+  description: { fontSize: 13, lineHeight: 18 },
 });

@@ -7,11 +7,14 @@
     "preferences": "ترجیحات",
     "integrations": "انضمامات",
     "privacyNotifications": "رازداری اور اطلاعات",
-    "feedback": "رائے"
+    "feedback": "رائے",
+    "developer": "ڈیولپر"
   },
   "account": {
     "editProfile": "پروفائل میں ترمیم کریں",
-    "editProfileSubtitle": "اپنی ذاتی معلومات کو اپ ڈیٹ کریں"
+    "editProfileSubtitle": "اپنی ذاتی معلومات کو اپ ڈیٹ کریں",
+    "changePassword": "پاس ورڈ تبدیل کریں",
+    "changePasswordSubtitle": "اپنے اکاؤنٹ کا پاس ورڈ اپ ڈیٹ کریں"
   },
   "preferences": {
     "theme": "تھیم",
@@ -23,7 +26,10 @@
     "systemLanguageSubtitle": "انگریزی",
     "unitsOfMeasure": "پیمائش کی اکائیاں",
     "unitsMetric": "میٹرک (کلومیٹر، کلوگرام)",
-    "unitsImperial": "امپیریل (میل، پاؤنڈ)"
+    "unitsImperial": "امپیریل (میل، پاؤنڈ)",
+    "themeLabelSystem": "سسٹم",
+    "unitsMetricShort": "میٹرک",
+    "unitsImperialShort": "امپیریل"
   },
   "integrations": {
     "connectedApps": "منسلک ایپس اور ڈیوائسز",
@@ -63,5 +69,28 @@
     "chooseFromLibrary": "لائبریری سے منتخب کریں",
     "takePhoto": "تصویر لیں",
     "removePhoto": "تصویر ہٹائیں"
+  },
+  "title": "آپ",
+  "backgroundTracking": {
+    "title": "بیک گراؤنڈ ٹریکنگ",
+    "subtitleOn": "آپ کی سرگرمیاں خودکار طور پر ٹریک ہو رہی ہیں",
+    "subtitleOff": "بیک گراؤنڈ میں سرگرمیاں ٹریک کریں"
+  },
+  "developer": {
+    "debugTracking": "ٹریکنگ ڈیبگ",
+    "debugTrackingSubtitle": "ریئل ٹائم ٹریکنگ اسٹیٹس اور تشخیص دیکھیں"
+  },
+  "language": {
+    "selectTitle": "زبان منتخب کریں",
+    "changing": "زبان تبدیل ہو رہی ہے..."
+  },
+  "version": "ورژن {{version}}",
+  "trackingHealth": {
+    "summaryOk": "اس ڈیوائس پر بیک گراؤنڈ ٹریکنگ قابل اعتماد طریقے سے چلنے کے لیے تیار ہے۔",
+    "summaryIssues": "کچھ سیٹنگز بیک گراؤنڈ میں سفر ریکارڈ ہونے سے روک سکتی ہیں۔ نیچے دی گئی چیزیں درست کریں۔",
+    "checksHeader": "جانچ"
+  },
+  "notifications": {
+    "title": "اطلاعات"
   }
 }

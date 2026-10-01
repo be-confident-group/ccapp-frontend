@@ -1,13 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, View, Switch, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import {
+  ChatBubbleLeftIcon,
+  HeartIcon,
+  UserGroupIcon,
+  UserPlusIcon,
+} from 'react-native-heroicons/solid';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { SettingsItem } from '@/components/profile/SettingsItem';
+import { SettingsScreen, SettingsFootnote } from '@/components/settings/SettingsScreen';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
 import { showErrorAlert } from '@/lib/utils/alert';
 import {
   getNotificationPreferences,
@@ -26,21 +30,29 @@ export default function NotificationPreferencesScreen() {
   const prefRows = [
     {
       key: 'likes' as PrefKey,
+      Icon: HeartIcon,
+      tint: '#FF3B30',
       label: t('groups:notificationPreferences.likes.label'),
       subtitle: t('groups:notificationPreferences.likes.subtitle'),
     },
     {
       key: 'comments' as PrefKey,
+      Icon: ChatBubbleLeftIcon,
+      tint: '#007AFF',
       label: t('groups:notificationPreferences.comments.label'),
       subtitle: t('groups:notificationPreferences.comments.subtitle'),
     },
     {
       key: 'club_activity' as PrefKey,
+      Icon: UserGroupIcon,
+      tint: '#34C759',
       label: t('groups:notificationPreferences.club_activity.label'),
       subtitle: t('groups:notificationPreferences.club_activity.subtitle'),
     },
     {
       key: 'join_requests' as PrefKey,
+      Icon: UserPlusIcon,
+      tint: '#FF9500',
       label: t('groups:notificationPreferences.join_requests.label'),
       subtitle: t('groups:notificationPreferences.join_requests.subtitle'),
     },
@@ -82,68 +94,36 @@ export default function NotificationPreferencesScreen() {
     [prefs, mutation]
   );
 
+  const isOn = (key: PrefKey) =>
+    key in optimisticOverrides ? (optimisticOverrides[key] ?? false) : (prefs?.[key] ?? false);
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <Header title={t('groups:notificationPreferences.title')} showBack />
-      <ThemedView style={styles.container}>
-        {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : (
-          <View style={styles.content}>
-            <ThemedText style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              {t('profile:notifications.subtitle')}
-            </ThemedText>
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {prefRows.map((row, index) => (
-                <View key={row.key}>
-                  {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                  <View style={styles.row}>
-                    <View style={styles.rowText}>
-                      <ThemedText style={styles.rowLabel}>{row.label}</ThemedText>
-                      <ThemedText style={[styles.rowSubtitle, { color: colors.textMuted }]}>
-                        {row.subtitle}
-                      </ThemedText>
-                    </View>
-                    <Switch
-                      value={row.key in optimisticOverrides ? (optimisticOverrides[row.key] ?? false) : (prefs?.[row.key] ?? false)}
-                      onValueChange={(val) => handleToggle(row.key, val)}
-                      disabled={mutation.isPending}
-                      trackColor={{ false: colors.border, true: colors.primary + '80' }}
-                      thumbColor={(row.key in optimisticOverrides ? optimisticOverrides[row.key] : prefs?.[row.key]) ? colors.primary : colors.textMuted}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </ThemedView>
-    </SafeAreaView>
+    <SettingsScreen title={t('profile:notifications.title')} loading={isLoading}>
+      <SettingsGroup>
+        {prefRows.map((row, index) => (
+          <SettingsItem
+            key={row.key}
+            grouped
+            icon={<row.Icon size={18} color="#FFFFFF" />}
+            iconColor={row.tint}
+            title={row.label}
+            subtitle={row.subtitle}
+            isLast={index === prefRows.length - 1}
+            rightElement={
+              <Switch
+                value={isOn(row.key)}
+                onValueChange={(val) => handleToggle(row.key, val)}
+                disabled={mutation.isPending}
+                trackColor={{ false: colors.border, true: colors.trackingActive }}
+                ios_backgroundColor={colors.border}
+              />
+            }
+          />
+        ))}
+      </SettingsGroup>
+      <SettingsFootnote>
+        {t('profile:notifications.subtitle')}
+      </SettingsFootnote>
+    </SettingsScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: Spacing.lg, gap: Spacing.md },
-  sectionLabel: { fontSize: 14, lineHeight: 20 },
-  card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    gap: Spacing.md,
-  },
-  rowText: { flex: 1, gap: 2 },
-  rowLabel: { fontSize: 15, fontWeight: '600' },
-  rowSubtitle: { fontSize: 13 },
-  divider: { height: 1, marginHorizontal: Spacing.md },
-});

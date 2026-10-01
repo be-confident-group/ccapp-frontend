@@ -6,7 +6,13 @@
     "bugReport": "Bug Report",
     "featureRequest": "Feature Request",
     "generalFeedback": "General Feedback",
-    "other": "Other"
+    "other": "Other",
+    "bugReportShort": "বাগ",
+    "featureRequestShort": "আইডিয়া",
+    "generalFeedbackShort": "সাধারণ",
+    "bugReportDescription": "বাগ বা সমস্যা জানান",
+    "featureRequestDescription": "নতুন ফিচারের পরামর্শ দিন",
+    "generalFeedbackDescription": "আপনার মতামত জানান"
   },
   "message": {
     "label": "Message",
@@ -19,10 +25,32 @@
   "submit": "Submit Feedback",
   "success": {
     "title": "Thank You!",
-    "message": "Your feedback has been submitted successfully."
+    "message": "Your feedback has been submitted successfully.",
+    "ok": "ঠিক আছে"
   },
   "error": {
     "title": "Error",
     "message": "Unable to submit feedback. Please try again."
+  },
+  "subject": {
+    "label": "বিষয় (ঐচ্ছিক)",
+    "placeholder": "আপনার মতামতের সংক্ষিপ্ত সারাংশ"
+  },
+  "attachments": {
+    "label": "সংযুক্তি (ঐচ্ছিক)",
+    "hint": "আপনি ৩টি পর্যন্ত ছবি সংযুক্ত করতে পারেন (শুধু PNG বা JPG)",
+    "add": "ছবি যোগ করুন",
+    "remove": "ছবি সরান",
+    "limitTitle": "সীমা পূর্ণ",
+    "limitMessage": "আপনি ৩টি পর্যন্ত ছবি সংযুক্ত করতে পারেন।",
+    "permissionTitle": "অনুমতি প্রয়োজন",
+    "permissionMessage": "ছবি সংযুক্ত করতে ফটো লাইব্রেরির অনুমতি দিন।",
+    "invalidTypeTitle": "অবৈধ ফাইলের ধরন",
+    "invalidTypeMessage": "একটি PNG বা JPG ছবি নির্বাচন করুন।",
+    "pickError": "ছবি নির্বাচন করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "validation": {
+    "messageRequiredTitle": "বার্তা প্রয়োজন",
+    "messageRequiredMessage": "আপনার মতামত লিখুন।"
   }
 }

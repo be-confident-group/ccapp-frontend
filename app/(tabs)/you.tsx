@@ -1,37 +1,43 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { StyleSheet, View, Alert, Linking, Platform, ActivityIndicator } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useTabBarInset, useTabBarScrollHandler } from '@/contexts/TabBarContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   UserIcon,
-  Cog6ToothIcon,
   GlobeAltIcon,
   DevicePhoneMobileIcon,
   ShieldCheckIcon,
   BellIcon,
   ChatBubbleBottomCenterTextIcon,
   StarIcon,
-  ArrowRightOnRectangleIcon,
   SunIcon,
   WrenchScrewdriverIcon,
-  TrashIcon,
   LockClosedIcon,
   HeartIcon,
   LifebuoyIcon,
-} from 'react-native-heroicons/outline';
+  ScaleIcon,
+} from 'react-native-heroicons/solid';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
+import { GlassMenu, type GlassMenuAnchor } from '@/components/ui/GlassMenu';
+import { ProfileCard } from '@/components/profile/ProfileCard';
+import { ChevronUpDownIcon } from 'react-native-heroicons/mini';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
-import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 
 import { SettingsItem } from '@/components/profile/SettingsItem';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
@@ -59,7 +65,6 @@ interface LocalProfile {
   dateOfBirth?: string; // YYYY-MM-DD or empty string
   gender?: 'M' | 'F' | 'O' | '';
   profilePicture?: string;
-  joinedDate?: string;
 }
 
 /** Shape sent to authApi.updateProfile */
@@ -71,12 +76,18 @@ interface UpdateProfilePayload {
   profile_picture?: string;
 }
 
+const HEADER_GAP = 8;
+const TITLE_FADE_DISTANCE = 60;
+
+// iOS Settings-style tile colours (kept identical in light and dark mode).
 export default function YouScreen() {
   const { t } = useTranslation();
   const { signOut, user: contextUser } = useAuth();
   const isDebugBuild = isDebugEnabled();
-  const { colors, isDark, toggleTheme } = useTheme();
-  const tabBarScroll = useTabBarScrollHandler();
+  const { colors, themeMode, setThemeMode } = useTheme();
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const tabBarScroll = useTabBarScrollHandler(scrollY);
   const tabBarInset = useTabBarInset();
   const { currentLanguage } = useLanguage();
   const { unitSystem, setUnitSystem } = useUnits();
@@ -104,10 +115,6 @@ export default function YouScreen() {
 
   // Map API response to local profile shape
   const profilePicture = profileData?.profile_picture;
-  let joinedDateDisplay = '';
-  if (profileData?.joined_at) {
-    joinedDateDisplay = new Date(profileData.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  }
   const userProfile = {
     firstName: profileData?.name ?? profileData?.first_name ?? contextUser?.name ?? contextUser?.first_name ?? 'User',
     lastName: profileData?.last_name ?? contextUser?.last_name ?? '',
@@ -115,7 +122,6 @@ export default function YouScreen() {
     dateOfBirth: profileData?.date_of_birth ?? profileData?.profile?.date_of_birth ?? '',
     gender: (profileData?.gender ?? profileData?.profile?.gender ?? '') as 'M' | 'F' | 'O' | '',
     profilePicture,
-    joinedDate: joinedDateDisplay,
   };
 
   const handleLogout = async () => {
@@ -298,330 +304,304 @@ export default function YouScreen() {
     );
   };
 
+  const scrollEdgeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [TITLE_FADE_DISTANCE / 2, TITLE_FADE_DISTANCE], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  const headerTop = insets.top + HEADER_GAP;
+  const fullName = `${userProfile.firstName} ${userProfile.lastName}`.trim();
+  const appVersion = Constants.expoConfig?.version;
+  const themeItems = [
+    { key: 'light' as const, label: t('profile:preferences.themeLabelLight', { defaultValue: 'Light' }) },
+    { key: 'dark' as const, label: t('profile:preferences.themeLabelDark', { defaultValue: 'Dark' }) },
+    { key: 'system' as const, label: t('profile:preferences.themeLabelSystem', { defaultValue: 'System' }) },
+  ];
+  const unitItems = [
+    { key: 'metric' as const, label: t('profile:preferences.unitsMetricShort', { defaultValue: 'Metric' }) },
+    { key: 'imperial' as const, label: t('profile:preferences.unitsImperialShort', { defaultValue: 'Imperial' }) },
+  ];
+  // Plain icons in the brand tint, no tiles.
+  const tile = (Icon: typeof UserIcon) => <Icon size={22} color={colors.glassTint} />;
+
+  // Theme / units open an iOS-style pull-down menu anchored to their row.
+  const themeRowRef = useRef<View>(null);
+  const unitsRowRef = useRef<View>(null);
+  const [menu, setMenu] = useState<{ kind: 'theme' | 'units'; anchor: GlassMenuAnchor } | null>(null);
+  const openMenu = (kind: 'theme' | 'units', ref: React.RefObject<View | null>) => {
+    ref.current?.measureInWindow((x, y, width, height) => setMenu({ kind, anchor: { x, y, width, height } }));
+  };
+  const valueWithChevron = (label: string) => (
+    <View style={styles.menuValue}>
+      <ThemedText style={[styles.menuValueText, { color: colors.textSecondary }]}>{label}</ThemedText>
+      <ChevronUpDownIcon size={16} color={colors.textSecondary} />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <ThemedView style={styles.container}>
-        {fetchingProfile ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-              {t('common:loading.profile')}
-            </ThemedText>
-          </View>
-        ) : (
-          <Animated.ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarInset }]}
-            showsVerticalScrollIndicator={false}
-            onScroll={tabBarScroll}
-            scrollEventThrottle={16}
-          >
-            {/* Profile Header */}
-            <View style={styles.profileHeader}>
-              <ProfileAvatar
-                imageUri={userProfile.profilePicture}
-                firstName={userProfile.firstName}
-                lastName={userProfile.lastName}
-                size={120}
-                editable={false}
-              />
-              <ThemedText style={styles.userName}>
-                {userProfile.firstName} {userProfile.lastName}
-              </ThemedText>
-              <ThemedText style={[styles.joinedDate, { color: colors.textSecondary }]}>
-                {t('profile:header.joined', { date: userProfile.joinedDate })}
-              </ThemedText>
-            </View>
-
-          {/* ===========================================
-              ACTIVITY CHART - HIDDEN FOR NEXT VERSION
-              ===========================================
-              This section contains dummy data and is planned for release in
-              the next version. Keeping the code commented out for future implementation.
-          */}
-          {/* <View style={styles.chartSection}>
-            <View style={[styles.chartCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <View style={styles.chartContent}>
-                  <ActivityChart />
-                </View>
-              </View>
-            </View>
-          </View> */}
-
-          {/* Account Section */}
-          <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>{t('profile:sections.account')}</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <SettingsItem
-                  icon={<UserIcon size={22} color={colors.text} />}
-                  title={t('profile:account.editProfile')}
-                  subtitle={t('profile:account.editProfileSubtitle')}
-                  onPress={() => setShowEditProfile(true)}
-                  isFirst
-                />
-                <SettingsItem
-                  icon={<LockClosedIcon size={22} color={colors.text} />}
-                  title="Change Password"
-                  subtitle="Update your account password"
-                  onPress={() => setShowChangePassword(true)}
-                  isLast
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Preferences Section */}
-          <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>{t('profile:sections.preferences')}</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <SettingsItem
-                  icon={<SunIcon size={22} color={colors.text} />}
-                  title={t('profile:preferences.theme')}
-                  subtitle={isDark ? t('profile:preferences.themeDark') : t('profile:preferences.themeLight')}
-                  toggleValue={isDark}
-                  onToggleChange={toggleTheme}
-                  showChevron={false}
-                  isFirst
-                />
-                <SettingsItem
-                  icon={<DevicePhoneMobileIcon size={22} color={colors.text} />}
-                  title="Background Tracking"
-                  subtitle={isTracking ? 'Automatically tracking your activities' : 'Track activities in the background'}
-                  toggleValue={isTracking}
-                  onToggleChange={handleBackgroundTrackingToggle}
-                  showChevron={false}
-                />
-                <SettingsItem
-                  icon={<HeartIcon size={22} color={colors.text} />}
-                  title={t('profile:trackingHealth.title')}
-                  subtitle={t('profile:trackingHealth.subtitle')}
-                  onPress={() => router.push('/settings/tracking-health')}
-                />
-                <SettingsItem
-                  icon={<Cog6ToothIcon size={22} color={colors.text} />}
-                  title={t('profile:preferences.unitsOfMeasure')}
-                  subtitle={unitSystem === 'metric' ? t('profile:preferences.unitsMetric') : t('profile:preferences.unitsImperial')}
-                  toggleValue={unitSystem === 'imperial'}
-                  onToggleChange={async (value) => {
-                    await setUnitSystem(value ? 'imperial' : 'metric');
-                  }}
-                  showChevron={false}
-                />
-                <SettingsItem
-                  icon={<GlobeAltIcon size={22} color={colors.text} />}
-                  title={t('profile:preferences.systemLanguage')}
-                  subtitle={SUPPORTED_LANGUAGES[currentLanguage]}
-                  onPress={() => setShowLanguagePicker(true)}
-                  isLast
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Privacy & Notifications Section */}
-          <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>{t('profile:sections.privacyNotifications')}</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <SettingsItem
-                  icon={<ShieldCheckIcon size={22} color={colors.text} />}
-                  title={t('profile:privacy.privacy')}
-                  subtitle={t('profile:privacy.privacySubtitle')}
-                  onPress={() => {
-                    Linking.openURL(PRIVACY_POLICY_URL).catch(() =>
-                      showInfoAlert('alerts:error.title', 'alerts:error.generic')
-                    );
-                  }}
-                  isFirst
-                />
-                <SettingsItem
-                  icon={<BellIcon size={22} color={colors.text} />}
-                  title={t('profile:privacy.notificationSettings')}
-                  subtitle={t('profile:privacy.notificationSettingsSubtitle')}
-                  onPress={() => router.push('/settings/notifications')}
-                />
-                <SettingsItem
-                  icon={<LifebuoyIcon size={22} color={colors.text} />}
-                  title={t('profile:privacy.contactSupport')}
-                  subtitle={t('profile:privacy.contactSupportSubtitle')}
-                  onPress={async () => {
-                    const url = `mailto:${SUPPORT_EMAIL}`;
-                    const canOpen = await Linking.canOpenURL(url).catch(() => false);
-                    if (canOpen) {
-                      Linking.openURL(url).catch(() =>
-                        Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }))
-                      );
-                    } else {
-                      Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }));
-                    }
-                  }}
-                  isLast
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Feedback Section */}
-          <View style={styles.settingsSection}>
-            <ThemedText style={styles.sectionTitle}>{t('profile:sections.feedback')}</ThemedText>
-            <View style={[styles.settingsCard, styles.cardShadow]}>
-              <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                {!isDark && (
-                  <LinearGradient
-                    pointerEvents="none"
-                    colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.3 }}
-                    style={styles.cardTopHighlight}
-                  />
-                )}
-                <SettingsItem
-                  icon={<ChatBubbleBottomCenterTextIcon size={22} color={colors.text} />}
-                  title={t('profile:feedback.sendFeedback')}
-                  subtitle={t('profile:feedback.sendFeedbackSubtitle')}
-                  onPress={() => router.push('/feedback')}
-                  isFirst
-                  isLast={!hasStoreListing}
-                />
-                {hasStoreListing && (
-                  <SettingsItem
-                    icon={<StarIcon size={22} color={colors.text} />}
-                    title={t('profile:feedback.rateUs')}
-                    subtitle={t('profile:feedback.rateUsSubtitle')}
-                    onPress={handleRateApp}
-                    isLast
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Developer Section - visible in dev and preview builds */}
-          {isDebugBuild && (
-            <View style={styles.settingsSection}>
-              <ThemedText style={styles.sectionTitle}>Developer</ThemedText>
-              <View style={[styles.settingsCard, styles.cardShadow]}>
-                <View style={[styles.cardInner, { backgroundColor: colors.card }]}>
-                  {!isDark && (
-                    <LinearGradient
-                      pointerEvents="none"
-                      colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 0.3 }}
-                      style={styles.cardTopHighlight}
-                    />
-                  )}
-                  <SettingsItem
-                    icon={<WrenchScrewdriverIcon size={22} color={colors.text} />}
-                    title="Debug Tracking"
-                    subtitle="View real-time tracking status and diagnostics"
-                    onPress={() => router.push('/debug-tracking')}
-                    isFirst
-                    isLast
-                  />
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Log Out Button */}
-          <View style={styles.logoutSection}>
-            <Button
-              title={t('profile:logout')}
-              onPress={handleLogout}
-              variant="outline"
-              size="large"
-              fullWidth
-              loading={loading}
-              icon={<ArrowRightOnRectangleIcon size={20} color={colors.primary} />}
-              iconPosition="left"
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      {fetchingProfile ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+            {t('common:loading.profile')}
+          </ThemedText>
+        </View>
+      ) : (
+        <Animated.ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: headerTop + HEADER_GAP, paddingBottom: tabBarInset },
+          ]}
+          showsVerticalScrollIndicator={false}
+          onScroll={tabBarScroll}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.profileCard}>
+            <ProfileCard
+              firstName={userProfile.firstName}
+              lastName={userProfile.lastName}
+              fullName={fullName}
+              email={userProfile.email || undefined}
+              imageUri={userProfile.profilePicture}
+              onPress={() => setShowEditProfile(true)}
             />
           </View>
 
-          {/* Delete Account Button */}
+          {/* Account */}
+          <SettingsGroup title={t('profile:sections.account')} index={0}>
+            <SettingsItem
+              icon={tile(LockClosedIcon)}
+              title={t('profile:account.changePassword', { defaultValue: 'Change Password' })}
+              subtitle={t('profile:account.changePasswordSubtitle', { defaultValue: 'Update your account password' })}
+              onPress={() => setShowChangePassword(true)}
+              grouped
+              isLast
+            />
+          </SettingsGroup>
+
+          {/* Preferences */}
+          <SettingsGroup title={t('profile:sections.preferences')} index={1}>
+            <View ref={themeRowRef} collapsable={false}>
+              <SettingsItem
+                icon={tile(SunIcon)}
+                  title={t('profile:preferences.theme')}
+                showChevron={false}
+                rightElement={valueWithChevron(themeItems.find((item) => item.key === themeMode)?.label ?? '')}
+                onPress={() => openMenu('theme', themeRowRef)}
+                grouped
+              />
+            </View>
+            <SettingsItem
+              icon={tile(DevicePhoneMobileIcon)}
+              title={t('profile:backgroundTracking.title', { defaultValue: 'Background Tracking' })}
+              subtitle={
+                isTracking
+                  ? t('profile:backgroundTracking.subtitleOn', { defaultValue: 'Automatically tracking your activities' })
+                  : t('profile:backgroundTracking.subtitleOff', { defaultValue: 'Track activities in the background' })
+              }
+              toggleValue={isTracking}
+              onToggleChange={handleBackgroundTrackingToggle}
+              toggleColor={colors.trackingActive}
+              showChevron={false}
+              grouped
+            />
+            <SettingsItem
+              icon={tile(HeartIcon)}
+              title={t('profile:trackingHealth.title')}
+              subtitle={t('profile:trackingHealth.subtitle')}
+              onPress={() => router.push('/settings/tracking-health')}
+              grouped
+            />
+            <View ref={unitsRowRef} collapsable={false}>
+              <SettingsItem
+                icon={tile(ScaleIcon)}
+                  title={t('profile:preferences.unitsOfMeasure')}
+                showChevron={false}
+                rightElement={valueWithChevron(unitItems.find((item) => item.key === unitSystem)?.label ?? '')}
+                onPress={() => openMenu('units', unitsRowRef)}
+                grouped
+              />
+            </View>
+            <SettingsItem
+              icon={tile(GlobeAltIcon)}
+              title={t('profile:preferences.systemLanguage')}
+              value={SUPPORTED_LANGUAGES[currentLanguage]}
+              onPress={() => setShowLanguagePicker(true)}
+              grouped
+              isLast
+            />
+          </SettingsGroup>
+
+          {/* Privacy & Notifications */}
+          <SettingsGroup title={t('profile:sections.privacyNotifications')} index={2}>
+            <SettingsItem
+              icon={tile(ShieldCheckIcon)}
+              title={t('profile:privacy.privacy')}
+              subtitle={t('profile:privacy.privacySubtitle')}
+              onPress={() => {
+                Linking.openURL(PRIVACY_POLICY_URL).catch(() =>
+                  showInfoAlert('alerts:error.title', 'alerts:error.generic')
+                );
+              }}
+              grouped
+            />
+            <SettingsItem
+              icon={tile(BellIcon)}
+              title={t('profile:privacy.notificationSettings')}
+              subtitle={t('profile:privacy.notificationSettingsSubtitle')}
+              onPress={() => router.push('/settings/notifications')}
+              grouped
+            />
+            <SettingsItem
+              icon={tile(LifebuoyIcon)}
+              title={t('profile:privacy.contactSupport')}
+              subtitle={t('profile:privacy.contactSupportSubtitle')}
+              onPress={async () => {
+                const url = `mailto:${SUPPORT_EMAIL}`;
+                const canOpen = await Linking.canOpenURL(url).catch(() => false);
+                if (canOpen) {
+                  Linking.openURL(url).catch(() =>
+                    Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }))
+                  );
+                } else {
+                  Alert.alert(t('alerts:error.title'), t('alerts:error.mailUnavailable', { email: SUPPORT_EMAIL }));
+                }
+              }}
+              grouped
+              isLast
+            />
+          </SettingsGroup>
+
+          {/* Feedback */}
+          <SettingsGroup title={t('profile:sections.feedback')} index={3}>
+            <SettingsItem
+              icon={tile(ChatBubbleBottomCenterTextIcon)}
+              title={t('profile:feedback.sendFeedback')}
+              subtitle={t('profile:feedback.sendFeedbackSubtitle')}
+              onPress={() => router.push('/feedback')}
+              grouped
+              isLast={!hasStoreListing}
+            />
+            {hasStoreListing && (
+              <SettingsItem
+                icon={tile(StarIcon)}
+                  title={t('profile:feedback.rateUs')}
+                subtitle={t('profile:feedback.rateUsSubtitle')}
+                onPress={handleRateApp}
+                grouped
+                isLast
+              />
+            )}
+          </SettingsGroup>
+
+          {/* Developer - visible in dev and preview builds */}
+          {isDebugBuild && (
+            <SettingsGroup title={t('profile:sections.developer', { defaultValue: 'Developer' })} index={4}>
+              <SettingsItem
+                icon={tile(WrenchScrewdriverIcon)}
+                  title={t('profile:developer.debugTracking', { defaultValue: 'Debug Tracking' })}
+                subtitle={t('profile:developer.debugTrackingSubtitle', {
+                  defaultValue: 'View real-time tracking status and diagnostics',
+                })}
+                onPress={() => router.push('/debug-tracking')}
+                grouped
+                isLast
+              />
+            </SettingsGroup>
+          )}
+
+          {/* Log out */}
+          <SettingsGroup index={5}>
+            <SettingsItem
+              title={t('profile:logout')}
+              titleColor={colors.error}
+              onPress={handleLogout}
+              centered
+              grouped
+              isLast
+            />
+          </SettingsGroup>
+
+          {/* Delete account */}
           <View style={styles.deleteAccountSection}>
             <Button
               title={t('profile:deleteAccount')}
               onPress={handleDeleteAccount}
-              variant="outline"
-              size="large"
-              fullWidth
+              variant="text"
+              size="small"
               loading={loading}
-              icon={<TrashIcon size={20} color={colors.error} />}
-              iconPosition="left"
               textStyle={{ color: colors.error }}
-              style={{ borderColor: colors.error }}
             />
           </View>
-          </Animated.ScrollView>
-        )}
 
-        {/* Edit Profile Modal */}
-        <EditProfileModal
-          visible={showEditProfile}
-          onClose={() => setShowEditProfile(false)}
-          profile={userProfile}
-          onSave={handleSaveProfile}
-        />
+          {appVersion ? (
+            <ThemedText style={[styles.version, { color: colors.textSecondary }]}>
+              {t('profile:version', { version: appVersion, defaultValue: 'Version {{version}}' })}
+            </ThemedText>
+          ) : null}
+        </Animated.ScrollView>
+      )}
 
-        {/* Change Password Modal */}
-        <ChangePasswordModal
-          visible={showChangePassword}
-          onClose={() => setShowChangePassword(false)}
+      {/* Scroll-edge fade under the status bar */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.scrollEdge, { height: headerTop + 24 }, scrollEdgeStyle]}
+      >
+        <LinearGradient
+          colors={[colors.backgroundSecondary, colors.backgroundSecondary + '00']}
+          locations={[0.55, 1]}
+          style={StyleSheet.absoluteFill}
         />
+      </Animated.View>
 
-        {/* Language Picker Modal */}
-        <LanguagePicker
-          visible={showLanguagePicker}
-          onClose={() => setShowLanguagePicker(false)}
-        />
-      </ThemedView>
-    </SafeAreaView>
+      <GlassMenu
+        anchor={menu?.anchor ?? null}
+        options={menu?.kind === 'units' ? unitItems : themeItems}
+        selected={menu?.kind === 'units' ? unitSystem : themeMode}
+        onSelect={(key) => {
+          if (menu?.kind === 'units') void setUnitSystem(key as typeof unitSystem);
+          else setThemeMode(key as typeof themeMode);
+          setMenu(null);
+        }}
+        onClose={() => setMenu(null)}
+      />
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        visible={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        profile={userProfile}
+        onSave={handleSaveProfile}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        visible={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
+
+      {/* Language Picker */}
+      <LanguagePicker
+        visible={showLanguagePicker}
+        onClose={() => setShowLanguagePicker(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
+  profileCard: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+  },
+  menuValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  menuValueText: {
+    fontSize: 16,
   },
   container: {
     flex: 1,
@@ -641,83 +621,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
-  profileHeader: {
-    alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  joinedDate: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  // ===========================================
-  // ACTIVITY CHART STYLES - HIDDEN FOR NEXT VERSION
-  // ===========================================
-  // Keeping styles commented out for future implementation
-  // chartSection: {
-  //   paddingHorizontal: 24,
-  //   marginBottom: 32,
-  // },
-  // chartCard: {
-  //   borderRadius: 16,
-  // },
-  cardShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  cardTopHighlight: {
+  scrollEdge: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '30%',
-    zIndex: 1,
-  },
-  // chartContent: {
-  //   padding: 20,
-  // },
-  settingsSection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  settingsCard: {
-    borderRadius: 16,
-  },
-  cardInner: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  themeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  themeBadgeText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  logoutSection: {
-    paddingHorizontal: 24,
-    marginTop: 16,
   },
   deleteAccountSection: {
-    paddingHorizontal: 24,
-    marginTop: 12,
-    marginBottom: 32,
+    alignItems: 'center',
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  version: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
   },
 });

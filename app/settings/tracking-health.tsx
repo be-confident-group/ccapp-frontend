@@ -1,34 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  AppStateStatus,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, AppStateStatus, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowPathIcon,
   BoltIcon,
   CheckCircleIcon,
   CpuChipIcon,
   ExclamationTriangleIcon,
   MapPinIcon,
   ShieldCheckIcon,
-  XCircleIcon,
-} from 'react-native-heroicons/outline';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import Header from '@/components/layout/Header';
-import Card from '@/components/ui/Card';
+} from 'react-native-heroicons/solid';
+import { ArrowPathIcon } from 'react-native-heroicons/outline';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { SettingsItem } from '@/components/profile/SettingsItem';
+import { SettingsScreen } from '@/components/settings/SettingsScreen';
 import Button from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
-import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import { RadziTrackerNative, type TrackingHealth } from '@/lib/native/RadziTracker';
 
 type CheckStatus = 'ok' | 'warn' | 'error' | 'info';
@@ -128,15 +114,6 @@ function buildChecks(health: TrackingHealth, t: (k: string) => string): HealthCh
   return checks;
 }
 
-function StatusIcon({ status }: { status: CheckStatus }) {
-  const { colors } = useTheme();
-  const size = 18;
-  if (status === 'ok') return <CheckCircleIcon size={size} color={colors.success} />;
-  if (status === 'warn') return <ExclamationTriangleIcon size={size} color={colors.warning ?? '#F59E0B'} />;
-  if (status === 'error') return <XCircleIcon size={size} color={colors.error} />;
-  return <CheckCircleIcon size={size} color={colors.textMuted} />;
-}
-
 export default function TrackingHealthScreen() {
   const { t } = useTranslation('profile');
   const { colors } = useTheme();
@@ -168,120 +145,110 @@ export default function TrackingHealthScreen() {
   const checks = health ? buildChecks(health, t) : [];
   const hasIssues = checks.some(c => c.status === 'error' || c.status === 'warn');
 
+  const statusTint = (status: CheckStatus): string =>
+    status === 'ok' ? colors.success
+      : status === 'warn' ? colors.warning
+      : status === 'error' ? colors.error
+      : '#8E8E93';
+
+  const summaryColor = hasIssues ? colors.warning : colors.success;
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <Header title={t('trackingHealth.title')} showBack />
-      <ThemedView style={styles.container}>
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-              {t('trackingHealth.loading')}
-            </ThemedText>
+    <SettingsScreen
+      title={t('trackingHealth.title')}
+      loading={loading}
+      loadingLabel={t('trackingHealth.loading')}
+    >
+      <SettingsGroup>
+        <View style={styles.summary}>
+          <View style={[styles.summaryIcon, { backgroundColor: summaryColor + '26' }]}>
+            {hasIssues
+              ? <ExclamationTriangleIcon size={40} color={summaryColor} />
+              : <CheckCircleIcon size={40} color={summaryColor} />}
           </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Summary banner */}
-            <View style={[styles.banner, { backgroundColor: hasIssues ? colors.error + '15' : colors.success + '15' }]}>
-              {hasIssues
-                ? <ExclamationTriangleIcon size={20} color={colors.error} />
-                : <CheckCircleIcon size={20} color={colors.success} />}
-              <ThemedText style={[styles.bannerText, { color: hasIssues ? colors.error : colors.success }]}>
-                {hasIssues ? t('trackingHealth.issuesFound') : t('trackingHealth.allGood')}
-              </ThemedText>
-            </View>
+          <Text style={[styles.summaryTitle, { color: colors.text }]}>
+            {hasIssues ? t('trackingHealth.issuesFound') : t('trackingHealth.allGood')}
+          </Text>
+          <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
+            {hasIssues
+              ? t('trackingHealth.summaryIssues', {
+                  defaultValue: 'Some settings may stop rides from being recorded in the background. Fix the items below.',
+                })
+              : t('trackingHealth.summaryOk', {
+                  defaultValue: 'Background tracking is ready to run reliably on this device.',
+                })}
+          </Text>
+        </View>
+      </SettingsGroup>
 
-            {/* Individual checks */}
-            {checks.map(check => {
-              const Icon = check.icon;
-              const statusColor = check.status === 'ok' ? colors.success
-                : check.status === 'warn' ? (colors.warning ?? '#F59E0B')
-                : check.status === 'error' ? colors.error
-                : colors.textMuted;
-              return (
-                <Card key={check.id} variant="outlined" style={styles.card}>
-                  <View style={styles.row}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.primary + '1F' }]}>
-                      <Icon size={18} color={colors.primary} />
-                    </View>
-                    <View style={styles.rowText}>
-                      <ThemedText style={styles.rowLabel}>
-                        {t(check.labelKey.replace('profile:', ''))}
-                      </ThemedText>
-                      <View style={styles.statusRow}>
-                        <StatusIcon status={check.status} />
-                        <ThemedText style={[styles.statusText, { color: statusColor }]}>
-                          {check.statusText}
-                        </ThemedText>
-                      </View>
-                    </View>
-                    {check.onFix && check.status !== 'ok' && (
-                      <TouchableOpacity
-                        onPress={check.onFix}
-                        style={[styles.fixBtn, { borderColor: colors.primary + '60' }]}
-                      >
-                        <ThemedText style={[styles.fixText, { color: colors.primary }]}>
-                          {t('trackingHealth.fixIt')}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </Card>
-              );
-            })}
-
-            <Button
-              title={t('trackingHealth.refresh')}
-              onPress={refresh}
-              variant="outline"
-              style={styles.refreshBtn}
-              icon={<ArrowPathIcon size={16} color={colors.primary} />}
+      <SettingsGroup
+        index={1}
+        title={t('trackingHealth.checksHeader', { defaultValue: 'Checks' })}
+      >
+        {checks.map((check, index) => {
+          const Icon = check.icon;
+          const tint = statusTint(check.status);
+          return (
+            <SettingsItem
+              key={check.id}
+              grouped
+              icon={<Icon size={18} color="#FFFFFF" />}
+              iconColor={tint}
+              title={t(check.labelKey.replace('profile:', ''))}
+              isLast={index === checks.length - 1}
+              bottomElement={
+                <View style={styles.checkDetails}>
+                  <Text
+                    style={[
+                      styles.checkStatus,
+                      { color: check.status === 'ok' || check.status === 'info' ? colors.textSecondary : tint },
+                    ]}
+                  >
+                    {check.statusText}
+                  </Text>
+                  {check.onFix && check.status !== 'ok' ? (
+                    <Button
+                      title={t('trackingHealth.fixIt')}
+                      onPress={check.onFix}
+                      variant="glass"
+                      size="small"
+                      style={styles.fixButton}
+                    />
+                  ) : null}
+                </View>
+              }
             />
-          </ScrollView>
-        )}
-      </ThemedView>
-    </SafeAreaView>
+          );
+        })}
+      </SettingsGroup>
+
+      <View style={styles.refresh}>
+        <Button
+          title={t('trackingHealth.refresh')}
+          onPress={refresh}
+          variant="outline"
+          fullWidth
+          icon={<ArrowPathIcon size={16} color={colors.primary} />}
+        />
+      </View>
+    </SettingsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  loadingText: { fontSize: FontSizes.sm },
-  content: { padding: Spacing.lg, gap: Spacing.sm },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.xs,
-  },
-  bannerText: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold },
-  card: { marginVertical: 0 },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.md,
+  summary: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20, gap: 8 },
+  summaryIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 2,
+    marginBottom: 4,
   },
-  rowText: { flex: 1, gap: 3 },
-  rowLabel: { fontSize: FontSizes.md, fontWeight: FontWeights.semibold },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  statusText: { fontSize: FontSizes.xs, lineHeight: 17, flex: 1 },
-  fixBtn: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    alignSelf: 'center',
-    flexShrink: 0,
-  },
-  fixText: { fontSize: FontSizes.xs, fontWeight: FontWeights.semibold },
-  refreshBtn: { marginTop: Spacing.md },
+  summaryTitle: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  summaryText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  checkDetails: { paddingLeft: 42, gap: 8, alignItems: 'flex-start' },
+  checkStatus: { fontSize: 13, lineHeight: 18 },
+  fixButton: { alignSelf: 'flex-start' },
+  refresh: { paddingHorizontal: 16 },
 });

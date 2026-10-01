@@ -1,18 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CheckIcon, XMarkIcon } from 'react-native-heroicons/outline';
+import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { CheckIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/lib/i18n/types';
 import { ThemedText } from '@/components/themed-text';
+import { GlassSheet } from '@/components/ui/GlassSheet';
 
 interface LanguagePickerProps {
   visible: boolean;
@@ -21,8 +15,8 @@ interface LanguagePickerProps {
 
 export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { currentLanguage, changeLanguage, isChanging } = useLanguage();
-  const insets = useSafeAreaInsets();
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
 
   const handleClose = () => {
@@ -38,120 +32,87 @@ export function LanguagePicker({ visible, onClose }: LanguagePickerProps) {
     }, 300);
   };
 
-  const renderLanguageItem = ({ item }: { item: LanguageOption }) => {
-    const isSelected = item.code === selectedLanguage;
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.languageItem,
-          {
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-          },
-        ]}
-        onPress={() => handleSelectLanguage(item)}
-        disabled={isChanging}
-      >
-        <View style={styles.languageInfo}>
-          <ThemedText style={styles.languageName}>{item.nativeName}</ThemedText>
-          <ThemedText style={[styles.languageSubtitle, { color: colors.textSecondary }]}>
-            {item.name}
+  return (
+    <GlassSheet
+      visible={visible}
+      onClose={handleClose}
+      title={t('profile:language.selectTitle', { defaultValue: 'Select Language' })}
+    >
+      {isChanging ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+            {t('profile:language.changing', { defaultValue: 'Changing language...' })}
           </ThemedText>
         </View>
-
-        {isSelected && (
-          <View style={[styles.checkmark, { backgroundColor: colors.primary + '15' }]}>
-            <CheckIcon size={20} color={colors.primary} />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: insets.top + 20 }]}>
-          <ThemedText style={styles.headerTitle}>Select Language</ThemedText>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <XMarkIcon size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Language List */}
-        {isChanging ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Changing language...
-            </ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            data={LANGUAGE_OPTIONS}
-            renderItem={renderLanguageItem}
-            keyExtractor={(item) => item.code}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={true}
-          />
-        )}
-      </View>
-    </Modal>
+      ) : (
+        LANGUAGE_OPTIONS.map((item, index) => {
+          const isSelected = item.code === selectedLanguage;
+          return (
+            <Pressable
+              key={item.code}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+              onPress={() => handleSelectLanguage(item)}
+              disabled={isChanging}
+              style={({ pressed }) => [
+                styles.row,
+                pressed && { backgroundColor: colors.glassHighlight },
+                index < LANGUAGE_OPTIONS.length - 1 && {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: colors.glassBorder,
+                },
+              ]}
+            >
+              <View style={styles.info}>
+                <ThemedText style={styles.name}>{item.nativeName}</ThemedText>
+                <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
+                  {item.name}
+                </ThemedText>
+              </View>
+              <View
+                style={[
+                  styles.radio,
+                  isSelected
+                    ? { backgroundColor: colors.glassActiveFill, borderColor: colors.glassActiveFill }
+                    : { borderColor: colors.textSecondary },
+                ]}
+              >
+                {isSelected ? <CheckIcon size={14} color="#FFFFFF" /> : null}
+              </View>
+            </Pressable>
+          );
+        })
+      )}
+    </GlassSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContent: {
-    flex: 1,
-  },
-  header: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 14,
+    minHeight: 56,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  listContent: {
-    paddingBottom: 32,
-  },
-  languageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  languageInfo: {
+  info: {
     flex: 1,
   },
-  languageName: {
+  name: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '500',
   },
-  languageSubtitle: {
-    fontSize: 14,
+  subtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
-  checkmark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

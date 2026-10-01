@@ -7,11 +7,14 @@
     "preferences": "Preferences",
     "integrations": "Integrations",
     "privacyNotifications": "Privacy & Notifications",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "developer": "Developer"
   },
   "account": {
     "editProfile": "Edit Profile",
-    "editProfileSubtitle": "Update your personal information"
+    "editProfileSubtitle": "Update your personal information",
+    "changePassword": "Change Password",
+    "changePasswordSubtitle": "Update your account password"
   },
   "preferences": {
     "theme": "Theme",
@@ -23,7 +26,10 @@
     "systemLanguageSubtitle": "English",
     "unitsOfMeasure": "Units of Measure",
     "unitsMetric": "Metric (km, kg)",
-    "unitsImperial": "Imperial (mi, lb)"
+    "unitsImperial": "Imperial (mi, lb)",
+    "themeLabelSystem": "System",
+    "unitsMetricShort": "Metric",
+    "unitsImperialShort": "Imperial"
   },
   "integrations": {
     "connectedApps": "Connected Apps & Devices",
@@ -61,10 +67,14 @@
       "engineActive": "Active"
     },
     "degradationBanner": "Location permission changed — background tracking may not work",
-    "fixNow": "Fix Now"
+    "fixNow": "Fix Now",
+    "summaryOk": "Background tracking is ready to run reliably on this device.",
+    "summaryIssues": "Some settings may stop rides from being recorded in the background. Fix the items below.",
+    "checksHeader": "Checks"
   },
   "notifications": {
-    "subtitle": "Manage your notification preferences"
+    "subtitle": "Manage your notification preferences",
+    "title": "Notifications"
   },
   "privacy": {
     "privacy": "Privacy",
@@ -130,5 +140,20 @@
     "successMessage": "Your password has been changed.",
     "successOk": "OK",
     "fallbackError": "Failed to change password. Please try again."
-  }
+  },
+  "title": "You",
+  "backgroundTracking": {
+    "title": "Background Tracking",
+    "subtitleOn": "Automatically tracking your activities",
+    "subtitleOff": "Track activities in the background"
+  },
+  "developer": {
+    "debugTracking": "Debug Tracking",
+    "debugTrackingSubtitle": "View real-time tracking status and diagnostics"
+  },
+  "language": {
+    "selectTitle": "Select Language",
+    "changing": "Changing language..."
+  },
+  "version": "Version {{version}}"
 }

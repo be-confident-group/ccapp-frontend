@@ -6,7 +6,13 @@
     "bugReport": "Reporte de Error",
     "featureRequest": "Solicitud de Función",
     "generalFeedback": "Comentarios Generales",
-    "other": "Otro"
+    "other": "Otro",
+    "bugReportShort": "Error",
+    "featureRequestShort": "Idea",
+    "generalFeedbackShort": "General",
+    "bugReportDescription": "Informa de un error o problema",
+    "featureRequestDescription": "Sugiere una nueva función",
+    "generalFeedbackDescription": "Comparte tu opinión"
   },
   "message": {
     "label": "Mensaje",
@@ -19,10 +25,32 @@
   "submit": "Enviar Comentarios",
   "success": {
     "title": "¡Gracias!",
-    "message": "Tus comentarios han sido enviados exitosamente."
+    "message": "Tus comentarios han sido enviados exitosamente.",
+    "ok": "Aceptar"
   },
   "error": {
     "title": "Error",
     "message": "No se pudieron enviar los comentarios. Por favor, inténtalo de nuevo."
+  },
+  "subject": {
+    "label": "Asunto (opcional)",
+    "placeholder": "Resumen breve de tu comentario"
+  },
+  "attachments": {
+    "label": "Adjuntos (opcional)",
+    "hint": "Puedes adjuntar hasta 3 imágenes (solo PNG o JPG)",
+    "add": "Añadir imagen",
+    "remove": "Quitar imagen",
+    "limitTitle": "Límite alcanzado",
+    "limitMessage": "Puedes adjuntar hasta 3 imágenes.",
+    "permissionTitle": "Permiso necesario",
+    "permissionMessage": "Concede acceso a la fototeca para adjuntar imágenes.",
+    "invalidTypeTitle": "Tipo de archivo no válido",
+    "invalidTypeMessage": "Selecciona una imagen PNG o JPG.",
+    "pickError": "No se pudo seleccionar la imagen. Inténtalo de nuevo."
+  },
+  "validation": {
+    "messageRequiredTitle": "Mensaje obligatorio",
+    "messageRequiredMessage": "Escribe tu comentario."
   }
 }

@@ -7,11 +7,14 @@
     "preferences": "Preferencje",
     "integrations": "Integracje",
     "privacyNotifications": "Prywatność i powiadomienia",
-    "feedback": "Opinia"
+    "feedback": "Opinia",
+    "developer": "Deweloper"
   },
   "account": {
     "editProfile": "Edytuj profil",
-    "editProfileSubtitle": "Zaktualizuj swoje dane osobowe"
+    "editProfileSubtitle": "Zaktualizuj swoje dane osobowe",
+    "changePassword": "Zmień hasło",
+    "changePasswordSubtitle": "Zaktualizuj hasło do konta"
   },
   "preferences": {
     "theme": "Motyw",
@@ -23,7 +26,10 @@
     "systemLanguageSubtitle": "Angielski",
     "unitsOfMeasure": "Jednostki miary",
     "unitsMetric": "Metryczny (km, kg)",
-    "unitsImperial": "Imperialny (mi, lb)"
+    "unitsImperial": "Imperialny (mi, lb)",
+    "themeLabelSystem": "Systemowy",
+    "unitsMetricShort": "Metryczny",
+    "unitsImperialShort": "Imperialny"
   },
   "integrations": {
     "connectedApps": "Połączone aplikacje i urządzenia",
@@ -63,5 +69,28 @@
     "chooseFromLibrary": "Wybierz z biblioteki",
     "takePhoto": "Zrób zdjęcie",
     "removePhoto": "Usuń zdjęcie"
+  },
+  "title": "Ty",
+  "backgroundTracking": {
+    "title": "Śledzenie w tle",
+    "subtitleOn": "Automatyczne śledzenie aktywności",
+    "subtitleOff": "Śledź aktywności w tle"
+  },
+  "developer": {
+    "debugTracking": "Debugowanie śledzenia",
+    "debugTrackingSubtitle": "Podgląd stanu śledzenia i diagnostyki na żywo"
+  },
+  "language": {
+    "selectTitle": "Wybierz język",
+    "changing": "Zmiana języka..."
+  },
+  "version": "Wersja {{version}}",
+  "trackingHealth": {
+    "summaryOk": "Śledzenie w tle jest gotowe do niezawodnego działania na tym urządzeniu.",
+    "summaryIssues": "Niektóre ustawienia mogą blokować zapis przejazdów w tle. Popraw poniższe elementy.",
+    "checksHeader": "Kontrole"
+  },
+  "notifications": {
+    "title": "Powiadomienia"
   }
 }

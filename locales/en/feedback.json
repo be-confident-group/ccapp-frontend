@@ -6,7 +6,13 @@
     "bugReport": "Bug Report",
     "featureRequest": "Feature Request",
     "generalFeedback": "General Feedback",
-    "other": "Other"
+    "other": "Other",
+    "bugReportShort": "Bug",
+    "featureRequestShort": "Idea",
+    "generalFeedbackShort": "General",
+    "bugReportDescription": "Report a bug or issue",
+    "featureRequestDescription": "Suggest a new feature",
+    "generalFeedbackDescription": "Share your thoughts"
   },
   "message": {
     "label": "Message",
@@ -19,10 +25,32 @@
   "submit": "Submit Feedback",
   "success": {
     "title": "Thank You!",
-    "message": "Your feedback has been submitted successfully."
+    "message": "Your feedback has been submitted successfully.",
+    "ok": "OK"
   },
   "error": {
     "title": "Error",
     "message": "Unable to submit feedback. Please try again."
+  },
+  "subject": {
+    "label": "Subject (Optional)",
+    "placeholder": "Brief summary of your feedback"
+  },
+  "attachments": {
+    "label": "Attachments (Optional)",
+    "hint": "You can attach up to 3 images (PNG or JPG only)",
+    "add": "Add Image",
+    "remove": "Remove image",
+    "limitTitle": "Limit Reached",
+    "limitMessage": "You can attach up to 3 images.",
+    "permissionTitle": "Permission Required",
+    "permissionMessage": "Please grant photo library permissions to attach images.",
+    "invalidTypeTitle": "Invalid File Type",
+    "invalidTypeMessage": "Please select a PNG or JPG image.",
+    "pickError": "Failed to pick image. Please try again."
+  },
+  "validation": {
+    "messageRequiredTitle": "Message Required",
+    "messageRequiredMessage": "Please enter your feedback message."
   }
 }

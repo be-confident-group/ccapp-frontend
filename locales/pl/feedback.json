@@ -6,7 +6,13 @@
     "bugReport": "Bug Report",
     "featureRequest": "Feature Request",
     "generalFeedback": "General Feedback",
-    "other": "Other"
+    "other": "Other",
+    "bugReportShort": "Błąd",
+    "featureRequestShort": "Pomysł",
+    "generalFeedbackShort": "Ogólne",
+    "bugReportDescription": "Zgłoś błąd lub problem",
+    "featureRequestDescription": "Zaproponuj nową funkcję",
+    "generalFeedbackDescription": "Podziel się opinią"
   },
   "message": {
     "label": "Message",
@@ -19,10 +25,32 @@
   "submit": "Submit Feedback",
   "success": {
     "title": "Thank You!",
-    "message": "Your feedback has been submitted successfully."
+    "message": "Your feedback has been submitted successfully.",
+    "ok": "OK"
   },
   "error": {
     "title": "Error",
     "message": "Unable to submit feedback. Please try again."
+  },
+  "subject": {
+    "label": "Temat (opcjonalnie)",
+    "placeholder": "Krótkie podsumowanie opinii"
+  },
+  "attachments": {
+    "label": "Załączniki (opcjonalnie)",
+    "hint": "Możesz dołączyć do 3 obrazów (tylko PNG lub JPG)",
+    "add": "Dodaj obraz",
+    "remove": "Usuń obraz",
+    "limitTitle": "Osiągnięto limit",
+    "limitMessage": "Możesz dołączyć do 3 obrazów.",
+    "permissionTitle": "Wymagane uprawnienie",
+    "permissionMessage": "Zezwól na dostęp do zdjęć, aby dołączyć obrazy.",
+    "invalidTypeTitle": "Nieprawidłowy typ pliku",
+    "invalidTypeMessage": "Wybierz obraz PNG lub JPG.",
+    "pickError": "Nie udało się wybrać obrazu. Spróbuj ponownie."
+  },
+  "validation": {
+    "messageRequiredTitle": "Wiadomość wymagana",
+    "messageRequiredMessage": "Wpisz treść opinii."
   }
 }

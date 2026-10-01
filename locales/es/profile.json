@@ -7,11 +7,14 @@
     "preferences": "Preferencias",
     "integrations": "Integraciones",
     "privacyNotifications": "Privacidad y Notificaciones",
-    "feedback": "Comentarios"
+    "feedback": "Comentarios",
+    "developer": "Desarrollador"
   },
   "account": {
     "editProfile": "Editar Perfil",
-    "editProfileSubtitle": "Actualiza tu información personal"
+    "editProfileSubtitle": "Actualiza tu información personal",
+    "changePassword": "Cambiar contraseña",
+    "changePasswordSubtitle": "Actualiza la contraseña de tu cuenta"
   },
   "preferences": {
     "theme": "Tema",
@@ -23,7 +26,10 @@
     "systemLanguageSubtitle": "Español",
     "unitsOfMeasure": "Unidades de Medida",
     "unitsMetric": "Métrico (km, kg)",
-    "unitsImperial": "Imperial (mi, lb)"
+    "unitsImperial": "Imperial (mi, lb)",
+    "themeLabelSystem": "Sistema",
+    "unitsMetricShort": "Métrico",
+    "unitsImperialShort": "Imperial"
   },
   "integrations": {
     "connectedApps": "Aplicaciones y Dispositivos Conectados",
@@ -61,10 +67,14 @@
       "engineActive": "Activo"
     },
     "degradationBanner": "Permiso de ubicación cambiado — el seguimiento puede no funcionar",
-    "fixNow": "Corregir"
+    "fixNow": "Corregir",
+    "summaryOk": "El seguimiento en segundo plano está listo para funcionar bien en este dispositivo.",
+    "summaryIssues": "Algunos ajustes pueden impedir que se registren viajes en segundo plano. Corrige los elementos de abajo.",
+    "checksHeader": "Comprobaciones"
   },
   "notifications": {
-    "subtitle": "Administra tus preferencias de notificaciones"
+    "subtitle": "Administra tus preferencias de notificaciones",
+    "title": "Notificaciones"
   },
   "privacy": {
     "privacy": "Privacidad",
@@ -129,5 +139,20 @@
     "successMessage": "Tu contraseña ha sido cambiada.",
     "successOk": "OK",
     "fallbackError": "Error al cambiar la contraseña. Por favor, inténtalo de nuevo."
-  }
+  },
+  "title": "Tú",
+  "backgroundTracking": {
+    "title": "Seguimiento en segundo plano",
+    "subtitleOn": "Registrando tus actividades automáticamente",
+    "subtitleOff": "Registra actividades en segundo plano"
+  },
+  "developer": {
+    "debugTracking": "Depurar seguimiento",
+    "debugTrackingSubtitle": "Ver estado y diagnóstico del seguimiento en tiempo real"
+  },
+  "language": {
+    "selectTitle": "Seleccionar idioma",
+    "changing": "Cambiando idioma..."
+  },
+  "version": "Versión {{version}}"
 }

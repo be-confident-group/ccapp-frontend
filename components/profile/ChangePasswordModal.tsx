@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { TextInput } from '@/components/ui';
+import { TextInput, Button } from '@/components/ui';
+import { GlassSheet } from '@/components/ui/GlassSheet';
 import { authApi } from '@/lib/api/auth';
 
 interface ChangePasswordModalProps {
@@ -24,7 +14,6 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { colors } = useTheme();
   const { t } = useTranslation('profile');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -101,110 +90,57 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   };
 
   return (
-    <Modal
+    <GlassSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={t('changePassword.title')}
+      footer={
+        <Button
+          title={saving ? t('changePassword.saving') : t('changePassword.save')}
+          onPress={handleSave}
+          size="large"
+          fullWidth
+          loading={saving}
+          disabled={saving}
+        />
+      }
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.container, { backgroundColor: colors.background }]}
-      >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={handleClose} style={styles.cancelButton} disabled={saving}>
-            <Text style={[styles.cancelText, { color: saving ? colors.textSecondary : colors.text }]}>{t('changePassword.cancel')}</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('changePassword.title')}</Text>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
-            <Text style={[styles.saveText, { color: saving ? colors.textSecondary : colors.primary }]}>
-              {saving ? t('changePassword.saving') : t('changePassword.save')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.formSection}>
+        <TextInput
+          label={t('changePassword.currentPasswordLabel')}
+          value={oldPassword}
+          onChangeText={setOldPassword}
+          error={errors.oldPassword}
+          placeholder={t('changePassword.currentPasswordPlaceholder')}
+          secureTextEntry
+          autoCapitalize="none"
+        />
 
-        {/* Content */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.formSection}>
-            <TextInput
-              label={t('changePassword.currentPasswordLabel')}
-              value={oldPassword}
-              onChangeText={setOldPassword}
-              error={errors.oldPassword}
-              placeholder={t('changePassword.currentPasswordPlaceholder')}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+        <TextInput
+          label={t('changePassword.newPasswordLabel')}
+          value={newPassword}
+          onChangeText={setNewPassword}
+          error={errors.newPassword}
+          placeholder={t('changePassword.newPasswordPlaceholder')}
+          secureTextEntry
+          autoCapitalize="none"
+        />
 
-            <TextInput
-              label={t('changePassword.newPasswordLabel')}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              error={errors.newPassword}
-              placeholder={t('changePassword.newPasswordPlaceholder')}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              label={t('changePassword.confirmPasswordLabel')}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              error={errors.confirmPassword}
-              placeholder={t('changePassword.confirmPasswordPlaceholder')}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
+        <TextInput
+          label={t('changePassword.confirmPasswordLabel')}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          error={errors.confirmPassword}
+          placeholder={t('changePassword.confirmPasswordPlaceholder')}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+      </View>
+    </GlassSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  cancelButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  cancelText: {
-    fontSize: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  saveButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  saveText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
-  },
   formSection: {
     gap: 12,
   },

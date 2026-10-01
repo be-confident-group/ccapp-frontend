@@ -3,42 +3,25 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
   Platform,
   Alert,
+  TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
-import {
-  ChevronLeftIcon,
-  ChevronDownIcon,
-  PhotoIcon,
-  XMarkIcon,
-} from 'react-native-heroicons/outline';
+import { useTranslation } from 'react-i18next';
+import { PhotoIcon, XMarkIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { TextInput , Button } from '@/components/ui';
+import Button from '@/components/ui/Button';
+import { GlassTextSegments } from '@/components/ui/GlassTextSegments';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { SettingsScreen, SettingsFootnote } from '@/components/settings/SettingsScreen';
 import { useSubmitFeedback } from '@/lib/hooks/useFeedback';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import type { FeedbackCategory } from '@/lib/api/feedback';
-
-interface CategoryOption {
-  value: FeedbackCategory;
-  label: string;
-  description: string;
-}
-
-const categories: CategoryOption[] = [
-  { value: 'bug', label: 'Bug Report', description: 'Report a bug or issue' },
-  { value: 'feature', label: 'Feature Request', description: 'Suggest a new feature' },
-  { value: 'general', label: 'General Feedback', description: 'Share your thoughts' },
-];
 
 interface Attachment {
   uri: string; // Local URI for display
@@ -46,12 +29,29 @@ interface Attachment {
 }
 
 export default function FeedbackScreen() {
+  const { t } = useTranslation('feedback');
   const { colors } = useTheme();
+  const categories: { key: FeedbackCategory; label: string; description: string }[] = [
+    {
+      key: 'bug',
+      label: t('categories.bugReportShort', { defaultValue: 'Bug' }),
+      description: t('categories.bugReportDescription', { defaultValue: 'Report a bug or issue' }),
+    },
+    {
+      key: 'feature',
+      label: t('categories.featureRequestShort', { defaultValue: 'Idea' }),
+      description: t('categories.featureRequestDescription', { defaultValue: 'Suggest a new feature' }),
+    },
+    {
+      key: 'general',
+      label: t('categories.generalFeedbackShort', { defaultValue: 'General' }),
+      description: t('categories.generalFeedbackDescription', { defaultValue: 'Share your thoughts' }),
+    },
+  ];
   const [category, setCategory] = useState<FeedbackCategory>('general');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const submitFeedbackMutation = useSubmitFeedback();
   const { data: currentUser } = useCurrentUser();
@@ -60,7 +60,7 @@ export default function FeedbackScreen() {
     try {
       // Limit to 3 attachments
       if (attachments.length >= 3) {
-        Alert.alert('Limit Reached', 'You can attach up to 3 images.');
+        Alert.alert(t('attachments.limitTitle', { defaultValue: 'Limit Reached' }), t('attachments.limitMessage', { defaultValue: 'You can attach up to 3 images.' }));
         return;
       }
 
@@ -69,8 +69,8 @@ export default function FeedbackScreen() {
 
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          'Please grant photo library permissions to attach images.'
+          t('attachments.permissionTitle', { defaultValue: 'Permission Required' }),
+          t('attachments.permissionMessage', { defaultValue: 'Please grant photo library permissions to attach images.' })
         );
         return;
       }
@@ -89,7 +89,7 @@ export default function FeedbackScreen() {
 
         // Validate file type (PNG or JPG)
         if (!uri.toLowerCase().match(/\.(png|jpg|jpeg)$/)) {
-          Alert.alert('Invalid File Type', 'Please select a PNG or JPG image.');
+          Alert.alert(t('attachments.invalidTypeTitle', { defaultValue: 'Invalid File Type' }), t('attachments.invalidTypeMessage', { defaultValue: 'Please select a PNG or JPG image.' }));
           return;
         }
 
@@ -105,7 +105,7 @@ export default function FeedbackScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert(t('error.title', { defaultValue: 'Error' }), t('attachments.pickError', { defaultValue: 'Failed to pick image. Please try again.' }));
     }
   };
 
@@ -115,7 +115,7 @@ export default function FeedbackScreen() {
 
   const handleSubmit = async () => {
     if (!message.trim()) {
-      Alert.alert('Message Required', 'Please enter your feedback message.');
+      Alert.alert(t('validation.messageRequiredTitle', { defaultValue: 'Message Required' }), t('validation.messageRequiredMessage', { defaultValue: 'Please enter your feedback message.' }));
       return;
     }
 
@@ -151,11 +151,11 @@ export default function FeedbackScreen() {
       });
 
       Alert.alert(
-        'Thank You!',
-        'Your feedback has been submitted successfully. We appreciate your input!',
+        t('success.title', { defaultValue: 'Thank You!' }),
+        t('success.message', { defaultValue: 'Your feedback has been submitted successfully. We appreciate your input!' }),
         [
           {
-            text: 'OK',
+            text: t('success.ok', { defaultValue: 'OK' }),
             onPress: () => router.back(),
           },
         ]
@@ -163,304 +163,143 @@ export default function FeedbackScreen() {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       Alert.alert(
-        'Error',
-        'Failed to submit feedback. Please try again.',
-        [{ text: 'OK' }]
+        t('error.title', { defaultValue: 'Error' }),
+        t('error.message', { defaultValue: 'Failed to submit feedback. Please try again.' }),
+        [{ text: t('success.ok', { defaultValue: 'OK' }) }]
       );
     }
   };
 
-  const selectedCategory = categories.find((cat) => cat.value === category);
+  const selectedCategory = categories.find((cat) => cat.key === category);
+  const inputStyle = [
+    styles.input,
+    { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text },
+  ];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeftIcon size={24} color={colors.text} />
-          </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Send Feedback</ThemedText>
-          <View style={styles.headerRight} />
+    <SettingsScreen title={t('title', { defaultValue: 'Send Feedback' })} keyboardAvoiding>
+      <SettingsGroup title={t('categories.label', { defaultValue: 'Category' })}>
+        <View style={styles.cardBody}>
+          <GlassTextSegments
+            items={categories.map((c) => ({ key: c.key, label: c.label }))}
+            value={category}
+            onChange={setCategory}
+            stretch
+            fontSize={13}
+          />
+          <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+            {selectedCategory?.description}
+          </Text>
         </View>
+      </SettingsGroup>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Category Picker */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Category</Text>
-              <TouchableOpacity
-                onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-                style={[
-                  styles.categoryButton,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <View style={styles.categoryContent}>
-                  <Text style={[styles.categoryLabel, { color: colors.text }]}>
-                    {selectedCategory?.label}
-                  </Text>
-                  <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
-                    {selectedCategory?.description}
-                  </Text>
-                </View>
-                <ChevronDownIcon
-                  size={20}
-                  color={colors.textSecondary}
-                  style={[
-                    styles.chevron,
-                    showCategoryPicker && styles.chevronRotated,
-                  ]}
-                />
-              </TouchableOpacity>
+      <SettingsGroup index={1} title={t('subject.label', { defaultValue: 'Subject (Optional)' })}>
+        <View style={styles.cardBody}>
+          <TextInput
+            value={subject}
+            onChangeText={setSubject}
+            placeholder={t('subject.placeholder', { defaultValue: 'Brief summary of your feedback' })}
+            placeholderTextColor={colors.textSecondary}
+            style={inputStyle}
+          />
+        </View>
+      </SettingsGroup>
 
-              {/* Category Options */}
-              {showCategoryPicker && (
-                <View style={[styles.categoryOptions, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  {categories.map((cat, index) => (
-                    <TouchableOpacity
-                      key={cat.value}
-                      onPress={() => {
-                        setCategory(cat.value);
-                        setShowCategoryPicker(false);
-                      }}
-                      style={[
-                        styles.categoryOption,
-                        index < categories.length - 1 && [
-                          styles.categoryOptionBorder,
-                          { borderBottomColor: colors.border },
-                        ],
-                        category === cat.value && {
-                          backgroundColor: colors.primary + '10',
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.categoryLabel, { color: colors.text }]}>
-                        {cat.label}
-                      </Text>
-                      <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
-                        {cat.description}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
+      <SettingsGroup index={2} title={t('message.label', { defaultValue: 'Message' })}>
+        <View style={styles.cardBody}>
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder={t('message.placeholder', { defaultValue: "Tell us what's on your mind..." })}
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            textAlignVertical="top"
+            style={[inputStyle, styles.messageInput]}
+          />
+        </View>
+      </SettingsGroup>
 
-            {/* Subject Input */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Subject (Optional)</Text>
-              <TextInput
-                value={subject}
-                onChangeText={setSubject}
-                placeholder="Brief summary of your feedback"
-                style={styles.subjectTextInput}
-              />
-            </View>
-
-            {/* Message Input */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>Message</Text>
-              <TextInput
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Tell us what's on your mind..."
-                multiline
-                numberOfLines={10}
-                textAlignVertical="top"
-                style={styles.messageTextInput}
-              />
-            </View>
-
-            {/* Attachments */}
-            <View style={styles.section}>
-              <Text style={[styles.label, { color: colors.text }]}>
-                Attachments (Optional)
-              </Text>
-              <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                You can attach up to 3 images (PNG or JPG only)
-              </Text>
-
-              {/* Attachment List */}
-              {attachments.length > 0 && (
-                <View style={styles.attachmentList}>
-                  {attachments.map((attachment, index) => (
-                    <View
-                      key={index}
-                      style={[styles.attachmentItem, { backgroundColor: colors.card }]}
-                    >
-                      <Image source={{ uri: attachment.uri }} style={styles.attachmentImage} />
-                      <TouchableOpacity
-                        onPress={() => handleRemoveAttachment(index)}
-                        style={[styles.removeButton, { backgroundColor: colors.error }]}
-                      >
-                        <XMarkIcon size={14} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* Add Attachment Button */}
-              {attachments.length < 3 && (
-                <TouchableOpacity
-                  onPress={handlePickImage}
-                  style={[
-                    styles.attachButton,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
-                  activeOpacity={0.7}
+      <SettingsGroup
+        index={3}
+        title={t('attachments.label', { defaultValue: 'Attachments (Optional)' })}
+      >
+        <View style={styles.cardBody}>
+          {attachments.length > 0 && (
+            <View style={styles.attachmentList}>
+              {attachments.map((attachment, index) => (
+                <View
+                  key={index}
+                  style={[styles.attachmentItem, { backgroundColor: colors.inputBackground }]}
                 >
-                  <PhotoIcon size={24} color={colors.textSecondary} />
-                  <Text style={[styles.attachButtonText, { color: colors.textSecondary }]}>
-                    Add Image
-                  </Text>
-                </TouchableOpacity>
-              )}
+                  <Image source={{ uri: attachment.uri }} style={styles.attachmentImage} />
+                  <TouchableOpacity
+                    onPress={() => handleRemoveAttachment(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('attachments.remove', { defaultValue: 'Remove image' })}
+                    style={[styles.removeButton, { backgroundColor: colors.error }]}
+                  >
+                    <XMarkIcon size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-          </ScrollView>
+          )}
+          {attachments.length < 3 && (
+            <TouchableOpacity
+              onPress={handlePickImage}
+              style={[
+                styles.attachButton,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+              ]}
+              activeOpacity={0.7}
+            >
+              <PhotoIcon size={22} color={colors.textSecondary} />
+              <Text style={[styles.attachButtonText, { color: colors.textSecondary }]}>
+                {t('attachments.add', { defaultValue: 'Add Image' })}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </SettingsGroup>
+      <SettingsFootnote>
+        {t('attachments.hint', { defaultValue: 'You can attach up to 3 images (PNG or JPG only)' })}
+      </SettingsFootnote>
 
-          {/* Submit Button */}
-          <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-            <Button
-              title="Submit Feedback"
-              onPress={handleSubmit}
-              variant="primary"
-              size="large"
-              fullWidth
-              loading={submitFeedbackMutation.isPending}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </ThemedView>
-    </SafeAreaView>
+      <View style={styles.submit}>
+        <Button
+          title={t('submit', { defaultValue: 'Submit Feedback' })}
+          onPress={handleSubmit}
+          variant="primary"
+          size="large"
+          fullWidth
+          loading={submitFeedbackMutation.isPending}
+        />
+      </View>
+    </SettingsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+  cardBody: { padding: 16, gap: 12 },
+  categoryDescription: { fontSize: 13, lineHeight: 18 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 40,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  label: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    lineHeight: 22,
   },
-  hint: {
-    fontSize: 13,
-    marginTop: -8,
-    marginBottom: 12,
-  },
-  categoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  categoryContent: {
-    flex: 1,
-  },
-  categoryLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  categoryDescription: {
-    fontSize: 13,
-  },
-  chevron: {
-    marginLeft: 8,
-  },
-  chevronRotated: {
-    transform: [{ rotate: '180deg' }],
-  },
-  categoryOptions: {
-    marginTop: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  categoryOption: {
-    padding: 16,
-  },
-  categoryOptionBorder: {
-    borderBottomWidth: 1,
-  },
-  subjectTextInput: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  messageTextInput: {
-    minHeight: 200,
-    maxHeight: 300,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  attachmentList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 12,
-  },
+  messageInput: { minHeight: 160, maxHeight: 300 },
+  attachmentList: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   attachmentItem: {
     position: 'relative',
-    width: 100,
-    height: 100,
-    borderRadius: 8,
+    width: 96,
+    height: 96,
+    borderRadius: 12,
     overflow: 'hidden',
   },
-  attachmentImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
+  attachmentImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   removeButton: {
     position: 'absolute',
     top: 4,
@@ -475,18 +314,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
     gap: 8,
   },
-  attachButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-  },
+  attachButtonText: { fontSize: 15, fontWeight: '500' },
+  submit: { paddingHorizontal: 16 },
 });

@@ -7,11 +7,14 @@
     "preferences": "পছন্দসমূহ",
     "integrations": "ইন্টিগ্রেশন",
     "privacyNotifications": "গোপনীয়তা এবং বিজ্ঞপ্তি",
-    "feedback": "মতামত"
+    "feedback": "মতামত",
+    "developer": "ডেভেলপার"
   },
   "account": {
     "editProfile": "প্রোফাইল সম্পাদনা করুন",
-    "editProfileSubtitle": "আপনার ব্যক্তিগত তথ্য আপডেট করুন"
+    "editProfileSubtitle": "আপনার ব্যক্তিগত তথ্য আপডেট করুন",
+    "changePassword": "পাসওয়ার্ড পরিবর্তন",
+    "changePasswordSubtitle": "আপনার অ্যাকাউন্টের পাসওয়ার্ড আপডেট করুন"
   },
   "preferences": {
     "theme": "থিম",
@@ -23,7 +26,10 @@
     "systemLanguageSubtitle": "ইংরেজি",
     "unitsOfMeasure": "পরিমাপের একক",
     "unitsMetric": "মেট্রিক (কিমি, কেজি)",
-    "unitsImperial": "ইম্পেরিয়াল (মাইল, পাউন্ড)"
+    "unitsImperial": "ইম্পেরিয়াল (মাইল, পাউন্ড)",
+    "themeLabelSystem": "সিস্টেম",
+    "unitsMetricShort": "মেট্রিক",
+    "unitsImperialShort": "ইম্পেরিয়াল"
   },
   "integrations": {
     "connectedApps": "সংযুক্ত অ্যাপ এবং ডিভাইস",
@@ -63,5 +69,28 @@
     "chooseFromLibrary": "লাইব্রেরি থেকে নির্বাচন করুন",
     "takePhoto": "ছবি তুলুন",
     "removePhoto": "ছবি সরান"
+  },
+  "title": "আপনি",
+  "backgroundTracking": {
+    "title": "ব্যাকগ্রাউন্ড ট্র্যাকিং",
+    "subtitleOn": "আপনার কার্যকলাপ স্বয়ংক্রিয়ভাবে ট্র্যাক হচ্ছে",
+    "subtitleOff": "ব্যাকগ্রাউন্ডে কার্যকলাপ ট্র্যাক করুন"
+  },
+  "developer": {
+    "debugTracking": "ট্র্যাকিং ডিবাগ",
+    "debugTrackingSubtitle": "রিয়েল-টাইম ট্র্যাকিং স্ট্যাটাস ও ডায়াগনস্টিকস দেখুন"
+  },
+  "language": {
+    "selectTitle": "ভাষা নির্বাচন করুন",
+    "changing": "ভাষা পরিবর্তন হচ্ছে..."
+  },
+  "version": "সংস্করণ {{version}}",
+  "trackingHealth": {
+    "summaryOk": "এই ডিভাইসে ব্যাকগ্রাউন্ড ট্র্যাকিং নির্ভরযোগ্যভাবে চলার জন্য প্রস্তুত।",
+    "summaryIssues": "কিছু সেটিং ব্যাকগ্রাউন্ডে রাইড রেকর্ড হওয়া বন্ধ করতে পারে। নিচের বিষয়গুলো ঠিক করুন।",
+    "checksHeader": "পরীক্ষা"
+  },
+  "notifications": {
+    "title": "নোটিফিকেশন"
   }
 }
