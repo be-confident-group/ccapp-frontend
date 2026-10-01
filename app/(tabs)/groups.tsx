@@ -215,18 +215,17 @@ export default function FeedScreen() {
     >
       <ThemedView style={styles.container}>
         <FeedHeader
+          leading={
+            <GlassTextSegments
+              items={FEED_FILTERS.map(({ key, labelKey }) => ({ key, label: t(labelKey) }))}
+              value={feedType}
+              onChange={setFeedType}
+              fontSize={FontSizes.sm}
+            />
+          }
           onLeaderboardPress={handleLeaderboardPress}
           onMyClubsPress={handleMyClubsPress}
         />
-
-        <View style={styles.filterBar}>
-          <GlassTextSegments
-            items={FEED_FILTERS.map(({ key, labelKey }) => ({ key, label: t(labelKey) }))}
-            value={feedType}
-            onChange={setFeedType}
-            fontSize={FontSizes.sm}
-          />
-        </View>
 
         <Animated.FlatList
           data={posts}
@@ -274,11 +273,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  filterBar: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.sm,
   },
   listContent: {
     paddingHorizontal: Spacing.lg,

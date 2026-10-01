@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { TrophyIcon, UsersIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from 'react-i18next';
@@ -8,11 +8,14 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing, FontSizes } from '@/constants/theme';
 
 interface FeedHeaderProps {
+  /** Shown on the left instead of the title, e.g. the feed filters. */
+  leading?: ReactNode;
   onLeaderboardPress: () => void;
   onMyClubsPress: () => void;
 }
 
 export function FeedHeader({
+  leading,
   onLeaderboardPress,
   onMyClubsPress,
 }: FeedHeaderProps) {
@@ -22,8 +25,9 @@ export function FeedHeader({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Title - Left */}
-      <ThemedText style={styles.title}>{t('title')}</ThemedText>
+      <View style={styles.leading}>
+        {leading ?? <ThemedText style={styles.title}>{t('title')}</ThemedText>}
+      </View>
 
       <GlassActionGroup
         actions={[
@@ -40,8 +44,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  leading: {
+    flexShrink: 1,
   },
   title: {
     fontSize: FontSizes.xl,

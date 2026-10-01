@@ -2,8 +2,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TrophyBadge } from '@/components/trophies/TrophyBadge';
 import { router, useFocusEffect } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
@@ -109,7 +110,7 @@ export default function TrophiesScreen() {
           {/* Trophies Grid */}
           {!loading && trophies.length > 0 && (
             <View style={styles.trophiesGrid}>
-                {trophies.map((trophy) => (
+                {trophies.map((trophy, index) => (
                   <TouchableOpacity
                     key={trophy.code}
                     style={styles.trophyWrapper}
@@ -119,13 +120,7 @@ export default function TrophiesScreen() {
                     <View style={styles.trophyCard}>
                       {/* Trophy Icon */}
                       <View style={styles.trophyContainer}>
-                        <Image
-                          source={require('@/assets/images/page-icons/trophy.png')}
-                          style={[
-                            styles.trophyImage,
-                            { opacity: trophy.is_earned ? 1 : 0.4 }
-                          ]}
-                        />
+                        <TrophyBadge trophy={trophy} size={80} index={index} />
                       </View>
 
                       {/* Trophy Title */}
@@ -251,11 +246,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  trophyImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
   },
   trophyTitle: {
     fontSize: 11,

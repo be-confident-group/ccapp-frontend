@@ -36,6 +36,7 @@ import { useTabBarInset, useTabBarScrollHandler } from '@/contexts/TabBarContext
 import { useTranslation } from 'react-i18next';
 import { GlassActionGroup } from '@/components/ui/GlassActionGroup';
 import { TrackingMenu, type AnchorFrame } from '@/components/home/TrackingMenu';
+import { TrophyBadge } from '@/components/trophies/TrophyBadge';
 import { useTracking } from '@/contexts/TrackingContext';
 import { useWeather } from '@/hooks/useWeather';
 import { WeatherDetailsModal } from '@/components/modals/WeatherDetailsModal';
@@ -562,7 +563,7 @@ export default function HomeScreen() {
                       </ThemedText>
                     </View>
                   ) : (
-                    trophies.map((trophy) => (
+                    trophies.map((trophy, index) => (
                       <TouchableOpacity
                         key={trophy.code}
                         style={styles.trophyItem}
@@ -571,15 +572,7 @@ export default function HomeScreen() {
                           setIsTrophyModalOpen(true);
                         }}
                       >
-                        <View style={styles.trophyIconWrapper}>
-                          <Image
-                            source={require('@/assets/images/page-icons/trophy.png')}
-                            style={[
-                              styles.trophyIcon,
-                              { opacity: trophy.is_earned ? 1 : 0.4 }
-                            ]}
-                          />
-                        </View>
+                        <TrophyBadge trophy={trophy} size={68} index={index} />
                         <ThemedText style={styles.trophyTitle} numberOfLines={2}>
                           {trophy.name}
                         </ThemedText>
@@ -1062,17 +1055,6 @@ const styles = StyleSheet.create({
   trophyItem: {
     alignItems: 'center',
     gap: Spacing.sm,
-  },
-  trophyIconWrapper: {
-    width: 64,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trophyIcon: {
-    width: 64,
-    height: 64,
-    resizeMode: 'contain',
   },
   trophyTitle: {
     fontSize: 11,

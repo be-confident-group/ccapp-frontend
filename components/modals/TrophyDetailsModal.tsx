@@ -1,11 +1,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TrophyBadge } from '@/components/trophies/TrophyBadge';
 import type { Trophy } from '@/lib/api/trophies';
 import { GlassSheet } from '@/components/ui/GlassSheet';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface TrophyDetailsModalProps {
   visible: boolean;
@@ -24,13 +25,7 @@ export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsMo
     <GlassSheet visible={visible} onClose={onClose}>
         {/* Trophy Icon */}
         <View style={styles.iconContainer}>
-          <Image
-            source={require('@/assets/images/page-icons/trophy.png')}
-            style={[
-              styles.trophyImage,
-              { opacity: trophy.is_earned ? 1 : 0.4 }
-            ]}
-          />
+          <TrophyBadge trophy={trophy} size={112} />
         </View>
 
         {/* Trophy Name */}
@@ -94,11 +89,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     marginBottom: Spacing.lg,
-  },
-  trophyImage: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
   },
   trophyName: {
     fontSize: 24,
