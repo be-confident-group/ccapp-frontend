@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useColorScheme as useSystemColorScheme } from 'react-native';
+import { Appearance, useColorScheme as useSystemColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, ColorScheme, ThemeColors } from '@/constants/theme';
 
@@ -31,6 +31,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     loadThemePreference();
   }, []);
+
+  // Apply the override natively too. On iOS 27+ the StatusBar style API is a no-op and
+  // the status bar follows the window's interface style, so without this a manual
+  // Light/Dark choice that differs from the system would leave unreadable status bar text.
+  // `null` restores following the system setting.
+  useEffect(() => {
+    if (!isReady) return;
+    Appearance.setColorScheme(themeMode === 'system' ? null : themeMode);
+  }, [themeMode, isReady]);
 
   const loadThemePreference = async () => {
     try {

@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "eas-build-pre-install": "./eas-build-pre-install.sh",
-    "postinstall": "npx patch-package"
+    "postinstall": "npx patch-package && node ./scripts/restore-expo-sqlite-sources.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
