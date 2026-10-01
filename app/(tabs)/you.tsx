@@ -281,10 +281,7 @@ export default function YouScreen() {
     }
   };
 
-  const hasStoreListing =
-    Platform.OS === 'ios'
-      ? IOS_APP_STORE_ID !== 'PLACEHOLDER_IOS_APP_ID'
-      : ANDROID_PACKAGE_NAME !== 'PLACEHOLDER_ANDROID_PACKAGE';
+  const hasStoreListing = Platform.OS === 'ios' ? IOS_APP_STORE_ID !== 'PLACEHOLDER_IOS_APP_ID' : true;
 
   const handleRateApp = () => {
     const storeUrl =

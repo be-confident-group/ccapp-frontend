@@ -17,6 +17,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { apiClient } from '../api/client';
+import { readAuthToken } from '../api/tokenStorage';
 import { useEffect, useState } from 'react';
 
 const CACHE_KEY = 'tracking-config:v1';
@@ -160,6 +161,9 @@ async function fetchFromServer(): Promise<TrackingConfig | null> {
   if (_fetchInFlight) return null;
   _fetchInFlight = true;
   try {
+    // The endpoint requires auth; when signed out, keep the cached/default config.
+    // refreshTrackingConfig() fetches once the user signs in.
+    if (!(await readAuthToken())) return null;
     const response = await apiClient.get<Record<string, unknown>>('/api/tracking-config/');
     const config = fromServerResponse(response);
     await saveToCache(config);
@@ -201,6 +205,15 @@ export async function initTrackingConfig(): Promise<void> {
       await pushConfigToNative(updated);
     }
   });
+}
+
+/** Fetches fresh config from the server, e.g. right after sign-in. */
+export async function refreshTrackingConfig(): Promise<void> {
+  const fresh = await fetchFromServer();
+  if (fresh) {
+    notify(fresh);
+    await pushConfigToNative(fresh);
+  }
 }
 
 /** Push the given config to the native TripStateMachine via the bridge. */

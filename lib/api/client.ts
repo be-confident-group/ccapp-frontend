@@ -101,11 +101,14 @@ class ApiClient {
       if (!response.ok) {
         // Handle 401 Unauthorized — token is invalid/expired
         if (response.status === 401 && requiresAuth) {
-          console.warn('[API] 401 Unauthorized — clearing invalid token');
-          await deleteAuthToken();
-          this.isLoggingOut = true;
-          if (this.onUnauthorized) {
-            this.onUnauthorized();
+          // Concurrent requests can all 401 at once; sign out only for the first.
+          if (!this.isLoggingOut) {
+            this.isLoggingOut = true;
+            console.warn('[API] 401 Unauthorized — clearing invalid token');
+            await deleteAuthToken();
+            if (this.onUnauthorized) {
+              this.onUnauthorized();
+            }
           }
           throw new Error('Session expired. Please sign in again.');
         }

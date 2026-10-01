@@ -152,6 +152,9 @@ export const RadziTrackerEvents = {
     return () => sub?.remove();
   },
   onPermissionMissing(cb: (e: { permission: string }) => void): () => void {
+    // Only the Android module emits this; iOS's supportedEvents() doesn't declare it,
+    // and subscribing to an undeclared event logs a warning.
+    if (Platform.OS !== 'android') return () => {};
     const sub = emitter?.addListener('trackingPermissionMissing', cb);
     return () => { sub?.remove(); };
   },

@@ -15,9 +15,9 @@ export const IOS_APP_STORE_ID = process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? 'PLA
 
 /**
  * Android package name used in the Play Store URL.
- * Replace PLACEHOLDER_ANDROID_PACKAGE with the real value before shipping.
+ * Defaults to android.package from app.config.js.
  */
-export const ANDROID_PACKAGE_NAME = process.env.EXPO_PUBLIC_ANDROID_PACKAGE ?? 'PLACEHOLDER_ANDROID_PACKAGE';
+export const ANDROID_PACKAGE_NAME = process.env.EXPO_PUBLIC_ANDROID_PACKAGE ?? 'com.radzi.app';
 
 // ---------------------------------------------------------------------------
 // Legal
@@ -46,12 +46,6 @@ if (__DEV__) {
     console.warn(
       '[config/env] IOS_APP_STORE_ID is not set. ' +
         'Set EXPO_PUBLIC_IOS_APP_STORE_ID in your .env file.'
-    );
-  }
-  if (ANDROID_PACKAGE_NAME === 'PLACEHOLDER_ANDROID_PACKAGE') {
-    console.warn(
-      '[config/env] ANDROID_PACKAGE_NAME is not set. ' +
-        'Set EXPO_PUBLIC_ANDROID_PACKAGE in your .env file.'
     );
   }
 }

@@ -54,8 +54,9 @@ export function useWeather(): UseWeatherReturn {
       setWeather(weatherData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch weather';
-      console.error('[useWeather] Error fetching weather:', errorMessage);
-      console.error('[useWeather] Full error:', err);
+      // Expected when location is off/unavailable (e.g. a simulator with no location
+      // set); the fallback below covers it, so warn rather than raise a LogBox error.
+      console.warn('[useWeather] Error fetching weather, using fallback:', errorMessage);
 
       setError(errorMessage);
 
