@@ -85,9 +85,17 @@ export function useLocation(): UseLocationReturn {
         return null;
       }
 
-      const expoLocation = await ExpoLocation.getCurrentPositionAsync({
-        accuracy: ExpoLocation.Accuracy.High,
-      });
+      let expoLocation: ExpoLocation.LocationObject | null;
+      try {
+        expoLocation = await ExpoLocation.getCurrentPositionAsync({
+          accuracy: ExpoLocation.Accuracy.High,
+        });
+      } catch (err) {
+        // No fix yet (e.g. indoors, or a simulator without a set location):
+        // iOS reports kCLErrorLocationUnknown. Fall back to the cached position.
+        expoLocation = await ExpoLocation.getLastKnownPositionAsync();
+        if (!expoLocation) throw err;
+      }
 
       const loc: Location = {
         latitude: expoLocation.coords.latitude,
@@ -103,7 +111,8 @@ export function useLocation(): UseLocationReturn {
       setLocation(loc);
       return loc;
     } catch (err) {
-      console.error('[useLocation] Error getting location:', err);
+      // Transient and expected without a GPS fix; callers handle the null/error state.
+      console.warn('[useLocation] Could not get location:', err);
       setError('Failed to get current location');
       return null;
     } finally {

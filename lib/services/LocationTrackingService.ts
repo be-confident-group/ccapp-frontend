@@ -1310,13 +1310,16 @@ export class LocationTrackingService {
    */
   static async getCurrentLocation(): Promise<Location.LocationObject | null> {
     try {
-      const location = await Location.getCurrentPositionAsync({
+      return await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      return location;
     } catch (error) {
-      console.error('[LocationTracking] Error getting current location:', error);
-      return null;
+      // No fix yet (kCLErrorLocationUnknown): fall back to the cached position.
+      const lastKnown = await Location.getLastKnownPositionAsync().catch(() => null);
+      if (!lastKnown) {
+        console.warn('[LocationTracking] Could not get current location:', error);
+      }
+      return lastKnown;
     }
   }
 

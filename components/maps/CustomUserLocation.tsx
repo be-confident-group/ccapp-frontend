@@ -28,17 +28,21 @@ export function CustomUserLocation({ onLocationUpdate }: CustomUserLocationProps
         }
 
         // Get initial location
+        // Without a GPS fix yet (kCLErrorLocationUnknown) fall back to the cached
+        // position; if there is none, the watcher below provides the first fix.
         const initialLocation = await ExpoLocation.getCurrentPositionAsync({
           accuracy: ExpoLocation.Accuracy.High,
-        });
-        
-        const coords: [number, number] = [
-          initialLocation.coords.longitude,
-          initialLocation.coords.latitude,
-        ];
-        setLocation(coords);
-        if (onLocationUpdate) {
-          onLocationUpdate(coords);
+        }).catch(() => ExpoLocation.getLastKnownPositionAsync());
+
+        if (initialLocation) {
+          const coords: [number, number] = [
+            initialLocation.coords.longitude,
+            initialLocation.coords.latitude,
+          ];
+          setLocation(coords);
+          if (onLocationUpdate) {
+            onLocationUpdate(coords);
+          }
         }
 
         // Watch location updates
