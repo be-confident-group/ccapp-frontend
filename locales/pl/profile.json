@@ -43,7 +43,9 @@
     "dailyReminder": "Codzienne przypomnienie",
     "dailyReminderSubtitle": "Przypominaj o logowaniu przejazdów",
     "notificationSettings": "Ustawienia powiadomień",
-    "notificationSettingsSubtitle": "Zarządzaj wszystkimi powiadomieniami"
+    "notificationSettingsSubtitle": "Zarządzaj wszystkimi powiadomieniami",
+    "contactSupport": "Skontaktuj się z pomocą",
+    "contactSupportSubtitle": "Zgłoś problem lub skontaktuj się z naszym zespołem"
   },
   "feedback": {
     "sendFeedback": "Wyślij opinię",
@@ -88,9 +90,93 @@
   "trackingHealth": {
     "summaryOk": "Śledzenie w tle jest gotowe do niezawodnego działania na tym urządzeniu.",
     "summaryIssues": "Niektóre ustawienia mogą blokować zapis przejazdów w tle. Popraw poniższe elementy.",
-    "checksHeader": "Kontrole"
+    "checksHeader": "Kontrole",
+    "allGood": "Wszystkie testy zaliczone",
+    "checks": {
+      "batteryOpt": "Optymalizacja baterii",
+      "batteryOptActive": "Zoptymalizowano – otwórz Informacje o aplikacji → Bateria → ustaw Bez ograniczeń",
+      "batteryOptExempt": "Wyłączono – aplikacja może swobodnie działać w tle",
+      "engineActive": "Aktywny",
+      "engineIdle": "Bezczynny – oczekiwanie na ruch",
+      "engineState": "Silnik śledzenia",
+      "locationAuth": "Uprawnienie lokalizacji",
+      "locationAuthAlways": "Zawsze – śledzenie w tle włączone",
+      "locationAuthDenied": "Odmówiono – zezwól w Ustawieniach",
+      "locationAuthWhenInUse": "Podczas użytkowania – śledzenie w tle wyłączone",
+      "locationPrecise": "Dokładna lokalizacja",
+      "locationPreciseDegraded": "Obniżona dokładność – precyzja GPS jest ograniczona",
+      "locationPreciseOk": "Pełna dokładność włączona",
+      "lowPowerMode": "Tryb niskiego zużycia energii",
+      "lowPowerModeOff": "Wyłączony – GPS działa z pełną mocą",
+      "lowPowerModeOn": "Włączony – GPS i zadania w tle są ograniczone",
+      "motion": "Ruch i kondycja",
+      "motionDenied": "Odmówiono – wykrywanie aktywności wyłączone",
+      "motionGranted": "Przyznano"
+    },
+    "degradationBanner": "Zmieniono uprawnienie lokalizacji – śledzenie w tle może nie działać",
+    "fixIt": "Napraw",
+    "fixNow": "Napraw teraz",
+    "issuesFound": "Znaleziono problemy",
+    "loading": "Sprawdzanie...",
+    "refresh": "Odśwież",
+    "subtitle": "Sprawdza, czy śledzenie w tle działa niezawodnie na tym urządzeniu",
+    "title": "Stan śledzenia"
   },
   "notifications": {
-    "title": "Powiadomienia"
+    "title": "Powiadomienia",
+    "subtitle": "Zarządzaj preferencjami powiadomień"
+  },
+  "card": {
+    "distance": "Dystans",
+    "trips": "Wyprawy",
+    "trophies": "Trofea"
+  },
+  "changePassword": {
+    "cancel": "Anuluj",
+    "confirmPasswordLabel": "Potwierdź nowe hasło",
+    "confirmPasswordPlaceholder": "Potwierdź nowe hasło",
+    "confirmPasswordRequired": "Potwierdź nowe hasło",
+    "currentPasswordLabel": "Obecne hasło",
+    "currentPasswordPlaceholder": "Wpisz obecne hasło",
+    "currentPasswordRequired": "Obecne hasło jest wymagane",
+    "fallbackError": "Nie udało się zmienić hasła. Spróbuj ponownie.",
+    "newPasswordLabel": "Nowe hasło",
+    "newPasswordPlaceholder": "Wpisz nowe hasło",
+    "newPasswordRequired": "Nowe hasło jest wymagane",
+    "newPasswordTooShort": "Hasło musi mieć co najmniej 8 znaków",
+    "passwordsDoNotMatch": "Hasła nie są takie same",
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
+    "successMessage": "Twoje hasło zostało zmienione.",
+    "successOk": "OK",
+    "successTitle": "Sukces",
+    "title": "Zmień hasło"
+  },
+  "deleteAccount": "Usuń konto",
+  "edit": {
+    "cancel": "Anuluj",
+    "dateOfBirthLabel": "Data urodzenia",
+    "done": "Gotowe",
+    "emailInvalid": "Nieprawidłowy format e-maila",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "email@example.com",
+    "emailRequired": "E-mail jest wymagany",
+    "firstNameLabel": "Imię",
+    "firstNamePlaceholder": "Wpisz swoje imię",
+    "firstNameRequired": "Imię jest wymagane",
+    "genderFemale": "Kobieta",
+    "genderLabel": "Płeć",
+    "genderMale": "Mężczyzna",
+    "genderOther": "Inna",
+    "genderPreferNotToSay": "Wolę nie podawać",
+    "lastNameLabel": "Nazwisko",
+    "lastNamePlaceholder": "Wpisz swoje nazwisko",
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
+    "selectDateOfBirth": "Wybierz datę urodzenia",
+    "selectGender": "Wybierz płeć",
+    "selectGenderTitle": "Wybierz płeć",
+    "tapToChangePhoto": "Dotknij, aby zmienić zdjęcie",
+    "title": "Edytuj profil"
   }
 }

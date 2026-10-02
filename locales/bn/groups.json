@@ -91,7 +91,56 @@
     "pendingRequests_one": "{{count}} pending join request",
     "pendingRequests_other": "{{count}} pending join requests",
     "memberCount_one": "{{count}} member",
-    "memberCount_other": "{{count}} members"
+    "memberCount_other": "{{count}} members",
+    "accept": "গ্রহণ করুন",
+    "acceptFailed": "অনুরোধ গ্রহণ করা যায়নি",
+    "acceptRequest": "অনুরোধ গ্রহণ করুন",
+    "addPhoto": "ছবি যোগ করুন",
+    "browseClubs": "গ্রুপ ব্রাউজ করুন",
+    "changePhoto": "পরিবর্তন",
+    "confirmTransferMessage": "\"{{clubName}}\"-এর মালিকানা {{memberName}}-কে হস্তান্তর করবেন? আপনি সাধারণ সদস্য হয়ে যাবেন।",
+    "confirmTransferTitle": "মালিকানা হস্তান্তর",
+    "create": "গ্রুপ তৈরি করুন",
+    "createClub": "গ্রুপ তৈরি করুন",
+    "createInfo": "আপনি এই গ্রুপের মালিক হবেন এবং সদস্য ও সেটিংস পরিচালনা করতে পারবেন।",
+    "dangerZone": "বিপজ্জনক এলাকা",
+    "decline": "প্রত্যাখ্যান",
+    "delete": "মুছুন",
+    "deleteClub": "গ্রুপ মুছুন",
+    "deleteConfirmMessage": "আপনি কি নিশ্চিত যে এই গ্রুপটি মুছতে চান? এটি ফেরানো যাবে না।",
+    "deleteWarning": "একবার গ্রুপ মুছে ফেললে আর ফেরার উপায় নেই। অনুগ্রহ করে নিশ্চিত হয়ে নিন।",
+    "description": "বিবরণ",
+    "descriptionPlaceholder": "আপনার গ্রুপের বর্ণনা দিন...",
+    "details": "বিস্তারিত",
+    "editClub": "গ্রুপ সম্পাদনা",
+    "errors": {
+      "createFailed": "গ্রুপ তৈরি করা যায়নি। আবার চেষ্টা করুন।",
+      "deleteFailed": "গ্রুপ মুছতে ব্যর্থ হয়েছে",
+      "descriptionTooLong": "বিবরণ অনেক দীর্ঘ (সর্বোচ্চ ৫০০ অক্ষর)",
+      "nameExists": "এই নামে একটি গ্রুপ আগে থেকেই আছে। অন্য নাম বেছে নিন।",
+      "nameRequired": "গ্রুপের নাম আবশ্যক",
+      "nameTooShort": "গ্রুপের নাম কমপক্ষে ৩ অক্ষরের হতে হবে",
+      "photoPickFailed": "ছবি বাছাই করা যায়নি",
+      "updateFailed": "গ্রুপ আপডেট করা যায়নি"
+    },
+    "moreActions": "আরও পদক্ষেপ",
+    "myClubs": "আমার গ্রুপ",
+    "name": "গ্রুপের নাম",
+    "namePlaceholder": "গ্রুপের নাম লিখুন",
+    "noOtherMembers": "মালিকানা হস্তান্তর করতে আপনার কমপক্ষে আরেকজন সদস্য দরকার।",
+    "noRequests": "কোনো অপেক্ষমাণ অনুরোধ নেই",
+    "notFound": "গ্রুপ পাওয়া যায়নি",
+    "notFoundMessage": "এই গ্রুপটি নেই।",
+    "optional": "(ঐচ্ছিক)",
+    "pendingRequests": "অপেক্ষমাণ অনুরোধ",
+    "pendingRequestsButton": "যোগদানের অনুরোধ দেখুন",
+    "photo": "গ্রুপের ছবি",
+    "rejectFailed": "অনুরোধ প্রত্যাখ্যান করা যায়নি",
+    "rejectRequest": "অনুরোধ প্রত্যাখ্যান করুন",
+    "removePhoto": "ছবি সরান",
+    "saveChanges": "পরিবর্তন সংরক্ষণ করুন",
+    "selectNewOwner": "নতুন মালিক বেছে নিন",
+    "selectNewOwnerDesc": "এই গ্রুপের নতুন মালিক হওয়ার জন্য একজন সদস্য বেছে নিন।"
   },
   "trips": {
     "shareToGroup": "Share to Group",
@@ -127,9 +176,83 @@
       "all": "সবাই",
       "male": "পুরুষ",
       "female": "মহিলা"
-    }
+    },
+    "allTime": "সর্বকালের",
+    "categories": {
+      "femaleRider": "সেরা নারী রাইডার",
+      "maleRider": "সেরা পুরুষ রাইডার",
+      "newFemaleRider": "সেরা নতুন নারী রাইডার",
+      "newMaleRider": "সেরা নতুন পুরুষ রাইডার",
+      "ridesDistance": "সেরা রাইডার - দূরত্ব",
+      "ridesTrips": "সেরা রাইডার - ট্রিপ",
+      "walksDistance": "সেরা পথচারী - দূরত্ব",
+      "walksTrips": "সেরা পথচারী - ট্রিপ"
+    },
+    "comingSoon": "কমিউনিটি বোর্ড শীঘ্রই আসছে",
+    "empty": {
+      "noData": "এই সময়ের জন্য কোনো তথ্য নেই"
+    },
+    "filters": {
+      "distance": "দূরত্ব",
+      "newFemale": "নতুন নারী",
+      "newMale": "নতুন পুরুষ",
+      "topFemale": "সেরা নারী",
+      "topMale": "সেরা পুরুষ",
+      "trips": "ট্রিপ"
+    },
+    "selectMonth": "মাস বেছে নিন",
+    "table": {
+      "distance": "দূরত্ব",
+      "name": "নাম",
+      "rank": "#",
+      "trips": "ট্রিপ"
+    },
+    "tabs": {
+      "gender": "লিঙ্গ",
+      "rides": "রাইড",
+      "walks": "হাঁটা"
+    },
+    "title": "কমিউনিটি বোর্ড"
   },
   "photoViewer": {
     "counter": "{{current}} / {{total}}"
+  },
+  "common": {
+    "ok": "ঠিক আছে"
+  },
+  "feed": {
+    "addComment": "মন্তব্য যোগ করুন...",
+    "commentFailed": "মন্তব্য পোস্ট করতে ব্যর্থ হয়েছে",
+    "comments": "মন্তব্য",
+    "daysAgo_one": "{{count}} দিন আগে",
+    "daysAgo_other": "{{count}} দিন আগে",
+    "distance": "দূরত্ব",
+    "duration": "সময়কাল",
+    "hoursAgo_one": "{{count}} ঘণ্টা আগে",
+    "hoursAgo_other": "{{count}} ঘণ্টা আগে",
+    "justNow": "এইমাত্র",
+    "like": "লাইক",
+    "likes": "লাইক",
+    "minutesAgo_one": "{{count}} মিনিট আগে",
+    "minutesAgo_other": "{{count}} মিনিট আগে",
+    "noComments": "এখনো কোনো মন্তব্য নেই। প্রথম মন্তব্যটি আপনিই করুন!",
+    "post": "পোস্ট",
+    "postNotFound": "পোস্ট পাওয়া যায়নি",
+    "sendComment": "মন্তব্য পাঠান",
+    "type": "ধরন"
+  },
+  "posts": {
+    "errors": {
+      "createFailed": "পোস্ট তৈরি করতে ব্যর্থ হয়েছে",
+      "invalidGroup": "গ্রুপের আইডি সঠিক নয়",
+      "pickPhotos": "ছবি বাছাই করা যায়নি"
+    },
+    "membersCount_one": "{{count}} জন সদস্য",
+    "membersCount_other": "{{count}} জন সদস্য",
+    "noGroupsTitle": "এখনো কোনো গ্রুপ নেই",
+    "noTripsToShare": "এখনো কোনো ট্রিপ নেই। শেয়ার করতে আগে একটি ট্রিপ সম্পন্ন করুন।",
+    "removePhoto": "ছবি সরান",
+    "shareTrip": "একটি ট্রিপ শেয়ার করুন",
+    "tripDateAt": "{{date}}, {{time}}"
   }
 }

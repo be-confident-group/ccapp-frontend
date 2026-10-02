@@ -2,15 +2,15 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/themed-view';
-import Header from '@/components/layout/Header';
+import { ClubScreenHeader, CLUB_HEADER_HEIGHT } from '@/components/clubs/clubUi';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useClubByShareCode } from '@/lib/hooks/useClubs';
 
 export default function ShareCodeResolverScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ code: string }>();
   const shareCode = params.code || '';
 
@@ -27,7 +27,7 @@ export default function ShareCodeResolverScreen() {
       Alert.alert(
         t('clubs.notFound', 'Group Not Found'),
         t('clubs.invalidShareCode', 'This share link is invalid or has expired.'),
-        [{ text: t('common.ok', 'OK') }]
+        [{ text: t('common:buttons.ok', 'OK') }]
       );
       if (router.canGoBack()) {
         router.back();
@@ -38,24 +38,17 @@ export default function ShareCodeResolverScreen() {
   }, [isError, t]);
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <Header title="" showBack onBackPress={() => router.back()} />
-        <View style={styles.content}>
-          {isLoading && (
-            <ActivityIndicator size="large" color={colors.primary} />
-          )}
-        </View>
-      </SafeAreaView>
-    </ThemedView>
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <View style={[styles.content, { paddingTop: insets.top + CLUB_HEADER_HEIGHT }]}>
+        {isLoading && <ActivityIndicator size="large" color={colors.primary} />}
+      </View>
+      <ClubScreenHeader />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  safeArea: {
     flex: 1,
   },
   content: {

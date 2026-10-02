@@ -43,7 +43,9 @@
     "dailyReminder": "روزانہ یاد دہانی",
     "dailyReminderSubtitle": "اپنی سواریوں کو لاگ کرنے کی یاد دلائی جائے",
     "notificationSettings": "اطلاعات کی ترتیبات",
-    "notificationSettingsSubtitle": "تمام اطلاعات کا انتظام کریں"
+    "notificationSettingsSubtitle": "تمام اطلاعات کا انتظام کریں",
+    "contactSupport": "سپورٹ سے رابطہ کریں",
+    "contactSupportSubtitle": "کسی مسئلے کی اطلاع دیں یا ہماری ٹیم سے رابطہ کریں"
   },
   "feedback": {
     "sendFeedback": "رائے بھیجیں",
@@ -88,9 +90,93 @@
   "trackingHealth": {
     "summaryOk": "اس ڈیوائس پر بیک گراؤنڈ ٹریکنگ قابل اعتماد طریقے سے چلنے کے لیے تیار ہے۔",
     "summaryIssues": "کچھ سیٹنگز بیک گراؤنڈ میں سفر ریکارڈ ہونے سے روک سکتی ہیں۔ نیچے دی گئی چیزیں درست کریں۔",
-    "checksHeader": "جانچ"
+    "checksHeader": "جانچ",
+    "allGood": "تمام جانچیں کامیاب",
+    "checks": {
+      "batteryOpt": "بیٹری آپٹیمائزیشن",
+      "batteryOptActive": "آپٹیمائزڈ — ایپ کی معلومات ← بیٹری کھول کر \"غیر محدود\" منتخب کریں",
+      "batteryOptExempt": "مستثنیٰ — ایپ بیک گراؤنڈ میں آزادانہ چل سکتی ہے",
+      "engineActive": "فعال",
+      "engineIdle": "غیر فعال — حرکت کا انتظار",
+      "engineState": "ٹریکنگ انجن",
+      "locationAuth": "مقام کی اجازت",
+      "locationAuthAlways": "ہمیشہ — بیک گراؤنڈ ٹریکنگ فعال",
+      "locationAuthDenied": "مسترد — اجازت دینے کے لیے سیٹنگز میں جائیں",
+      "locationAuthWhenInUse": "استعمال کے دوران — بیک گراؤنڈ ٹریکنگ بند",
+      "locationPrecise": "درست مقام",
+      "locationPreciseDegraded": "کم درستگی — جی پی ایس کی درستگی کم ہو گئی ہے",
+      "locationPreciseOk": "مکمل درستگی فعال",
+      "lowPowerMode": "لو پاور موڈ",
+      "lowPowerModeOff": "بند — جی پی ایس پوری رفتار سے چل رہا ہے",
+      "lowPowerModeOn": "آن — جی پی ایس اور بیک گراؤنڈ کام محدود",
+      "motion": "موشن اور فٹنس",
+      "motionDenied": "مسترد — سرگرمی کی شناخت بند",
+      "motionGranted": "اجازت مل گئی"
+    },
+    "degradationBanner": "مقام کی اجازت بدل گئی — بیک گراؤنڈ ٹریکنگ شاید کام نہ کرے",
+    "fixIt": "درست کریں",
+    "fixNow": "ابھی درست کریں",
+    "issuesFound": "مسائل ملے",
+    "loading": "جانچ ہو رہی ہے...",
+    "refresh": "ریفریش",
+    "subtitle": "جانچتا ہے کہ اس ڈیوائس پر بیک گراؤنڈ ٹریکنگ قابل اعتماد طریقے سے چل سکتی ہے",
+    "title": "ٹریکنگ کی حالت"
   },
   "notifications": {
-    "title": "اطلاعات"
+    "title": "اطلاعات",
+    "subtitle": "اپنی نوٹیفکیشن ترجیحات کا انتظام کریں"
+  },
+  "card": {
+    "distance": "فاصلہ",
+    "trips": "سفر",
+    "trophies": "ٹرافیاں"
+  },
+  "changePassword": {
+    "cancel": "منسوخ کریں",
+    "confirmPasswordLabel": "نئے پاس ورڈ کی تصدیق کریں",
+    "confirmPasswordPlaceholder": "نئے پاس ورڈ کی تصدیق کریں",
+    "confirmPasswordRequired": "براہ کرم اپنے نئے پاس ورڈ کی تصدیق کریں",
+    "currentPasswordLabel": "موجودہ پاس ورڈ",
+    "currentPasswordPlaceholder": "موجودہ پاس ورڈ درج کریں",
+    "currentPasswordRequired": "موجودہ پاس ورڈ ضروری ہے",
+    "fallbackError": "پاس ورڈ تبدیل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+    "newPasswordLabel": "نیا پاس ورڈ",
+    "newPasswordPlaceholder": "نیا پاس ورڈ درج کریں",
+    "newPasswordRequired": "نیا پاس ورڈ ضروری ہے",
+    "newPasswordTooShort": "پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے",
+    "passwordsDoNotMatch": "پاس ورڈ مماثل نہیں ہیں",
+    "save": "محفوظ کریں",
+    "saving": "محفوظ ہو رہا ہے...",
+    "successMessage": "آپ کا پاس ورڈ تبدیل ہو گیا ہے۔",
+    "successOk": "ٹھیک ہے",
+    "successTitle": "کامیابی",
+    "title": "پاس ورڈ تبدیل کریں"
+  },
+  "deleteAccount": "اکاؤنٹ حذف کریں",
+  "edit": {
+    "cancel": "منسوخ کریں",
+    "dateOfBirthLabel": "تاریخ پیدائش",
+    "done": "مکمل",
+    "emailInvalid": "ای میل کا فارمیٹ درست نہیں",
+    "emailLabel": "ای میل",
+    "emailPlaceholder": "email@example.com",
+    "emailRequired": "ای میل ضروری ہے",
+    "firstNameLabel": "پہلا نام",
+    "firstNamePlaceholder": "اپنا پہلا نام درج کریں",
+    "firstNameRequired": "پہلا نام ضروری ہے",
+    "genderFemale": "خاتون",
+    "genderLabel": "جنس",
+    "genderMale": "مرد",
+    "genderOther": "دیگر",
+    "genderPreferNotToSay": "بتانا نہیں چاہتا/چاہتی",
+    "lastNameLabel": "آخری نام",
+    "lastNamePlaceholder": "اپنا آخری نام درج کریں",
+    "save": "محفوظ کریں",
+    "saving": "محفوظ ہو رہا ہے...",
+    "selectDateOfBirth": "تاریخ پیدائش منتخب کریں",
+    "selectGender": "جنس منتخب کریں",
+    "selectGenderTitle": "جنس منتخب کریں",
+    "tapToChangePhoto": "تصویر بدلنے کے لیے ٹیپ کریں",
+    "title": "پروفائل میں ترمیم کریں"
   }
 }

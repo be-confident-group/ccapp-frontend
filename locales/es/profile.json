@@ -154,5 +154,11 @@
     "selectTitle": "Seleccionar idioma",
     "changing": "Cambiando idioma..."
   },
-  "version": "Versión {{version}}"
+  "version": "Versión {{version}}",
+  "card": {
+    "distance": "Distancia",
+    "trips": "Viajes",
+    "trophies": "Trofeos"
+  },
+  "deleteAccount": "Eliminar cuenta"
 }

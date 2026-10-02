@@ -21,7 +21,26 @@
       "all": "All",
       "posts": "Posts",
       "activities": "Activities"
-    }
+    },
+    "addComment": "Add a comment...",
+    "commentFailed": "Failed to post comment",
+    "comments": "Comments",
+    "daysAgo_one": "{{count}}d ago",
+    "daysAgo_other": "{{count}}d ago",
+    "distance": "Distance",
+    "duration": "Duration",
+    "hoursAgo_one": "{{count}}h ago",
+    "hoursAgo_other": "{{count}}h ago",
+    "justNow": "Just now",
+    "like": "Like",
+    "likes": "Likes",
+    "minutesAgo_one": "{{count}}m ago",
+    "minutesAgo_other": "{{count}}m ago",
+    "noComments": "No comments yet. Be the first to comment!",
+    "post": "Post",
+    "postNotFound": "Post not found",
+    "sendComment": "Send comment",
+    "type": "Type"
   },
   "header": {
     "settings": "Settings",
@@ -65,8 +84,18 @@
       "textRequired": "Post content is required",
       "textTooShort": "Post content must be at least 10 characters",
       "titleObjectionable": "Please remove inappropriate language from your title",
-      "textObjectionable": "Please remove inappropriate language from your post"
-    }
+      "textObjectionable": "Please remove inappropriate language from your post",
+      "createFailed": "Failed to create post",
+      "invalidGroup": "Invalid group ID",
+      "pickPhotos": "Failed to pick photos"
+    },
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members",
+    "noGroupsTitle": "No groups yet",
+    "noTripsToShare": "No trips yet. Complete a trip first to share it.",
+    "removePhoto": "Remove photo",
+    "shareTrip": "Share a Trip",
+    "tripDateAt": "{{date}} at {{time}}"
   },
   "createPost": {
     "title": "Create Post",
@@ -157,8 +186,15 @@
       "nameTooShort": "Group name must be at least 3 characters",
       "descriptionTooLong": "Description is too long (max 500 characters)",
       "nameExists": "A group with this name already exists. Please choose a different name.",
-      "createFailed": "Failed to create group. Please try again."
-    }
+      "createFailed": "Failed to create group. Please try again.",
+      "deleteFailed": "Failed to delete group",
+      "photoPickFailed": "Failed to pick photo",
+      "updateFailed": "Failed to update group"
+    },
+    "details": "Details",
+    "moreActions": "More actions",
+    "pendingRequestsButton": "View join requests",
+    "removePhoto": "Remove photo"
   },
   "trips": {
     "shareToGroup": "Share to Group",
@@ -288,5 +324,8 @@
   },
   "photoViewer": {
     "counter": "{{current}} / {{total}}"
+  },
+  "common": {
+    "ok": "OK"
   }
 }

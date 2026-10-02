@@ -1,22 +1,42 @@
 /**
  * FeelingSelector Component
  *
- * A 2x2 grid of feeling buttons for route rating.
+ * Feeling buttons for route rating (single compact row, or a 2x2 grid).
  * Users select a feeling before painting route segments.
+ * Feeling colours carry meaning (stressed -> enjoyable) and are kept; the
+ * selected state is a solid fill with white content, readable in light & dark.
  */
 
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import {
+  FaceFrownIcon,
+  FaceSmileIcon,
+  MinusCircleIcon,
+  SparklesIcon,
+} from 'react-native-heroicons/outline';
+import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
 import {
   FeelingType,
   FEELING_ORDER,
   FEELINGS,
   getFeelingColor,
-  getFeelingBackgroundColor,
 } from '@/types/rating';
+
+// Near-critically damped: quick and settled, no visible wobble.
+const PRESS_SPRING = { damping: 26, stiffness: 420 };
+const SELECT_SPRING = { damping: 28, stiffness: 320 };
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const FEELING_ICONS: Record<FeelingType, typeof FaceFrownIcon> = {
+  stressed: FaceFrownIcon,
+  uncomfortable: MinusCircleIcon,
+  comfortable: FaceSmileIcon,
+  enjoyable: SparklesIcon,
+};
 
 interface FeelingSelectorProps {
   selectedFeeling: FeelingType | null;
@@ -26,6 +46,73 @@ interface FeelingSelectorProps {
   compact?: boolean;
 }
 
+interface FeelingButtonProps {
+  feelingType: FeelingType;
+  isSelected: boolean;
+  disabled: boolean;
+  compact: boolean;
+  onSelect: (feeling: FeelingType) => void;
+}
+
+function FeelingButton({ feelingType, isSelected, disabled, compact, onSelect }: FeelingButtonProps) {
+  const { t } = useTranslation('maps');
+  const press = useSharedValue(1);
+  const selectScale = useSharedValue(1);
+  const feelingColor = getFeelingColor(feelingType);
+  const Icon = FEELING_ICONS[feelingType];
+  const label = t(`rating.feelings.${feelingType}`, { defaultValue: FEELINGS[feelingType].label });
+
+  // The selected tile lifts slightly; press shrinks it. Transforms only.
+  useEffect(() => {
+    selectScale.value = withSpring(isSelected ? 1.02 : 1, SELECT_SPRING);
+  }, [isSelected, selectScale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: selectScale.value * press.value }],
+  }));
+
+  const contentColor = isSelected ? '#FFFFFF' : feelingColor;
+
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isSelected, disabled }}
+      onPress={() => onSelect(feelingType)}
+      onPressIn={() => {
+        press.value = withSpring(0.97, PRESS_SPRING);
+        if (process.env.EXPO_OS !== 'web') {
+          Haptics.selectionAsync().catch(() => {});
+        }
+      }}
+      onPressOut={() => {
+        press.value = withSpring(1, PRESS_SPRING);
+      }}
+      disabled={disabled}
+      style={[
+        compact ? styles.compactButton : styles.button,
+        {
+          backgroundColor: isSelected ? feelingColor : feelingColor + '22',
+          borderColor: feelingColor,
+          borderWidth: isSelected ? 0 : 1.5,
+          opacity: disabled ? 0.5 : 1,
+        },
+        animatedStyle,
+      ]}
+    >
+      <Icon size={compact ? 22 : 32} color={contentColor} />
+      <ThemedText
+        style={[compact ? styles.compactLabel : styles.label, { color: contentColor }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {label}
+      </ThemedText>
+    </AnimatedPressable>
+  );
+}
+
 export default function FeelingSelector({
   selectedFeeling,
   onSelect,
@@ -33,126 +120,62 @@ export default function FeelingSelector({
   style,
   compact = false,
 }: FeelingSelectorProps) {
+  const { t } = useTranslation('maps');
+
+  const buttons = FEELING_ORDER.map((feelingType) => (
+    <FeelingButton
+      key={feelingType}
+      feelingType={feelingType}
+      isSelected={selectedFeeling === feelingType}
+      disabled={disabled}
+      compact={compact}
+      onSelect={onSelect}
+    />
+  ));
+
   if (compact) {
     return (
       <View style={[styles.compactContainer, style]}>
-        <View style={styles.compactRow}>
-          {FEELING_ORDER.map((feelingType) => {
-            const feeling = FEELINGS[feelingType];
-            const isSelected = selectedFeeling === feelingType;
-            const feelingColor = getFeelingColor(feelingType);
-            const backgroundColor = getFeelingBackgroundColor(feelingType);
-
-            return (
-              <TouchableOpacity
-                key={feelingType}
-                style={[
-                  styles.compactButton,
-                  {
-                    backgroundColor: isSelected ? feelingColor : backgroundColor,
-                    borderColor: feelingColor,
-                    borderWidth: isSelected ? 0 : 1.5,
-                    opacity: disabled ? 0.5 : 1,
-                  },
-                ]}
-                onPress={() => onSelect(feelingType)}
-                disabled={disabled}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons
-                  name={feeling.icon as any}
-                  size={20}
-                  color={isSelected ? '#FFFFFF' : feelingColor}
-                />
-                <ThemedText
-                  style={[
-                    styles.compactLabel,
-                    { color: isSelected ? '#FFFFFF' : feelingColor },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {feeling.label}
-                </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <View style={styles.compactRow}>{buttons}</View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, style]}>
-      <ThemedText style={styles.title}>Select a feeling, then paint</ThemedText>
-      <View style={styles.grid}>
-        {FEELING_ORDER.map((feelingType) => {
-          const feeling = FEELINGS[feelingType];
-          const isSelected = selectedFeeling === feelingType;
-          const feelingColor = getFeelingColor(feelingType);
-          const backgroundColor = getFeelingBackgroundColor(feelingType);
-
-          return (
-            <TouchableOpacity
-              key={feelingType}
-              style={[
-                styles.button,
-                {
-                  backgroundColor: isSelected ? feelingColor : backgroundColor,
-                  borderColor: feelingColor,
-                  borderWidth: isSelected ? 0 : 2,
-                  opacity: disabled ? 0.5 : 1,
-                },
-              ]}
-              onPress={() => onSelect(feelingType)}
-              disabled={disabled}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name={feeling.icon as any}
-                size={32}
-                color={isSelected ? '#FFFFFF' : feelingColor}
-              />
-              <ThemedText
-                style={[
-                  styles.label,
-                  { color: isSelected ? '#FFFFFF' : feelingColor },
-                ]}
-              >
-                {feeling.label}
-              </ThemedText>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <ThemedText style={styles.title}>
+        {t('rating.selectFeelingThenPaint', { defaultValue: 'Select a feeling, then paint' })}
+      </ThemedText>
+      <View style={styles.grid}>{buttons}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.md,
+    padding: 16,
   },
   title: {
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 12,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: 12,
   },
   button: {
     width: '48%',
     flexGrow: 1,
     flexBasis: '45%',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
+    gap: 4,
     minHeight: 80,
   },
   label: {
@@ -160,10 +183,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  // Compact styles for single row
   compactContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 4,
   },
   compactRow: {
     flexDirection: 'row',
@@ -172,14 +193,14 @@ const styles = StyleSheet.create({
   compactButton: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: 12,
+    paddingHorizontal: 4,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   compactLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
     textAlign: 'center',
   },

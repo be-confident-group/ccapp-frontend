@@ -1,30 +1,42 @@
 import React, { useState, useCallback } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  FlatList,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Image, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import { CheckIcon, UserGroupIcon } from 'react-native-heroicons/outline';
+import Button from '@/components/ui/Button';
+import { GlassSheet } from '@/components/ui/GlassSheet';
+import { PostsScreen } from '@/components/posts/PostsScreen';
+import { PostsEmptyState } from '@/components/posts/PostsEmptyState';
+import { ComposerCard } from '@/components/posts/ComposerCard';
+import { ComposerPhotos } from '@/components/posts/ComposerPhotos';
+import { SelectorRow } from '@/components/posts/SelectorRow';
+import { PressableScale } from '@/components/posts/PressableScale';
+import { FadeInUp } from '@/components/posts/FadeInUp';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
 import { useCreatePost } from '@/lib/hooks/usePosts';
 import { useMyClubs } from '@/lib/hooks/useClubs';
 import { pickAndProcessMultipleImages } from '@/lib/utils/imageHelpers';
 import { containsObjectionableContent } from '@/lib/utils/contentFilter';
-import { PhotoIcon, XMarkIcon, ChevronDownIcon, CheckIcon } from 'react-native-heroicons/outline';
-import type { PostCreateRequest , Club } from '@/types/feed';
+import type { PostCreateRequest, Club } from '@/types/feed';
+
+function ClubAvatar({ club, size }: { club: Club; size: number }) {
+  const { colors } = useTheme();
+  if (club.photo) {
+    return <Image source={{ uri: club.photo }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
+  return (
+    <View
+      style={[
+        styles.clubPlaceholder,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.glassHighlight },
+      ]}
+    >
+      <Text style={[styles.clubInitial, { color: colors.glassTint, fontSize: size * 0.42 }]}>
+        {club.name.charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
 
 export default function CreateStandalonePostScreen() {
   const { t } = useTranslation('groups');
@@ -54,9 +66,9 @@ export default function CreateStandalonePostScreen() {
       }
     } catch (error) {
       console.error('Error picking photos:', error);
-      alert('Failed to pick photos');
+      alert(t('posts.errors.pickPhotos', { defaultValue: 'Failed to pick photos' }));
     }
-  }, [photosBase64.length]);
+  }, [photosBase64.length, t]);
 
   const handleRemovePhoto = useCallback((index: number) => {
     setPhotosBase64((prev) => prev.filter((_, i) => i !== index));
@@ -111,556 +123,163 @@ export default function CreateStandalonePostScreen() {
       router.replace(`/clubs/${selectedClub.id}`);
     } catch (error) {
       console.error('Error creating post:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create post');
+      alert(error instanceof Error ? error.message : t('posts.errors.createFailed', { defaultValue: 'Failed to create post' }));
     }
-  }, [selectedClub, title, text, photosBase64, validateForm, createPostMutation]);
+  }, [selectedClub, title, text, photosBase64, validateForm, createPostMutation, t]);
 
-  const renderPhotoItem = useCallback(
-    ({ item, index }: { item: string; index: number }) => (
-      <View style={styles.photoItem}>
-        <Image source={{ uri: item }} style={styles.photoThumbnail} />
-        <TouchableOpacity
-          style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
-          onPress={() => handleRemovePhoto(index)}
-          activeOpacity={0.8}
-        >
-          <XMarkIcon size={16} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    ),
-    [colors, handleRemovePhoto]
-  );
-
-  const renderClubItem = useCallback(
-    ({ item }: { item: Club }) => {
-      const isSelected = selectedClub?.id === item.id;
-      return (
-        <TouchableOpacity
-          style={[
-            styles.clubItem,
-            { backgroundColor: colors.card, borderColor: isSelected ? colors.primary : colors.border },
-          ]}
-          onPress={() => handleSelectClub(item)}
-          activeOpacity={0.7}
-        >
-          {item.photo ? (
-            <Image source={{ uri: item.photo }} style={styles.clubItemPhoto} />
-          ) : (
-            <View style={[styles.clubItemPhotoPlaceholder, { backgroundColor: colors.primary + '20' }]}>
-              <ThemedText style={[styles.clubItemPhotoText, { color: colors.primary }]}>
-                {item.name.charAt(0).toUpperCase()}
-              </ThemedText>
-            </View>
+  const renderClubRow = (club: Club) => {
+    const isSelected = selectedClub?.id === club.id;
+    return (
+      <PressableScale
+        key={club.id}
+        scaleTo={0.98}
+        onPress={() => handleSelectClub(club)}
+        accessibilityState={{ selected: isSelected }}
+        style={[styles.clubRow, isSelected && { backgroundColor: colors.glassHighlight }]}
+      >
+        <ClubAvatar club={club} size={40} />
+        <View style={styles.clubInfo}>
+          <Text style={[styles.clubName, { color: colors.glassTint }]} numberOfLines={1}>
+            {club.name}
+          </Text>
+          {club.members_count !== undefined && (
+            <Text style={[styles.clubMembers, { color: colors.textSecondary }]}>
+              {t('posts.membersCount', {
+                count: club.members_count,
+                defaultValue: club.members_count === 1 ? '{{count}} member' : '{{count}} members',
+              })}
+            </Text>
           )}
-          <View style={styles.clubItemInfo}>
-            <ThemedText style={styles.clubItemName}>{item.name}</ThemedText>
-            {item.members_count !== undefined && (
-              <ThemedText style={[styles.clubItemMembers, { color: colors.textMuted }]}>
-                {item.members_count} {item.members_count === 1 ? 'member' : 'members'}
-              </ThemedText>
-            )}
-          </View>
-          {isSelected && (
-            <View style={[styles.checkIcon, { backgroundColor: colors.primary }]}>
-              <CheckIcon size={16} color="#fff" />
-            </View>
-          )}
-        </TouchableOpacity>
-      );
-    },
-    [colors, selectedClub, handleSelectClub]
-  );
+        </View>
+        {isSelected && <CheckIcon size={20} color={colors.glassTint} />}
+      </PressableScale>
+    );
+  };
 
   if (loadingClubs) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top', 'bottom']}
-      >
-        <Header title={t('posts.createPost', 'Create Post')} showBack />
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
+      <PostsScreen title={t('posts.createPost', 'Create Post')} scroll={false}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </PostsScreen>
     );
   }
 
   if (!myClubs || myClubs.length === 0) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top', 'bottom']}
-      >
-        <Header title={t('posts.createPost', 'Create Post')} showBack />
-        <View style={styles.loading}>
-          <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-            {t('posts.noGroupsMessage', 'You need to join a group first to create a post.')}
-          </ThemedText>
-          <TouchableOpacity
-            style={[styles.browseButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace('/clubs/browse')}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.browseButtonText}>
-              {t('clubs.browseClubs', 'Browse Groups')}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <PostsScreen title={t('posts.createPost', 'Create Post')} scroll={false}>
+        <PostsEmptyState
+          icon={(color) => <UserGroupIcon size={28} color={color} />}
+          title={t('posts.noGroupsTitle', { defaultValue: 'No groups yet' })}
+          text={t('posts.noGroupsMessage', 'You need to join a group first to create a post.')}
+          actionLabel={t('clubs.browseClubs', 'Browse Groups')}
+          onAction={() => router.replace('/clubs/browse')}
+        />
+      </PostsScreen>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      <Header title={t('posts.createPost', 'Create Post')} showBack />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    <>
+      <PostsScreen
+        title={t('posts.createPost', 'Create Post')}
+        keyboardAvoiding
+        footer={
+          <Button
+            title={t('posts.create', 'Create Post')}
+            onPress={handleCreate}
+            variant="primary"
+            size="large"
+            fullWidth
+            loading={createPostMutation.isPending}
+            disabled={!selectedClub || !title.trim() || !text.trim()}
+          />
+        }
       >
-        {!showGroupPicker ? (
-          <>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <ThemedView style={styles.content}>
-                {/* Group Selector */}
-                <View style={styles.section}>
-                  <ThemedText style={styles.label}>
-                    {t('posts.selectGroup', 'Select Group')} *
-                  </ThemedText>
-                  <TouchableOpacity
-                    style={[
-                      styles.groupSelector,
-                      {
-                        backgroundColor: colors.card,
-                        borderColor: errors.club ? colors.error : colors.border,
-                      },
-                    ]}
-                    onPress={() => setShowGroupPicker(true)}
-                    activeOpacity={0.7}
-                  >
-                    {selectedClub ? (
-                      <>
-                        {selectedClub.photo ? (
-                          <Image source={{ uri: selectedClub.photo }} style={styles.selectedGroupPhoto} />
-                        ) : (
-                          <View style={[styles.selectedGroupPhotoPlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                            <ThemedText style={[styles.selectedGroupPhotoText, { color: colors.primary }]}>
-                              {selectedClub.name.charAt(0).toUpperCase()}
-                            </ThemedText>
-                          </View>
-                        )}
-                        <ThemedText style={styles.selectedGroupName}>{selectedClub.name}</ThemedText>
-                      </>
-                    ) : (
-                      <ThemedText style={[styles.groupSelectorPlaceholder, { color: colors.textMuted }]}>
-                        {t('posts.selectGroupPlaceholder', 'Choose a group to post in')}
-                      </ThemedText>
-                    )}
-                    <ChevronDownIcon size={20} color={colors.textMuted} />
-                  </TouchableOpacity>
-                  {errors.club && (
-                    <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                      {errors.club}
-                    </ThemedText>
-                  )}
-                </View>
+        <ComposerCard index={0} flush caption={`${t('posts.selectGroup', 'Select Group')} *`} error={errors.club}>
+          <SelectorRow
+            leading={selectedClub ? <ClubAvatar club={selectedClub} size={32} /> : undefined}
+            value={selectedClub?.name}
+            placeholder={t('posts.selectGroupPlaceholder', 'Choose a group to post in')}
+            accessibilityLabel={t('posts.selectGroup', 'Select Group')}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowGroupPicker(true);
+            }}
+          />
+        </ComposerCard>
 
-                {/* Title Field */}
-                <View style={styles.section}>
-                  <ThemedText style={styles.label}>
-                    {t('posts.title', 'Title')} *
-                  </ThemedText>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.card,
-                        color: colors.text,
-                        borderColor: errors.title ? colors.error : colors.border,
-                      },
-                    ]}
-                    placeholder={t('posts.titlePlaceholder', 'Enter post title')}
-                    placeholderTextColor={colors.textMuted}
-                    value={title}
-                    onChangeText={setTitle}
-                    maxLength={255}
-                    autoCapitalize="sentences"
-                    autoCorrect
-                  />
-                  {errors.title && (
-                    <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                      {errors.title}
-                    </ThemedText>
-                  )}
-                </View>
+        <ComposerCard index={1} caption={`${t('posts.title', 'Title')} *`} error={errors.title}>
+          <TextInput
+            style={[styles.input, { color: colors.text }]}
+            placeholder={t('posts.titlePlaceholder', 'Enter post title')}
+            placeholderTextColor={colors.textMuted}
+            value={title}
+            onChangeText={setTitle}
+            maxLength={255}
+            autoCapitalize="sentences"
+            autoCorrect
+          />
+        </ComposerCard>
 
-                {/* Text Field */}
-                <View style={styles.section}>
-                  <ThemedText style={styles.label}>
-                    {t('posts.content', 'Content')} *
-                  </ThemedText>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.textArea,
-                      {
-                        backgroundColor: colors.card,
-                        color: colors.text,
-                        borderColor: errors.text ? colors.error : colors.border,
-                      },
-                    ]}
-                    placeholder={t('posts.contentPlaceholder', 'Share your thoughts...')}
-                    placeholderTextColor={colors.textMuted}
-                    value={text}
-                    onChangeText={setText}
-                    maxLength={2000}
-                    multiline
-                    numberOfLines={6}
-                    textAlignVertical="top"
-                    autoCapitalize="sentences"
-                  />
-                  {errors.text && (
-                    <ThemedText style={[styles.errorText, { color: colors.error }]}>
-                      {errors.text}
-                    </ThemedText>
-                  )}
-                  <ThemedText style={[styles.characterCount, { color: colors.textMuted }]}>
-                    {text.length}/2000
-                  </ThemedText>
-                </View>
+        <ComposerCard index={2} caption={`${t('posts.content', 'Content')} *`} error={errors.text}>
+          <TextInput
+            style={[styles.input, styles.textArea, { color: colors.text }]}
+            placeholder={t('posts.contentPlaceholder', 'Share your thoughts...')}
+            placeholderTextColor={colors.textMuted}
+            value={text}
+            onChangeText={setText}
+            maxLength={2000}
+            multiline
+            textAlignVertical="top"
+            autoCapitalize="sentences"
+          />
+          <Text style={[styles.characterCount, { color: colors.textMuted }]}>{text.length}/2000</Text>
+        </ComposerCard>
 
-                {/* Photos Section */}
-                <View style={styles.section}>
-                  <ThemedText style={styles.label}>
-                    {t('posts.photos', 'Photos')} {t('posts.optional', '(Optional)')}
-                  </ThemedText>
+        <ComposerCard index={3} caption={`${t('posts.photos', 'Photos')} ${t('posts.optional', '(Optional)')}`}>
+          <ComposerPhotos
+            photos={photosBase64}
+            max={5}
+            onAdd={handlePickPhotos}
+            onRemove={handleRemovePhoto}
+            addLabel={photosBase64.length === 0 ? t('posts.addPhotos', 'Add Photos') : t('posts.addMorePhotos', 'Add More Photos')}
+          />
+        </ComposerCard>
 
-                  {photosBase64.length > 0 && (
-                    <FlatList
-                      data={photosBase64}
-                      renderItem={renderPhotoItem}
-                      keyExtractor={(_, index) => index.toString()}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.photosList}
-                    />
-                  )}
+        <FadeInUp index={4}>
+          <Text style={[styles.footnote, { color: colors.textSecondary }]}>
+            {t('posts.createInfo', 'Your post will be visible to all members of this group.')}
+          </Text>
+        </FadeInUp>
+      </PostsScreen>
 
-                  {photosBase64.length < 5 && (
-                    <TouchableOpacity
-                      style={[
-                        styles.addPhotosButton,
-                        { backgroundColor: colors.card, borderColor: colors.border },
-                      ]}
-                      onPress={handlePickPhotos}
-                      activeOpacity={0.7}
-                    >
-                      <PhotoIcon size={24} color={colors.primary} />
-                      <ThemedText style={[styles.addPhotosText, { color: colors.primary }]}>
-                        {photosBase64.length === 0
-                          ? t('posts.addPhotos', 'Add Photos')
-                          : t('posts.addMorePhotos', 'Add More Photos')}
-                      </ThemedText>
-                      <ThemedText style={[styles.photosCount, { color: colors.textMuted }]}>
-                        ({photosBase64.length}/5)
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Info Box */}
-                <View style={[styles.infoBox, { backgroundColor: colors.primary + '15' }]}>
-                  <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
-                    {t('posts.createInfo', 'Your post will be visible to all members of this group.')}
-                  </ThemedText>
-                </View>
-              </ThemedView>
-            </ScrollView>
-
-            {/* Create Button */}
-            <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-              <TouchableOpacity
-                style={[
-                  styles.createButton,
-                  { backgroundColor: colors.primary },
-                  (!selectedClub || !title.trim() || !text.trim() || createPostMutation.isPending) &&
-                    styles.createButtonDisabled,
-                ]}
-                onPress={handleCreate}
-                disabled={!selectedClub || !title.trim() || !text.trim() || createPostMutation.isPending}
-                activeOpacity={0.8}
-              >
-                {createPostMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <ThemedText style={[styles.createButtonText, { color: '#fff' }]}>
-                    {t('posts.create', 'Create Post')}
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <View style={styles.groupPickerContainer}>
-            <View style={[styles.groupPickerHeader, { borderBottomColor: colors.border }]}>
-              <ThemedText style={styles.groupPickerTitle}>
-                {t('posts.selectGroup', 'Select Group')}
-              </ThemedText>
-              <TouchableOpacity onPress={() => setShowGroupPicker(false)} activeOpacity={0.7}>
-                <ThemedText style={[styles.groupPickerCancel, { color: colors.primary }]}>
-                  {t('common:buttons.cancel', 'Cancel')}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={myClubs}
-              renderItem={renderClubItem}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={styles.groupPickerList}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <GlassSheet
+        visible={showGroupPicker}
+        onClose={() => setShowGroupPicker(false)}
+        title={t('posts.selectGroup', 'Select Group')}
+      >
+        <View style={styles.clubList}>{myClubs.map(renderClubRow)}</View>
+      </GlassSheet>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-  },
-  emptyText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
-  browseButton: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: 8,
-    marginTop: Spacing.md,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
-  content: {
-    padding: Spacing.lg,
-    gap: Spacing.lg,
-  },
-  section: {
-    gap: Spacing.sm,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  groupSelector: {
+  input: { fontSize: 16, padding: 0 },
+  textArea: { minHeight: 140 },
+  characterCount: { fontSize: 12, textAlign: 'right' },
+  footnote: { fontSize: 13, lineHeight: 18, paddingHorizontal: 32 },
+  clubList: { gap: 4 },
+  clubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: Spacing.sm,
-  },
-  groupSelectorPlaceholder: {
-    flex: 1,
-    fontSize: 16,
-  },
-  selectedGroupPhoto: {
-    width: 32,
-    height: 32,
+    gap: 12,
+    padding: 10,
     borderRadius: 16,
   },
-  selectedGroupPhotoPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedGroupPhotoText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  selectedGroupName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  input: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 120,
-    paddingTop: Spacing.md,
-  },
-  errorText: {
-    fontSize: 12,
-    marginTop: -Spacing.xs,
-  },
-  characterCount: {
-    fontSize: 12,
-    textAlign: 'right',
-    marginTop: -Spacing.xs,
-  },
-  photosList: {
-    gap: Spacing.sm,
-  },
-  photoItem: {
-    position: 'relative',
-  },
-  photoThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: 'absolute',
-    top: Spacing.xs,
-    right: Spacing.xs,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addPhotosButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    gap: Spacing.sm,
-  },
-  addPhotosText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  photosCount: {
-    fontSize: 12,
-  },
-  infoBox: {
-    padding: Spacing.md,
-    borderRadius: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  footer: {
-    padding: Spacing.lg,
-    borderTopWidth: 1,
-  },
-  createButton: {
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  createButtonDisabled: {
-    opacity: 0.5,
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  groupPickerContainer: {
-    flex: 1,
-  },
-  groupPickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  groupPickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  groupPickerCancel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  groupPickerList: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  clubItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: 12,
-    borderWidth: 2,
-    gap: Spacing.md,
-  },
-  clubItemPhoto: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  clubItemPhotoPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clubItemPhotoText: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  clubItemInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  clubItemName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  clubItemMembers: {
-    fontSize: 13,
-  },
-  checkIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  clubPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  clubInitial: { fontWeight: '700' },
+  clubInfo: { flex: 1, gap: 2 },
+  clubName: { fontSize: 16, fontWeight: '600' },
+  clubMembers: { fontSize: 13 },
 });

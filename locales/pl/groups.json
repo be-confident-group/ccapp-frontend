@@ -91,7 +91,56 @@
     "pendingRequests_one": "{{count}} pending join request",
     "pendingRequests_other": "{{count}} pending join requests",
     "memberCount_one": "{{count}} member",
-    "memberCount_other": "{{count}} members"
+    "memberCount_other": "{{count}} members",
+    "accept": "Zaakceptuj",
+    "acceptFailed": "Nie udało się zaakceptować prośby",
+    "acceptRequest": "Zaakceptuj prośbę",
+    "addPhoto": "Dodaj zdjęcie",
+    "browseClubs": "Przeglądaj grupy",
+    "changePhoto": "Zmień",
+    "confirmTransferMessage": "Przekazać własność grupy „{{clubName}}” użytkownikowi {{memberName}}? Staniesz się zwykłym członkiem.",
+    "confirmTransferTitle": "Przekaż własność",
+    "create": "Utwórz grupę",
+    "createClub": "Utwórz grupę",
+    "createInfo": "Będziesz właścicielem tej grupy i będziesz mógł zarządzać członkami oraz ustawieniami.",
+    "dangerZone": "Strefa zagrożenia",
+    "decline": "Odrzuć",
+    "delete": "Usuń",
+    "deleteClub": "Usuń grupę",
+    "deleteConfirmMessage": "Czy na pewno chcesz usunąć tę grupę? Tej czynności nie można cofnąć.",
+    "deleteWarning": "Po usunięciu grupy nie ma odwrotu. Upewnij się, że tego chcesz.",
+    "description": "Opis",
+    "descriptionPlaceholder": "Opisz swoją grupę...",
+    "details": "Szczegóły",
+    "editClub": "Edytuj grupę",
+    "errors": {
+      "createFailed": "Nie udało się utworzyć grupy. Spróbuj ponownie.",
+      "deleteFailed": "Nie udało się usunąć grupy",
+      "descriptionTooLong": "Opis jest za długi (maks. 500 znaków)",
+      "nameExists": "Grupa o tej nazwie już istnieje. Wybierz inną nazwę.",
+      "nameRequired": "Nazwa grupy jest wymagana",
+      "nameTooShort": "Nazwa grupy musi mieć co najmniej 3 znaki",
+      "photoPickFailed": "Nie udało się wybrać zdjęcia",
+      "updateFailed": "Nie udało się zaktualizować grupy"
+    },
+    "moreActions": "Więcej akcji",
+    "myClubs": "Moje grupy",
+    "name": "Nazwa grupy",
+    "namePlaceholder": "Wpisz nazwę grupy",
+    "noOtherMembers": "Aby przekazać własność, potrzebujesz co najmniej jednego innego członka.",
+    "noRequests": "Brak oczekujących próśb",
+    "notFound": "Nie znaleziono grupy",
+    "notFoundMessage": "Ta grupa nie istnieje.",
+    "optional": "(Opcjonalnie)",
+    "pendingRequests": "Oczekujące prośby",
+    "pendingRequestsButton": "Zobacz prośby o dołączenie",
+    "photo": "Zdjęcie grupy",
+    "rejectFailed": "Nie udało się odrzucić prośby",
+    "rejectRequest": "Odrzuć prośbę",
+    "removePhoto": "Usuń zdjęcie",
+    "saveChanges": "Zapisz zmiany",
+    "selectNewOwner": "Wybierz nowego właściciela",
+    "selectNewOwnerDesc": "Wybierz członka, który zostanie nowym właścicielem tej grupy."
   },
   "trips": {
     "shareToGroup": "Share to Group",
@@ -127,9 +176,91 @@
       "all": "Wszyscy",
       "male": "Mężczyźni",
       "female": "Kobiety"
-    }
+    },
+    "allTime": "Cały czas",
+    "categories": {
+      "femaleRider": "Najlepsze rowerzystki",
+      "maleRider": "Najlepsi rowerzyści",
+      "newFemaleRider": "Najlepsze nowe rowerzystki",
+      "newMaleRider": "Najlepsi nowi rowerzyści",
+      "ridesDistance": "Najlepsi rowerzyści – dystans",
+      "ridesTrips": "Najlepsi rowerzyści – przejazdy",
+      "walksDistance": "Najlepsi piesi – dystans",
+      "walksTrips": "Najlepsi piesi – spacery"
+    },
+    "comingSoon": "Tablica społeczności już wkrótce",
+    "empty": {
+      "noData": "Brak danych za ten okres"
+    },
+    "filters": {
+      "distance": "Dystans",
+      "newFemale": "Nowe panie",
+      "newMale": "Nowi panowie",
+      "topFemale": "Najlepsze panie",
+      "topMale": "Najlepsi panowie",
+      "trips": "Wyprawy"
+    },
+    "selectMonth": "Wybierz miesiąc",
+    "table": {
+      "distance": "Dystans",
+      "name": "Nazwa",
+      "rank": "#",
+      "trips": "Wyprawy"
+    },
+    "tabs": {
+      "gender": "Płeć",
+      "rides": "Przejazdy",
+      "walks": "Spacery"
+    },
+    "title": "Tablica społeczności"
   },
   "photoViewer": {
     "counter": "{{current}} / {{total}}"
+  },
+  "common": {
+    "ok": "OK"
+  },
+  "feed": {
+    "addComment": "Dodaj komentarz...",
+    "commentFailed": "Nie udało się opublikować komentarza",
+    "comments": "Komentarze",
+    "daysAgo_one": "{{count}} dzień temu",
+    "daysAgo_few": "{{count}} dni temu",
+    "daysAgo_many": "{{count}} dni temu",
+    "daysAgo_other": "{{count}} dni temu",
+    "distance": "Dystans",
+    "duration": "Czas trwania",
+    "hoursAgo_one": "{{count}} godz. temu",
+    "hoursAgo_few": "{{count}} godz. temu",
+    "hoursAgo_many": "{{count}} godz. temu",
+    "hoursAgo_other": "{{count}} godz. temu",
+    "justNow": "Przed chwilą",
+    "like": "Lubię to",
+    "likes": "Polubienia",
+    "minutesAgo_one": "{{count}} min temu",
+    "minutesAgo_few": "{{count}} min temu",
+    "minutesAgo_many": "{{count}} min temu",
+    "minutesAgo_other": "{{count}} min temu",
+    "noComments": "Brak komentarzy. Bądź pierwszy!",
+    "post": "Post",
+    "postNotFound": "Nie znaleziono posta",
+    "sendComment": "Wyślij komentarz",
+    "type": "Typ"
+  },
+  "posts": {
+    "errors": {
+      "createFailed": "Nie udało się utworzyć posta",
+      "invalidGroup": "Nieprawidłowy identyfikator grupy",
+      "pickPhotos": "Nie udało się wybrać zdjęć"
+    },
+    "membersCount_one": "{{count}} członek",
+    "membersCount_few": "{{count}} członków",
+    "membersCount_many": "{{count}} członków",
+    "membersCount_other": "{{count}} członka",
+    "noGroupsTitle": "Brak grup",
+    "noTripsToShare": "Brak wypraw. Najpierw ukończ wyprawę, aby ją udostępnić.",
+    "removePhoto": "Usuń zdjęcie",
+    "shareTrip": "Udostępnij wyprawę",
+    "tripDateAt": "{{date}} o {{time}}"
   }
 }

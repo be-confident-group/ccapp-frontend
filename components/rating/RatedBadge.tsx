@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { CheckIcon, StarIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface RatedBadgeProps {
@@ -26,9 +26,9 @@ export default function RatedBadge({
   const badgeSize = size === 'small' ? 20 : 24;
   const iconSize = size === 'small' ? 12 : 14;
 
-  // Gold for unrated (needs attention), primary (teal) for rated
+  // Gold for unrated (needs attention), primary for rated
   const backgroundColor = isRated ? colors.primary : colors.accent;
-  const iconName = isRated ? 'check' : 'star';
+  const Icon = isRated ? CheckIcon : StarIcon;
 
   return (
     <View
@@ -43,7 +43,7 @@ export default function RatedBadge({
         style,
       ]}
     >
-      <MaterialCommunityIcons name={iconName} size={iconSize} color="#FFFFFF" />
+      <Icon size={iconSize} color="#FFFFFF" />
     </View>
   );
 }

@@ -3,32 +3,31 @@
  *
  * Main screen for rating a route by painting segments with feelings.
  * Users select a feeling, then swipe along the route to paint.
+ *
+ * Layout: full-bleed map with floating glass controls (back, step pill,
+ * undo/clear) and a glass bottom panel holding the feeling selector + save.
  */
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Animated, { Easing, SlideInDown } from 'react-native-reanimated';
+import { ArrowUturnLeftIcon, ChevronLeftIcon, TrashIcon } from 'react-native-heroicons/outline';
+import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import {
   FeelingSelector,
   RatingMap,
   SegmentPainter,
   type RatingMapRef,
 } from '@/components/rating';
+import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassSurface } from '@/components/ui/GlassSurface';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
 import { database } from '@/lib/database';
 import type { Coordinate } from '@/types/location';
 import {
@@ -40,6 +39,14 @@ import {
 import { ratingsAPI } from '@/lib/api/ratings';
 import { useTrip } from '@/lib/hooks/useTrips';
 import { ReportIssueModal } from '@/components/maps/ReportIssueModal';
+
+const BUTTON_SIZE = 40;
+// Same inset on both sides so the step pill stays centred on screen.
+const PILL_INSET = 16 + BUTTON_SIZE + 8;
+const PANEL_RADIUS = 28;
+// Approximate height of the glass bottom panel (excluding the bottom inset);
+// used to keep the route clear of it when the camera fits the route.
+const PANEL_HEIGHT = 236;
 
 /**
  * Densify a route by adding interpolated points between GPS coordinates
@@ -72,6 +79,8 @@ function densifyRoute(route: Coordinate[], targetPointsPerSegment: number = 5): 
 
 export default function RateRouteScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation('maps');
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const mapRef = useRef<RatingMapRef>(null);
 
@@ -130,7 +139,10 @@ export default function RateRouteScreen() {
   useEffect(() => {
     async function loadTrip() {
       if (!id) {
-        Alert.alert('Error', 'No trip ID provided');
+        Alert.alert(
+          t('common:status.error', { defaultValue: 'Error' }),
+          t('rating.errNoTripId', { defaultValue: 'No trip ID provided' })
+        );
         router.back();
         return;
       }
@@ -138,13 +150,19 @@ export default function RateRouteScreen() {
       if (isFetchingTrip) return;
 
       if (!backendTrip) {
-        Alert.alert('Error', 'Trip not found');
+        Alert.alert(
+          t('common:status.error', { defaultValue: 'Error' }),
+          t('rating.errTripNotFound', { defaultValue: 'Trip not found' })
+        );
         router.back();
         return;
       }
 
       if (!backendTrip.route || backendTrip.route.length === 0) {
-        Alert.alert('Error', 'This trip has no route data');
+        Alert.alert(
+          t('common:status.error', { defaultValue: 'Error' }),
+          t('rating.errNoRoute', { defaultValue: 'This trip has no route data' })
+        );
         router.back();
         return;
       }
@@ -158,7 +176,10 @@ export default function RateRouteScreen() {
         }));
 
         if (routeData.length < 2) {
-          Alert.alert('Error', 'Route is too short to rate');
+          Alert.alert(
+            t('common:status.error', { defaultValue: 'Error' }),
+            t('rating.errRouteTooShort', { defaultValue: 'Route is too short to rate' })
+          );
           router.back();
           return;
         }
@@ -194,13 +215,16 @@ export default function RateRouteScreen() {
         }
       } catch (error) {
         console.error('[RateRoute] Error loading trip:', error);
-        Alert.alert('Error', 'Failed to load trip data');
+        Alert.alert(
+          t('common:status.error', { defaultValue: 'Error' }),
+          t('rating.errLoadTrip', { defaultValue: 'Failed to load trip data' })
+        );
         router.back();
       }
     }
 
     loadTrip();
-  }, [id, backendTrip, isFetchingTrip]);
+  }, [id, backendTrip, isFetchingTrip, t]);
 
   // Handle map ready
   const handleMapReady = useCallback(() => {
@@ -252,16 +276,16 @@ export default function RateRouteScreen() {
     setPendingReportCoordinate(coordinate);
 
     Alert.alert(
-      'Report Issue',
-      'Do you want to report an issue at this location?',
+      t('rating.reportIssueTitle', { defaultValue: 'Report Issue' }),
+      t('rating.reportIssueMessage', { defaultValue: 'Do you want to report an issue at this location?' }),
       [
         {
-          text: 'Cancel',
+          text: t('common:buttons.cancel', { defaultValue: 'Cancel' }),
           style: 'cancel',
           onPress: () => setPendingReportCoordinate(null),
         },
         {
-          text: 'Report Here',
+          text: t('rating.reportHere', { defaultValue: 'Report Here' }),
           onPress: () => {
             setIssueCoordinate(coordinate);
             setShowIssueModal(true);
@@ -270,7 +294,7 @@ export default function RateRouteScreen() {
         },
       ]
     );
-  }, []);
+  }, [t]);
 
   // Handle close issue modal
   const handleCloseIssueModal = useCallback(() => {
@@ -280,15 +304,18 @@ export default function RateRouteScreen() {
 
   // Handle clear all
   const handleClearAll = useCallback(() => {
-    Alert.alert('Clear All', 'Are you sure you want to clear all ratings?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(
+      t('rating.clearAllTitle', { defaultValue: 'Clear All' }),
+      t('rating.clearAllMessage', { defaultValue: 'Are you sure you want to clear all ratings?' }),
+      [
+      { text: t('common:buttons.cancel', { defaultValue: 'Cancel' }), style: 'cancel' },
       {
-        text: 'Clear',
+        text: t('rating.clear', { defaultValue: 'Clear' }),
         style: 'destructive',
         onPress: () => setSegments([]),
       },
     ]);
-  }, []);
+  }, [t]);
 
   // Handle undo last
   const handleUndoLast = useCallback(() => {
@@ -304,8 +331,8 @@ export default function RateRouteScreen() {
 
     if (segments.length === 0) {
       Alert.alert(
-        'No Ratings',
-        'Please paint at least one segment before saving.'
+        t('rating.noRatingsTitle', { defaultValue: 'No Ratings' }),
+        t('rating.noRatingsMessage', { defaultValue: 'Please paint at least one segment before saving.' })
       );
       return;
     }
@@ -371,9 +398,12 @@ export default function RateRouteScreen() {
         // Mark as synced on success
         await database.updateRating(clientId, { synced: 1 });
 
-        Alert.alert('Success', 'Your route rating has been saved!', [
+        Alert.alert(
+          t('common:status.success', { defaultValue: 'Success' }),
+          t('rating.savedMessage', { defaultValue: 'Your route rating has been saved!' }),
+          [
           {
-            text: 'OK',
+            text: t('common:buttons.ok', { defaultValue: 'OK' }),
             onPress: () => router.back(),
           },
         ]);
@@ -381,11 +411,14 @@ export default function RateRouteScreen() {
         console.error('[RateRoute] API submission failed:', apiError);
         // Rating is saved locally but not synced - will be retried later
         Alert.alert(
-          'Saved Locally',
-          'Your rating was saved but could not be uploaded. It will sync automatically when you have a connection.',
+          t('rating.savedLocallyTitle', { defaultValue: 'Saved Locally' }),
+          t('rating.savedLocallyMessage', {
+            defaultValue:
+              'Your rating was saved but could not be uploaded. It will sync automatically when you have a connection.',
+          }),
           [
             {
-              text: 'OK',
+              text: t('common:buttons.ok', { defaultValue: 'OK' }),
               onPress: () => router.back(),
             },
           ]
@@ -393,300 +426,246 @@ export default function RateRouteScreen() {
       }
     } catch (error) {
       console.error('[RateRoute] Error saving rating:', error);
-      Alert.alert('Error', 'Failed to save rating. Please try again.');
+      Alert.alert(
+        t('common:status.error', { defaultValue: 'Error' }),
+        t('rating.errSave', { defaultValue: 'Failed to save rating. Please try again.' })
+      );
     } finally {
       setSaving(false);
     }
-  }, [trip, backendTrip, segments, originalRoute]);
+  }, [trip, backendTrip, segments, originalRoute, t]);
 
   if (isFetchingTrip || !trip || route.length === 0) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top']}
-      >
-        <ThemedView style={styles.container}>
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Loading route...
-            </ThemedText>
-          </View>
-        </ThemedView>
-      </SafeAreaView>
+      <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+        <View style={{ paddingTop: insets.top }}>
+          <Header showBack />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+            {t('rating.loadingRoute', { defaultValue: 'Loading route...' })}
+          </ThemedText>
+        </View>
+      </View>
     );
   }
 
   const hasUnsavedChanges = segments.length > 0;
 
+  const handleBackPress = () => {
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        t('rating.unsavedTitle', { defaultValue: 'Unsaved Changes' }),
+        t('rating.unsavedMessage', {
+          defaultValue: 'You have unsaved changes. Are you sure you want to leave?',
+        }),
+        [
+          { text: t('rating.stay', { defaultValue: 'Stay' }), style: 'cancel' },
+          {
+            text: t('rating.leave', { defaultValue: 'Leave' }),
+            style: 'destructive',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } else {
+      router.back();
+    }
+  };
+
+  const stepText = selectedFeeling
+    ? t('rating.stepPaint', { defaultValue: 'Step 2 of 2 · Swipe on the route to paint' })
+    : t('rating.stepChoose', { defaultValue: 'Step 1 of 2 · Choose a feeling' });
+  const topOffset = insets.top + 8;
+  const cameraPadding: [number, number, number, number] = [
+    insets.top + 72,
+    48,
+    PANEL_HEIGHT + insets.bottom + 32,
+    48,
+  ];
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top']}
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      {/* Full-bleed map with painting overlay */}
+      <SegmentPainter
+        route={route}
+        routeScreenPoints={routeScreenPoints}
+        selectedFeeling={selectedFeeling}
+        onSegmentPainted={handleSegmentPainted}
+        onLongPress={handleLongPress}
+        enabled={isMapReady && isCameraSettled}
+        style={styles.painter}
       >
-        <ThemedView style={styles.container}>
-          {/* Header */}
-          <View
-            style={[
-              styles.header,
-              { backgroundColor: colors.background, borderBottomColor: colors.border },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => {
-                if (hasUnsavedChanges) {
-                  Alert.alert(
-                    'Unsaved Changes',
-                    'You have unsaved changes. Are you sure you want to leave?',
-                    [
-                      { text: 'Stay', style: 'cancel' },
-                      {
-                        text: 'Leave',
-                        style: 'destructive',
-                        onPress: () => router.back(),
-                      },
-                    ]
-                  );
-                } else {
-                  router.back();
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <ChevronLeftIcon size={28} color={colors.text} />
-            </TouchableOpacity>
-
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              Rate Your Route
-            </ThemedText>
-
-            <View style={styles.headerActions}>
-              {segments.length > 0 && (
-                <>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleUndoLast}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialCommunityIcons
-                      name="undo"
-                      size={22}
-                      color={colors.icon}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleClearAll}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialCommunityIcons
-                      name="delete-outline"
-                      size={22}
-                      color="#F44336"
-                    />
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-
-          {/* Map with painting overlay */}
-          <View style={styles.mapContainer}>
-            <View style={[styles.mapWrapper, { backgroundColor: colors.card }]}>
-              <SegmentPainter
-                route={route}
-                routeScreenPoints={routeScreenPoints}
-                selectedFeeling={selectedFeeling}
-                onSegmentPainted={handleSegmentPainted}
-                onLongPress={handleLongPress}
-                enabled={isMapReady && isCameraSettled}
-                style={styles.painter}
-              >
-                <RatingMap
-                  ref={mapRef}
-                  route={route}
-                  segments={segments}
-                  previewSegment={previewSegment}
-                  pendingReportLocation={pendingReportCoordinate}
-                  onMapReady={handleMapReady}
-                  onCameraIdle={handleCameraIdle}
-                  onLongPress={handleLongPress}
-                  disableInteraction={selectedFeeling !== null}
-                  style={styles.map}
-                />
-              </SegmentPainter>
-            </View>
-
-            {/* Painting mode indicator */}
-            {selectedFeeling && (
-              <View
-                style={[
-                  styles.paintingIndicator,
-                  { backgroundColor: colors.card },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="gesture-swipe"
-                  size={16}
-                  color={colors.primary}
-                />
-                <ThemedText style={styles.paintingText}>
-                  Swipe on route to paint
-                </ThemedText>
-              </View>
-            )}
-          </View>
-
-          {/* Bottom panel - compact */}
-          <View style={[styles.bottomPanel, { backgroundColor: colors.card }]}>
-            {/* Instruction hint */}
-            <ThemedText style={[styles.hintText, { color: colors.textSecondary }]}>
-              {selectedFeeling ? 'Swipe on route to paint. Long press to report an issue.' : 'Select a feeling to start. Long press to report an issue.'}
-            </ThemedText>
-
-            {/* Feeling selector - compact single row */}
-            <FeelingSelector
-              selectedFeeling={selectedFeeling}
-              onSelect={handleFeelingSelect}
-              disabled={saving}
-              compact
-            />
-
-            {/* Save button */}
-            <View style={styles.footer}>
-              <Button
-                title="Save Rating"
-                onPress={handleSave}
-                variant="primary"
-                size="medium"
-                fullWidth
-                loading={saving}
-                disabled={segments.length === 0}
-              />
-            </View>
-          </View>
-        </ThemedView>
-
-        {/* Report Issue Modal */}
-        <ReportIssueModal
-          visible={showIssueModal}
-          coordinates={issueCoordinate}
-          onClose={handleCloseIssueModal}
+        <RatingMap
+          ref={mapRef}
+          route={route}
+          segments={segments}
+          previewSegment={previewSegment}
+          pendingReportLocation={pendingReportCoordinate}
+          onMapReady={handleMapReady}
+          onCameraIdle={handleCameraIdle}
+          onLongPress={handleLongPress}
+          disableInteraction={selectedFeeling !== null}
+          cameraPadding={cameraPadding}
+          style={styles.map}
         />
-      </SafeAreaView>
+      </SegmentPainter>
+
+      {/* Floating glass step pill (non-interactive, never blocks painting) */}
+      <View
+        pointerEvents="none"
+        style={[styles.pillWrap, { top: topOffset, left: PILL_INSET, right: PILL_INSET }]}
+      >
+        <View style={styles.pill}>
+          <GlassSurface borderRadius={22} />
+          <ThemedText style={styles.pillTitle} numberOfLines={1}>
+            {t('rating.rateYourRoute', { defaultValue: 'Rate Your Route' })}
+          </ThemedText>
+          <ThemedText style={[styles.pillStep, { color: colors.textSecondary }]} numberOfLines={2}>
+            {stepText}
+          </ThemedText>
+        </View>
+      </View>
+
+      {/* Floating glass controls */}
+      <GlassButton
+        onPress={handleBackPress}
+        accessibilityLabel={t('common:buttons.back', { defaultValue: 'Back' })}
+        size={BUTTON_SIZE}
+        style={[styles.floating, { top: topOffset, left: 16 }]}
+      >
+        <ChevronLeftIcon size={22} color={colors.glassInactive} />
+      </GlassButton>
+      {segments.length > 0 && (
+        <>
+          <GlassButton
+            onPress={handleUndoLast}
+            accessibilityLabel={t('rating.undo', { defaultValue: 'Undo last segment' })}
+            size={BUTTON_SIZE}
+            style={[styles.floating, { top: topOffset, right: 16 }]}
+          >
+            <ArrowUturnLeftIcon size={20} color={colors.glassInactive} />
+          </GlassButton>
+          <GlassButton
+            onPress={handleClearAll}
+            accessibilityLabel={t('rating.clearAllTitle', { defaultValue: 'Clear All' })}
+            size={BUTTON_SIZE}
+            style={[styles.floating, { top: topOffset + BUTTON_SIZE + 8, right: 16 }]}
+          >
+            <TrashIcon size={20} color={colors.error} />
+          </GlassButton>
+        </>
+      )}
+
+      {/* Glass bottom panel */}
+      <Animated.View
+        entering={SlideInDown.duration(320).easing(Easing.out(Easing.cubic))}
+        style={[styles.panelWrap, { bottom: insets.bottom + 12, shadowColor: colors.shadow }]}
+      >
+        <View style={styles.panel}>
+          <GlassSurface borderRadius={PANEL_RADIUS} />
+          <ThemedText style={[styles.hintText, { color: colors.textSecondary }]}>
+            {selectedFeeling
+              ? t('rating.hintPainting', {
+                  defaultValue: 'Swipe on route to paint. Long press to report an issue.',
+                })
+              : t('rating.hintSelect', {
+                  defaultValue: 'Select a feeling to start. Long press to report an issue.',
+                })}
+          </ThemedText>
+
+          <FeelingSelector
+            selectedFeeling={selectedFeeling}
+            onSelect={handleFeelingSelect}
+            disabled={saving}
+            compact
+          />
+
+          <Button
+            title={t('rating.saveRating', { defaultValue: 'Save Rating' })}
+            onPress={handleSave}
+            variant="primary"
+            size="medium"
+            fullWidth
+            loading={saving}
+            disabled={segments.length === 0}
+          />
+        </View>
+      </Animated.View>
+
+      {/* Report Issue Modal */}
+      <ReportIssueModal
+        visible={showIssueModal}
+        coordinates={issueCoordinate}
+        onClose={handleCloseIssueModal}
+      />
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-    minWidth: 40,
-    justifyContent: 'flex-end',
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: 12,
   },
   loadingText: {
     fontSize: 14,
   },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
-    padding: Spacing.md,
-  },
-  mapWrapper: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
   painter: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
   map: {
     flex: 1,
   },
-  paintingIndicator: {
+  floating: {
     position: 'absolute',
-    top: Spacing.lg + 4,
-    alignSelf: 'center',
-    flexDirection: 'row',
+  },
+  pillWrap: {
+    position: 'absolute',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
+  },
+  pill: {
+    maxWidth: '100%',
+    minHeight: BUTTON_SIZE,
+    paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  paintingText: {
-    fontSize: 12,
-    fontWeight: '500',
+  pillTitle: {
+    fontSize: 15,
+    fontWeight: '600',
   },
-  bottomPanel: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  pillStep: {
+    fontSize: 13,
+    lineHeight: 17,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  panelWrap: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    borderRadius: PANEL_RADIUS,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    paddingTop: Spacing.sm,
+  },
+  panel: {
+    padding: 16,
+    gap: 12,
+    borderRadius: PANEL_RADIUS,
   },
   hintText: {
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  footer: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.lg,
   },
 });

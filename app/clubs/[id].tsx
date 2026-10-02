@@ -1,26 +1,40 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  ScrollView,
   StyleSheet,
   View,
   TouchableOpacity,
   Image,
   RefreshControl,
   ActivityIndicator,
-  FlatList,
   Share,
   Platform,
   Modal,
+  ScrollView,
+  Pressable,
+  Text,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import Button from '@/components/ui/Button';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassMenu } from '@/components/ui/GlassMenu';
+import type { GlassMenuAnchor } from '@/components/ui/GlassMenu';
+import { GlassSurface } from '@/components/ui/GlassSurface';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { SettingsItem } from '@/components/profile/SettingsItem';
+import { ClubChip, ClubEmptyState, ClubScreenHeader } from '@/components/clubs/clubUi';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { showAlert } from '@/lib/utils/alert';
 import {
   useClub,
@@ -43,9 +57,18 @@ import {
   ShareIcon,
   UserPlusIcon,
   LockClosedIcon,
+  GlobeAltIcon,
   ClockIcon,
+  EllipsisHorizontalIcon,
+  ChatBubbleLeftRightIcon,
 } from 'react-native-heroicons/outline';
+import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import type { Post , ActivityPost } from '@/types/feed';
+
+const BUTTON_SIZE = 40;
+const SHEET_OVERLAP = 28;
+
+type ClubMenuKey = 'edit' | 'requests' | 'none';
 
 // Helper function to transform backend Post to ActivityPost for legacy component
 function transformPostToActivityPost(post: Post): ActivityPost {
@@ -77,6 +100,43 @@ export default function ClubDetailScreen() {
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const clubId = params.id ? parseInt(params.id, 10) : 0;
+
+  // --- Presentation: hero / scroll / menu state ---
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const heroHeight = Math.round(windowHeight * 0.3) + insets.top;
+  const pillHideOffset = insets.top + BUTTON_SIZE + 24;
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const moreRef = useRef<View>(null);
+  const [menuAnchor, setMenuAnchor] = useState<GlassMenuAnchor | null>(null);
+
+  const heroAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scrollY.value,
+          [-heroHeight, 0, heroHeight],
+          [-heroHeight / 2, 0, heroHeight * 0.5],
+          Extrapolation.CLAMP
+        ),
+      },
+      { scale: interpolate(scrollY.value, [-heroHeight, 0], [2, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const pillAnimatedStyle = useAnimatedStyle(() => {
+    const start = heroHeight - insets.top - 120;
+    const p = interpolate(scrollY.value, [start, start + 60], [0, 1], Extrapolation.CLAMP);
+    return { transform: [{ translateY: (1 - p) * -pillHideOffset }, { scale: 0.9 + 0.1 * p }] };
+  });
+
+  const statusBackdropStyle = useAnimatedStyle(() => {
+    const start = heroHeight - insets.top - 100;
+    return { opacity: interpolate(scrollY.value, [start, start + 60], [0, 1], Extrapolation.CLAMP) };
+  });
 
   const { data: club, isLoading, refetch, isRefetching } = useClub(clubId);
   const { data: posts, refetch: refetchPosts } = useClubPosts(clubId);
@@ -283,154 +343,141 @@ export default function ClubDetailScreen() {
     [handleLike, handleComment, handleUserPress, handlePhotoPress, handleOptionsPress, ownPostIds]
   );
 
-  const headerElement = useMemo(() => {
-    if (!club) return null;
+  const openMenu = () => {
+    moreRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuAnchor({ x, y, width, height });
+    });
+  };
 
+  const pendingCount = joinRequests?.length ?? 0;
+
+  if (isLoading || !club) {
     return (
-      <View style={styles.header}>
-        {/* Club Photo */}
-        {club.photo ? (
-          <Image source={{ uri: club.photo }} style={styles.clubPhoto} />
-        ) : (
-          <View style={[styles.clubPhotoPlaceholder, { backgroundColor: colors.border }]}>
-            <UsersIcon size={48} color={colors.textMuted} />
-          </View>
-        )}
+      <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
+        <View style={[styles.loading, { paddingTop: insets.top + 56 }]}>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} />
+          ) : (
+            <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
+          )}
+        </View>
+        <ClubScreenHeader
+          title={isLoading ? t('clubs.loading', 'Loading...') : t('clubs.notFound', 'Group Not Found')}
+        />
+      </View>
+    );
+  }
 
-        {/* Club Info */}
-        <View style={styles.clubInfo}>
+  const isPrivateClub = club.visibility === 'private';
+  const mutationPending =
+    joinClubMutation.isPending || leaveClubMutation.isPending || requestJoinMutation.isPending;
+
+  const menuOptions = [
+    { key: 'edit' as ClubMenuKey, label: t('clubs.editClub', 'Edit Group'), icon: <PencilSquareIcon size={18} color={colors.glassTint} /> },
+    {
+      key: 'requests' as ClubMenuKey,
+      label:
+        pendingCount > 0
+          ? `${t('clubs.pendingRequests', 'Pending Requests')} (${pendingCount})`
+          : t('clubs.pendingRequests', 'Pending Requests'),
+      icon: <UserPlusIcon size={18} color={colors.glassTint} />,
+    },
+  ];
+
+  const headerElement = (
+    <View>
+      <View style={{ height: heroHeight - SHEET_OVERLAP }} />
+      <View style={[styles.sheet, { backgroundColor: colors.backgroundSecondary }]}>
+        {/* Info card */}
+        <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
           <ThemedText style={styles.clubName}>{club.name}</ThemedText>
-          {club.description && (
+          <View style={styles.chips}>
+            <ClubChip
+              icon={<UsersIcon size={13} color={colors.glassTint} />}
+              label={t('clubs.memberCount', { count: club.members?.length ?? 0 })}
+            />
+            <ClubChip
+              icon={
+                isPrivateClub ? (
+                  <LockClosedIcon size={13} color={colors.glassTint} />
+                ) : (
+                  <GlobeAltIcon size={13} color={colors.glassTint} />
+                )
+              }
+              label={isPrivateClub ? t('clubs.private', 'Private') : t('clubs.public', 'Public')}
+            />
+          </View>
+          {club.description ? (
             <ThemedText style={[styles.clubDescription, { color: colors.textSecondary }]}>
               {club.description}
             </ThemedText>
-          )}
+          ) : null}
         </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          {/* Primary: Join / Request / Leave — visible only for non-owners */}
-          {!isOwner && (
-            <TouchableOpacity
-              style={[
-                styles.primaryActionButton,
-                isMember
-                  ? { borderWidth: 1, borderColor: colors.border }
-                  : joinRequestPending
-                  ? { backgroundColor: colors.border }
-                  : { backgroundColor: colors.primary },
-              ]}
-              onPress={joinRequestPending ? undefined : handleJoinLeave}
-              disabled={
-                joinClubMutation.isPending ||
-                leaveClubMutation.isPending ||
-                requestJoinMutation.isPending ||
-                joinRequestPending
-              }
-              activeOpacity={joinRequestPending ? 1 : 0.8}
-            >
-              {isMember && <ArrowLeftStartOnRectangleIcon size={18} color={colors.text} />}
-              {!isMember && joinRequestPending && <ClockIcon size={18} color={colors.textSecondary} />}
-              {!isMember && !joinRequestPending && club?.visibility === 'private' && (
-                <LockClosedIcon size={18} color="#fff" />
-              )}
-              <ThemedText
-                style={[
-                  styles.primaryActionText,
-                  isMember
-                    ? { color: colors.text }
-                    : joinRequestPending
-                    ? { color: colors.textSecondary }
-                    : { color: '#fff' },
-                ]}
-              >
-                {isMember
-                  ? t('clubs.leave', 'Leave Group')
-                  : joinRequestPending
-                  ? t('clubs.requestPending', 'Requested')
-                  : club?.visibility === 'private'
-                  ? t('clubs.requestJoin', 'Request to Join')
-                  : t('clubs.join', 'Join Group')}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+        {/* Actions */}
+        <View style={styles.actions}>
+          {!isOwner &&
+            (isMember ? (
+              <Button
+                title={t('clubs.leave', 'Leave Group')}
+                variant="outline"
+                size="large"
+                fullWidth
+                loading={mutationPending}
+                icon={<ArrowLeftStartOnRectangleIcon size={18} color={colors.primary} />}
+                onPress={handleJoinLeave}
+              />
+            ) : joinRequestPending ? (
+              <Button
+                title={t('clubs.requestPending', 'Requested')}
+                variant="glass"
+                size="large"
+                fullWidth
+                disabled
+                icon={<ClockIcon size={18} color={colors.textSecondary} />}
+                onPress={handleJoinLeave}
+              />
+            ) : (
+              <Button
+                title={isPrivateClub ? t('clubs.requestJoin', 'Request to Join') : t('clubs.join', 'Join Group')}
+                size="large"
+                fullWidth
+                loading={mutationPending}
+                icon={isPrivateClub ? <LockClosedIcon size={18} color="#fff" /> : undefined}
+                onPress={handleJoinLeave}
+              />
+            ))}
 
-          {/* Secondary: compact pill buttons */}
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity
-              style={[
-                styles.pillButton,
-                isMember
-                  ? { backgroundColor: colors.primary + '15', borderColor: colors.primary }
-                  : { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-              onPress={handleCreatePost}
-              disabled={!isMember}
-              activeOpacity={0.8}
-            >
-              <PlusIcon size={15} color={isMember ? colors.primary : colors.textMuted} />
-              <ThemedText style={[styles.pillButtonText, { color: isMember ? colors.primary : colors.textMuted }]}>
-                {t('clubs.createPost', 'Post')}
-              </ThemedText>
-            </TouchableOpacity>
-
+          <View style={styles.actionRow}>
+            <View style={styles.actionFlex}>
+              <Button
+                title={t('clubs.createPost', 'Post')}
+                variant="glass"
+                size="small"
+                fullWidth
+                disabled={!isMember}
+                icon={<PlusIcon size={16} color={isMember ? colors.glassTint : colors.textMuted} />}
+                onPress={handleCreatePost}
+              />
+            </View>
             {isMember && (
-              <TouchableOpacity
-                style={[styles.pillButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
-                onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
-                activeOpacity={0.8}
-              >
-                <ShareIcon size={15} color={colors.primary} />
-                <ThemedText style={[styles.pillButtonText, { color: colors.primary }]}>
-                  {t('clubs.shareTrip', 'Share Trip')}
-                </ThemedText>
-              </TouchableOpacity>
+              <View style={styles.actionFlex}>
+                <Button
+                  title={t('clubs.shareTrip', 'Share Trip')}
+                  variant="glass"
+                  size="small"
+                  fullWidth
+                  icon={<ShareIcon size={16} color={colors.glassTint} />}
+                  onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+                />
+              </View>
             )}
-
-            <TouchableOpacity
-              style={[styles.pillButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
-              onPress={handleShareClub}
-              activeOpacity={0.8}
-            >
-              <UserPlusIcon size={15} color={colors.primary} />
-              <ThemedText style={[styles.pillButtonText, { color: colors.primary }]}>
-                {t('clubs.share', 'Invite')}
-              </ThemedText>
-            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Members Preview */}
+        {/* Members */}
         {club.members && club.members.length > 0 && (
-          <View style={styles.membersSection}>
-            <View style={styles.membersSectionHeader}>
-              <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                {t('clubs.members', 'Members')}
-              </ThemedText>
-              <View style={styles.membersHeaderRight}>
-                <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-                  {t('clubs.memberCount', { count: club.members.length })}
-                </ThemedText>
-                {/* Pending join requests icon — owner only, always visible */}
-                {isOwner && (
-                  <TouchableOpacity
-                    style={[styles.pendingIconButton, { backgroundColor: colors.primary + '15' }]}
-                    onPress={() => router.push(`/clubs/pending-requests?id=${club.id}`)}
-                    activeOpacity={0.7}
-                    accessibilityLabel={t('clubs.pendingRequestsButton', 'View join requests')}
-                  >
-                    <UserPlusIcon size={16} color={colors.primary} />
-                    {(joinRequests?.length ?? 0) > 0 && (
-                      <View style={[styles.pendingBadge, { backgroundColor: colors.primary }]}>
-                        <ThemedText style={styles.pendingBadgeText}>
-                          {joinRequests!.length}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+          <SettingsGroup title={t('clubs.members', 'Members')} index={1}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -438,140 +485,180 @@ export default function ClubDetailScreen() {
             >
               {club.members.slice(0, 10).map((member, index) => {
                 const isClubOwner = member.id === club.owner.id;
+                const canRemove = isOwner && !isClubOwner;
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={index}
                     style={styles.memberItem}
                     onLongPress={
-                      isOwner && !isClubOwner
+                      canRemove
                         ? () => handleRemoveMember(`${member.name} ${member.last_name}`, member.id)
                         : undefined
                     }
-                    activeOpacity={isOwner && !isClubOwner ? 0.7 : 1}
                   >
                     {member.profile_picture ? (
                       <Image source={{ uri: member.profile_picture }} style={styles.memberAvatar} />
                     ) : (
-                      <View style={[styles.memberAvatarPlaceholder, { backgroundColor: colors.border }]}>
-                        <ThemedText style={styles.memberInitial}>
-                          {member.name.charAt(0).toUpperCase()}
-                        </ThemedText>
+                      <View style={[styles.memberAvatar, styles.memberAvatarPlaceholder, { backgroundColor: colors.glassHighlight }]}>
+                        <ThemedText style={styles.memberInitial}>{member.name.charAt(0).toUpperCase()}</ThemedText>
                       </View>
                     )}
-                    <ThemedText
-                      style={[styles.memberName, { color: colors.textSecondary }]}
-                      numberOfLines={1}
-                    >
+                    <ThemedText style={[styles.memberName, { color: colors.textSecondary }]} numberOfLines={1}>
                       {member.name}
                     </ThemedText>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </ScrollView>
-          </View>
+            {isOwner && (
+              <SettingsItem
+                grouped
+                isFirst
+                isLast
+                icon={<UserPlusIcon size={22} color={colors.glassTint} />}
+                title={t('clubs.pendingRequestsButton', 'View join requests')}
+                value={pendingCount > 0 ? String(pendingCount) : undefined}
+                onPress={() => router.push(`/clubs/pending-requests?id=${club.id}`)}
+              />
+            )}
+          </SettingsGroup>
         )}
 
-        {/* Posts Header */}
-        <View style={styles.postsHeader}>
-          <ThemedText style={styles.sectionTitle}>
-            {t('clubs.posts', 'Posts')}
-          </ThemedText>
-        </View>
+        {/* Posts header */}
+        <Text style={[styles.sectionCaption, { color: colors.textSecondary }]}>
+          {t('clubs.posts', 'Posts').toUpperCase()}
+        </Text>
       </View>
-    );
-  }, [club, colors, isOwner, isMember, joinRequestPending, joinRequests, handleJoinLeave, handleCreatePost, handleShareClub, handleRemoveMember, joinClubMutation.isPending, leaveClubMutation.isPending, requestJoinMutation.isPending, router, t]);
+    </View>
+  );
 
-
-  const emptyElement = useMemo(() => {
-    // Show different message for non-members
-    if (!isMember) {
-      return (
-        <View style={styles.emptyPosts}>
-          <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-            {t('clubs.joinToSeePosts', 'Join this group to see posts')}
-          </ThemedText>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyPosts}>
-        <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-          {t('clubs.noPosts', 'No posts yet. Be the first to post!')}
-        </ThemedText>
-      </View>
-    );
-  }, [isMember, colors.textMuted, t]);
-
-  if (isLoading) {
-    return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top', 'bottom']}
-      >
-        <Header title={t('clubs.loading', 'Loading...')} showBack />
-        <ThemedView style={styles.container}>
-          <View style={styles.loading}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </ThemedView>
-      </SafeAreaView>
-    );
-  }
-
-  if (!club) {
-    return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top', 'bottom']}
-      >
-        <Header title={t('clubs.notFound', 'Group Not Found')} showBack />
-        <ThemedView style={styles.container}>
-          <View style={styles.loading}>
-            <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
-          </View>
-        </ThemedView>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      <Header
-        title={club.name}
-        showBack
-        rightElement={
-          isOwner ? (
-            <TouchableOpacity onPress={handleEditClub} style={styles.headerButton}>
-              <PencilSquareIcon size={22} color={colors.primary} />
-            </TouchableOpacity>
-          ) : undefined
+  const emptyElement = (
+    <View style={styles.emptyWrap}>
+      <ClubEmptyState
+        icon={
+          isMember ? (
+            <ChatBubbleLeftRightIcon size={30} color={colors.glassTint} />
+          ) : (
+            <LockClosedIcon size={30} color={colors.glassTint} />
+          )
+        }
+        title={
+          isMember
+            ? t('clubs.noPosts', 'No posts yet. Be the first to post!')
+            : t('clubs.joinToSeePosts', 'Join this group to see posts')
         }
       />
-      <ThemedView style={styles.container}>
-        <FlatList
-          data={isMember ? activityPosts : []}
-          renderItem={renderPost}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={headerElement}
-          ListEmptyComponent={emptyElement}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={() => {
-                refetch();
-                refetchPosts();
-              }}
-              tintColor={colors.primary}
-            />
-          }
+    </View>
+  );
+
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
+      {/* Hero */}
+      <Animated.View style={[styles.hero, { height: heroHeight }, heroAnimatedStyle]}>
+        {club.photo ? (
+          <Image source={{ uri: club.photo }} style={StyleSheet.absoluteFill} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder, { backgroundColor: colors.glassHighlight }]}>
+            <UsersIcon size={64} color={colors.glassTint} />
+          </View>
+        )}
+      </Animated.View>
+
+      <Animated.FlatList
+        data={isMember ? activityPosts : []}
+        renderItem={({ item }) => <View style={styles.postWrap}>{renderPost({ item })}</View>}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={headerElement}
+        ListEmptyComponent={emptyElement}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentInsetAdjustmentBehavior="never"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch();
+              refetchPosts();
+            }}
+            tintColor={colors.primary}
+            progressViewOffset={insets.top}
+          />
+        }
+      />
+
+      {/* Status bar backdrop once the hero is gone */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.statusBackdrop, { height: insets.top, backgroundColor: colors.backgroundSecondary }, statusBackdropStyle]}
+      />
+
+      {/* Compact glass title pill */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.pillWrap,
+          {
+            top: insets.top + 8,
+            left: 16 + BUTTON_SIZE + 8,
+            right: 16 + (isOwner ? 2 : 1) * (BUTTON_SIZE + 8),
+          },
+        ]}
+      >
+        <Animated.View style={[styles.pill, pillAnimatedStyle]}>
+          <GlassSurface borderRadius={BUTTON_SIZE / 2} />
+          <ThemedText style={styles.pillText} numberOfLines={1}>
+            {club.name}
+          </ThemedText>
+        </Animated.View>
+      </View>
+
+      {/* Floating glass controls */}
+      <GlassButton
+        onPress={() => router.back()}
+        accessibilityLabel={t('common:buttons.back')}
+        size={BUTTON_SIZE}
+        style={[styles.floating, { top: insets.top + 8, left: 16 }]}
+      >
+        <ChevronLeftIcon size={22} color={colors.glassInactive} />
+      </GlassButton>
+      <View style={[styles.floatingRight, { top: insets.top + 8 }]}>
+        <GlassButton
+          onPress={handleShareClub}
+          accessibilityLabel={t('clubs.share', 'Invite')}
+          size={BUTTON_SIZE}
+        >
+          <ShareIcon size={20} color={colors.glassInactive} />
+        </GlassButton>
+        {isOwner && (
+          <View ref={moreRef} collapsable={false}>
+            <GlassButton
+              onPress={openMenu}
+              accessibilityLabel={t('clubs.moreActions', { defaultValue: 'More actions' })}
+              size={BUTTON_SIZE}
+            >
+              <EllipsisHorizontalIcon size={22} color={colors.glassInactive} />
+              {pendingCount > 0 && <View style={[styles.menuDot, { backgroundColor: colors.error }]} />}
+            </GlassButton>
+          </View>
+        )}
+      </View>
+
+      {isOwner && (
+        <GlassMenu<ClubMenuKey>
+          anchor={menuAnchor}
+          options={menuOptions}
+          selected="none"
+          onSelect={(key) => {
+            setMenuAnchor(null);
+            if (key === 'edit') handleEditClub();
+            else if (key === 'requests') router.push(`/clubs/pending-requests?id=${club.id}`);
+          }}
+          onClose={() => setMenuAnchor(null)}
         />
-      </ThemedView>
+      )}
+
       <Modal
         visible={photoViewer != null}
         transparent
@@ -597,189 +684,60 @@ export default function ClubDetailScreen() {
         target={moderationTarget}
         onClose={() => setModerationTarget(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
+  screen: { flex: 1 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  hero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
+  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  sheet: {
+    borderTopLeftRadius: SHEET_OVERLAP,
+    borderTopRightRadius: SHEET_OVERLAP,
+    paddingTop: 20,
   },
-  container: {
-    flex: 1,
+  infoCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 20, padding: 16, gap: 12 },
+  clubName: { fontSize: 24, fontWeight: '700' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  clubDescription: { fontSize: 15, lineHeight: 22 },
+  actions: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
+  actionRow: { flexDirection: 'row', gap: 12 },
+  actionFlex: { flex: 1 },
+  membersList: { gap: 16, paddingHorizontal: 16, paddingVertical: 14 },
+  memberItem: { alignItems: 'center', gap: 6, width: 60 },
+  memberAvatar: { width: 50, height: 50, borderRadius: 25 },
+  memberAvatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  memberInitial: { fontSize: 18, fontWeight: '600' },
+  memberName: { fontSize: 12, textAlign: 'center' },
+  sectionCaption: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingHorizontal: 32,
   },
-  loading: {
-    flex: 1,
+  postWrap: { paddingHorizontal: 16 },
+  emptyWrap: { paddingHorizontal: 16 },
+  statusBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5 },
+  floating: { position: 'absolute', zIndex: 10 },
+  floatingRight: { position: 'absolute', right: 16, zIndex: 10, flexDirection: 'row', gap: 8 },
+  menuDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4 },
+  pillWrap: { position: 'absolute', alignItems: 'center', zIndex: 6 },
+  pill: {
+    height: BUTTON_SIZE,
+    maxWidth: '100%',
+    paddingHorizontal: 18,
+    borderRadius: BUTTON_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerButton: {
-    padding: Spacing.sm,
-    marginRight: Spacing.sm,
-  },
-  listContent: {
-    paddingBottom: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-  },
-  header: {
-    paddingTop: Spacing.md,
-    gap: Spacing.lg,
-  },
-  clubPhoto: {
-    width: '100%',
-    height: 200,
-    borderRadius: BorderRadius.md,
-  },
-  clubPhotoPlaceholder: {
-    width: '100%',
-    height: 200,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clubInfo: {
-    gap: Spacing.sm,
-  },
-  clubName: {
-    fontSize: FontSizes.xl,
-    fontWeight: '700',
-  },
-  clubDescription: {
-    fontSize: FontSizes.md,
-    lineHeight: 24,
-  },
-  clubMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  memberCount: {
-    fontSize: FontSizes.xs,
-    fontWeight: '500',
-  },
-  actionsContainer: {
-    gap: Spacing.sm,
-  },
-  primaryActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.xs,
-    minHeight: 48,
-  },
-  primaryActionText: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  pillButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    gap: 5,
-  },
-  pillButtonText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '500',
-  },
-  membersSection: {
-    gap: Spacing.sm,
-  },
-  membersSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  membersHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  pendingIconButton: {
-    position: 'relative',
-    padding: 6,
-    borderRadius: BorderRadius.full,
-  },
-  pendingBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  pendingBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  sectionTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-  },
-  membersList: {
-    gap: Spacing.md,
-  },
-  memberItem: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-    width: 60,
-  },
-  memberAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  memberAvatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberInitial: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-  },
-  memberName: {
-    fontSize: FontSizes.xs,
-    textAlign: 'center',
-  },
-  postsHeader: {
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
-  },
-  emptyPosts: {
-    padding: Spacing.xl,
-    alignItems: 'center',
-  },
-  emptyMessage: {
-    fontSize: FontSizes.sm,
-    textAlign: 'center',
-  },
+  pillText: { fontSize: 16, lineHeight: 22, fontWeight: '600' },
   photoViewerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoViewerImage: {
-    width: '100%',
-    height: '70%',
-  },
+  photoViewerImage: { width: '100%', height: '70%' },
 });

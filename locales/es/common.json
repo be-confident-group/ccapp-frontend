@@ -16,7 +16,8 @@
     "filter": "Filtrar",
     "share": "Compartir",
     "retry": "Reintentar",
-    "remove": "Eliminar"
+    "remove": "Eliminar",
+    "ok": "OK"
   },
   "navigation": {
     "home": "Inicio",
@@ -123,5 +124,6 @@
     "humidity": "Humedad",
     "windSpeed": "Velocidad del viento",
     "lastUpdated": "Última actualización: {{time}}"
-  }
+  },
+  "error": "Error"
 }

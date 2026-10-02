@@ -4,37 +4,30 @@
  * Full page form to manually add a trip with optional route drawing
  */
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { TripManager } from '@/lib/services';
 import { calculateRouteDistance } from '@/lib/utils/geoCalculations';
-import type { TripType } from '@/types/trip';
+import { getTripTypeColor, type TripType } from '@/types/trip';
 import type { Coordinate } from '@/types/location';
 import Mapbox, { Camera, LineLayer, ShapeSource, CircleLayer } from '@rnmapbox/maps';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
-import { TextInput, Button } from '@/components/ui';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import { ArrowUturnLeftIcon, MapIcon, TrashIcon } from 'react-native-heroicons/outline';
+import { Button } from '@/components/ui';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { SettingsScreen } from '@/components/settings/SettingsScreen';
+import { SettingsGroup } from '@/components/profile/SettingsGroup';
+import { TripTypeTile } from '@/components/trips/TripTypeTile';
+import { TripFormField } from '@/components/trips/TripFormField';
+import { TRIP_TYPE_ICONS } from '@/components/trips/tripTypeIcons';
 import { useLocation } from '@/lib/hooks/useLocation';
 import { useTranslation } from 'react-i18next';
 
-const TRIP_TYPES: { type: TripType; labelKey: string; icon: string }[] = [
-  { type: 'walk', labelKey: 'maps:tripTypes.walk', icon: 'walk' },
-  { type: 'cycle', labelKey: 'maps:tripTypes.cycle', icon: 'bicycle' },
+const TRIP_TYPES: { type: TripType; labelKey: string }[] = [
+  { type: 'walk', labelKey: 'maps:tripTypes.walk' },
+  { type: 'cycle', labelKey: 'maps:tripTypes.cycle' },
 ];
 
 export default function ManualEntryScreen() {
@@ -194,80 +187,36 @@ export default function ManualEntryScreen() {
   } : null;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
-
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            {t('manualEntry.title')}
-          </ThemedText>
-
-          <View style={styles.placeholder} />
-        </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Type Selection */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>{t('manualEntry.activityType')}</ThemedText>
+    <SettingsScreen title={t('manualEntry.title')} keyboardAvoiding>
+      {/* Type Selection */}
+      <SettingsGroup title={t('manualEntry.activityType')} index={0}>
+        <View style={styles.cardBody}>
           <View style={styles.typeGrid}>
             {TRIP_TYPES.map((type) => (
-              <TouchableOpacity
+              <TripTypeTile
                 key={type.type}
-                style={[
-                  styles.typeButton,
-                  { backgroundColor: colors.card },
-                  selectedType === type.type && { borderColor: colors.primary, borderWidth: 2 },
-                ]}
+                label={t(type.labelKey)}
+                color={getTripTypeColor(type.type)}
+                icon={TRIP_TYPE_ICONS[type.type]}
+                selected={selectedType === type.type}
                 onPress={() => setSelectedType(type.type)}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons
-                  name={type.icon as any}
-                  size={32}
-                  color={selectedType === type.type ? colors.primary : colors.icon}
-                />
-                <ThemedText
-                  style={[
-                    styles.typeLabel,
-                    selectedType === type.type && { color: colors.primary, fontWeight: '600' },
-                  ]}
-                >
-                  {t(type.labelKey)}
-                </ThemedText>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </View>
+      </SettingsGroup>
 
-        {/* Route Drawing Option */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>{t('manualEntry.route')}</ThemedText>
-            <TouchableOpacity
-              style={[styles.toggleButton, { backgroundColor: showMap ? colors.primary : colors.card }]}
+      {/* Route Drawing Option */}
+      <SettingsGroup title={t('manualEntry.route')} index={1}>
+        <View style={styles.cardBody}>
+          <View style={styles.routeToggle}>
+            <Button
+              title={showMap ? t('manualEntry.hideMap') : t('manualEntry.drawRoute')}
               onPress={() => setShowMap(!showMap)}
-            >
-              <MaterialCommunityIcons
-                name={showMap ? 'map-check' : 'map-outline'}
-                size={20}
-                color={showMap ? '#FFFFFF' : colors.icon}
-              />
-              <ThemedText style={[styles.toggleText, { color: showMap ? '#FFFFFF' : colors.text }]}>
-                {showMap ? t('manualEntry.hideMap') : t('manualEntry.drawRoute')}
-              </ThemedText>
-            </TouchableOpacity>
+              variant="glass"
+              size="small"
+              icon={<MapIcon size={18} color={colors.glassTint} />}
+            />
           </View>
 
           {showMap && (
@@ -281,7 +230,7 @@ export default function ManualEntryScreen() {
                   <Camera
                     zoomLevel={13}
                     centerCoordinate={
-                      location 
+                      location
                         ? [location.longitude, location.latitude]
                         : [-0.1276, 51.5074] // Default to London
                     }
@@ -319,92 +268,93 @@ export default function ManualEntryScreen() {
 
                 {routePoints.length > 0 && (
                   <View style={styles.mapControls}>
-                    <TouchableOpacity
-                      style={[styles.mapButton, { backgroundColor: colors.card }]}
+                    <GlassButton
                       onPress={undoLastPoint}
+                      accessibilityLabel={t('manualEntry.undoPoint', { defaultValue: 'Undo last point' })}
+                      size={40}
                     >
-                      <MaterialCommunityIcons name="undo" size={20} color={colors.icon} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.mapButton, { backgroundColor: colors.card }]}
+                      <ArrowUturnLeftIcon size={20} color={colors.glassTint} />
+                    </GlassButton>
+                    <GlassButton
                       onPress={clearRoute}
+                      accessibilityLabel={t('manualEntry.clearRoute', { defaultValue: 'Clear route' })}
+                      size={40}
                     >
-                      <MaterialCommunityIcons name="delete" size={20} color="#EF4444" />
-                    </TouchableOpacity>
+                      <TrashIcon size={20} color="#EF4444" />
+                    </GlassButton>
                   </View>
                 )}
               </View>
 
-              <ThemedText style={[styles.mapHint, { color: colors.textSecondary }]}>
+              <Text style={[styles.mapHint, { color: colors.textSecondary }]}>
                 {t('manualEntry.mapHint')}
-              </ThemedText>
+              </Text>
             </>
           )}
         </View>
+      </SettingsGroup>
 
-        {/* Distance */}
-        <View style={styles.section}>
-          <TextInput
-            label={
-              routePoints.length > 1
-                ? t('manualEntry.distanceLabelAuto', { unit: distanceUnit })
-                : t('manualEntry.distanceLabel', { unit: distanceUnit })
-            }
+      {/* Distance */}
+      <SettingsGroup
+        title={
+          routePoints.length > 1
+            ? t('manualEntry.distanceLabelAuto', { unit: distanceUnit })
+            : t('manualEntry.distanceLabel', { unit: distanceUnit })
+        }
+        index={2}
+      >
+        <View style={styles.cardBody}>
+          <TripFormField
             value={distance}
             onChangeText={setDistance}
             placeholder={t('manualEntry.distancePlaceholder', { unit: distanceUnit })}
             keyboardType="decimal-pad"
             editable={routePoints.length < 2}
-            containerStyle={styles.inputContainer}
           />
         </View>
+      </SettingsGroup>
 
-        {/* Duration */}
-        <View style={styles.section}>
-          <ThemedText style={styles.label}>{t('manualEntry.durationLabel')}</ThemedText>
-          <View style={styles.durationRow}>
-            <View style={styles.durationInput}>
-              <TextInput
-                value={hours}
-                onChangeText={setHours}
-                placeholder="0"
-                keyboardType="number-pad"
-                containerStyle={styles.durationInputContainer}
-              />
-              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('manualEntry.hours')}</ThemedText>
-            </View>
-
-            <View style={styles.durationInput}>
-              <TextInput
-                value={minutes}
-                onChangeText={setMinutes}
-                placeholder="0"
-                keyboardType="number-pad"
-                containerStyle={styles.durationInputContainer}
-              />
-              <ThemedText style={[styles.durationLabel, { color: colors.textSecondary }]}>{t('manualEntry.minutes')}</ThemedText>
-            </View>
+      {/* Duration */}
+      <SettingsGroup title={t('manualEntry.durationLabel')} index={3}>
+        <View style={[styles.cardBody, styles.durationRow]}>
+          <View style={styles.durationInput}>
+            <TripFormField
+              value={hours}
+              onChangeText={setHours}
+              placeholder="0"
+              keyboardType="number-pad"
+              unit={t('manualEntry.hours')}
+            />
+          </View>
+          <View style={styles.durationInput}>
+            <TripFormField
+              value={minutes}
+              onChangeText={setMinutes}
+              placeholder="0"
+              keyboardType="number-pad"
+              unit={t('manualEntry.minutes')}
+            />
           </View>
         </View>
+      </SettingsGroup>
 
-        {/* Notes */}
-        <View style={styles.section}>
-          <TextInput
-            label={t('manualEntry.notesLabel')}
+      {/* Notes */}
+      <SettingsGroup title={t('manualEntry.notesLabel')} index={4}>
+        <View style={styles.cardBody}>
+          <TripFormField
             value={notes}
             onChangeText={setNotes}
             placeholder={t('manualEntry.notesPlaceholder')}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-            containerStyle={styles.inputContainer}
             style={styles.textAreaInput}
           />
         </View>
-      </ScrollView>
+      </SettingsGroup>
 
       {/* Submit Button */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View style={styles.submit}>
         <Button
           title={t('manualEntry.saveTrip')}
           onPress={handleSubmit}
@@ -414,95 +364,26 @@ export default function ManualEntryScreen() {
           loading={loading}
         />
       </View>
-      </KeyboardAvoidingView>
-      </ThemedView>
-    </SafeAreaView>
+    </SettingsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-  },
-  section: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '500',
+  cardBody: {
+    padding: 16,
+    gap: 12,
   },
   typeGrid: {
     flexDirection: 'row',
     gap: 12,
   },
-  typeButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    gap: 8,
-  },
-  typeLabel: {
-    fontSize: 14,
+  routeToggle: {
+    alignItems: 'flex-start',
   },
   mapContainer: {
     height: 300,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 8,
   },
   map: {
     flex: 1,
@@ -514,46 +395,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  mapButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
   mapHint: {
     fontSize: 12,
     textAlign: 'center',
   },
-  inputContainer: {
-    marginBottom: 0,
-  },
   textAreaInput: {
-    minHeight: 120,
+    minHeight: 100,
     paddingTop: 12,
   },
   durationRow: {
     flexDirection: 'row',
-    gap: 12,
   },
   durationInput: {
     flex: 1,
   },
-  durationInputContainer: {
-    marginBottom: 0,
-  },
-  durationLabel: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  footer: {
-    padding: Spacing.lg,
-    borderTopWidth: 1,
+  submit: {
+    paddingHorizontal: 16,
+    marginTop: 4,
   },
 });

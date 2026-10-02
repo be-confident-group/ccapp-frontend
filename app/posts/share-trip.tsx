@@ -1,29 +1,25 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  FlatList,
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import { useTranslation } from 'react-i18next';
+import { ChevronRightIcon } from 'react-native-heroicons/mini';
+import { MapIcon, MapPinIcon } from 'react-native-heroicons/outline';
+import { PostsScreen } from '@/components/posts/PostsScreen';
+import { PostsEmptyState } from '@/components/posts/PostsEmptyState';
+import { PressableScale } from '@/components/posts/PressableScale';
+import { FadeInUp } from '@/components/posts/FadeInUp';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
 import { useTrips } from '@/lib/hooks/useTrips';
 import { ShareTripModal } from '@/components/trips/ShareTripModal';
 import { formatDistance, formatDuration } from '@/lib/utils/geoCalculations';
-import { getTripTypeColor, getTripTypeIcon, getTripTypeName } from '@/types/trip';
+import { getTripTypeName } from '@/types/trip';
 import { useUnits } from '@/contexts/UnitsContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import type { ApiTrip } from '@/lib/api/trips';
 
 export default function ShareTripScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation('groups');
   const { unitSystem } = useUnits();
   const params = useLocalSearchParams<{ clubId?: string }>();
   const preselectedClubId = params.clubId ? parseInt(params.clubId, 10) : undefined;
@@ -34,7 +30,7 @@ export default function ShareTripScreen() {
   const visibleTrips = useMemo(() => {
     if (!trips) return [];
     return trips
-      .filter((t) => t.is_valid !== false && isVisibleTripType(t.type))
+      .filter((trip) => trip.is_valid !== false && isVisibleTripType(trip.type))
       .slice(0, 20);
   }, [trips]);
 
@@ -42,62 +38,62 @@ export default function ShareTripScreen() {
     setSelectedTrip(trip);
   }, []);
 
-  function renderTrip({ item }: { item: ApiTrip }) {
-    const tripColor = getTripTypeColor(item.type);
-    const tripIcon = getTripTypeIcon(item.type);
+  function renderTrip(item: ApiTrip, index: number) {
     const tripName = getTripTypeName(item.type);
     const startTime = new Date(item.start_timestamp);
 
     return (
-      <TouchableOpacity
-        style={[styles.tripCard, { backgroundColor: colors.card }]}
-        onPress={() => handleTripPress(item)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.tripIcon, { backgroundColor: tripColor + '20' }]}>
-          <MaterialCommunityIcons name={tripIcon as any} size={24} color={tripColor} />
-        </View>
-        <View style={styles.tripDetails}>
-          <ThemedText style={styles.tripType}>{tripName}</ThemedText>
-          <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
-            {startTime.toLocaleDateString()} at {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </ThemedText>
-          <View style={styles.tripStats}>
-            <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-              {formatDistance(item.distance * 1000, unitSystem)}
-            </ThemedText>
-            <ThemedText style={[styles.statText, { color: colors.textSecondary }]}>
-              {formatDuration(item.duration)}
-            </ThemedText>
+      <FadeInUp key={item.client_id} index={index} style={styles.cardWrap}>
+        <PressableScale
+          style={[styles.tripCard, { backgroundColor: colors.card }]}
+          onPress={() => handleTripPress(item)}
+          accessibilityLabel={tripName}
+        >
+          <MapPinIcon size={24} color={colors.glassTint} />
+          <View style={styles.tripDetails}>
+            <Text style={[styles.tripType, { color: colors.text }]}>{tripName}</Text>
+            <Text style={[styles.tripDate, { color: colors.textSecondary }]}>
+              {t('posts.tripDateAt', {
+                date: startTime.toLocaleDateString(),
+                time: startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                defaultValue: '{{date}} at {{time}}',
+              })}
+            </Text>
+            <View style={styles.tripStats}>
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {formatDistance(item.distance * 1000, unitSystem)}
+              </Text>
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {formatDuration(item.duration)}
+              </Text>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+          <ChevronRightIcon size={20} color={colors.textMuted} />
+        </PressableScale>
+      </FadeInUp>
     );
   }
 
+  const title = t('posts.shareTrip', { defaultValue: 'Share a Trip' });
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <Header title="Share a Trip" showBack />
-      <ThemedView style={styles.container}>
-        {isLoading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : visibleTrips.length === 0 ? (
-          <View style={styles.centered}>
-            <ThemedText style={{ color: colors.textMuted, textAlign: 'center' }}>
-              No trips yet. Complete a trip first to share it.
-            </ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            data={visibleTrips}
-            renderItem={renderTrip}
-            keyExtractor={(item) => item.client_id}
-            contentContainerStyle={styles.list}
+    <>
+      {isLoading ? (
+        <PostsScreen title={title} scroll={false}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </PostsScreen>
+      ) : visibleTrips.length === 0 ? (
+        <PostsScreen title={title} scroll={false}>
+          <PostsEmptyState
+            icon={(color) => <MapIcon size={28} color={color} />}
+            text={t('posts.noTripsToShare', {
+              defaultValue: 'No trips yet. Complete a trip first to share it.',
+            })}
           />
-        )}
-      </ThemedView>
+        </PostsScreen>
+      ) : (
+        <PostsScreen title={title}>{visibleTrips.map(renderTrip)}</PostsScreen>
+      )}
 
       <ShareTripModal
         visible={selectedTrip !== null}
@@ -110,37 +106,22 @@ export default function ShareTripScreen() {
           router.back();
         }}
       />
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  list: { padding: Spacing.lg },
+  cardWrap: { paddingHorizontal: 16, marginBottom: 12 },
   tripCard: {
     flexDirection: 'row',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  tripIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    padding: 16,
+    borderRadius: 20,
+    gap: 12,
   },
-  tripDetails: { flex: 1, justifyContent: 'center' },
-  tripType: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
-  tripDate: { fontSize: 13, marginBottom: 4 },
-  tripStats: { flexDirection: 'row', gap: 12 },
+  tripDetails: { flex: 1, gap: 2 },
+  tripType: { fontSize: 16, fontWeight: '600' },
+  tripDate: { fontSize: 13 },
+  tripStats: { flexDirection: 'row', gap: 12, marginTop: 2 },
   statText: { fontSize: 13 },
 });

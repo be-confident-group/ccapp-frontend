@@ -16,7 +16,8 @@
     "filter": "Filter",
     "share": "Share",
     "retry": "Retry",
-    "remove": "Remove"
+    "remove": "Remove",
+    "ok": "OK"
   },
   "navigation": {
     "home": "Home",
@@ -123,5 +124,6 @@
     "humidity": "Humidity",
     "windSpeed": "Wind Speed",
     "lastUpdated": "Last updated: {{time}}"
-  }
+  },
+  "error": "Error"
 }

@@ -155,5 +155,10 @@
     "selectTitle": "Select Language",
     "changing": "Changing language..."
   },
-  "version": "Version {{version}}"
+  "version": "Version {{version}}",
+  "card": {
+    "distance": "Distance",
+    "trips": "Trips",
+    "trophies": "Trophies"
+  }
 }

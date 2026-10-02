@@ -91,7 +91,56 @@
     "pendingRequests_one": "{{count}} pending join request",
     "pendingRequests_other": "{{count}} pending join requests",
     "memberCount_one": "{{count}} member",
-    "memberCount_other": "{{count}} members"
+    "memberCount_other": "{{count}} members",
+    "accept": "قبول کریں",
+    "acceptFailed": "درخواست قبول نہیں ہو سکی",
+    "acceptRequest": "درخواست قبول کریں",
+    "addPhoto": "تصویر شامل کریں",
+    "browseClubs": "گروپس دیکھیں",
+    "changePhoto": "تبدیل کریں",
+    "confirmTransferMessage": "کیا \"{{clubName}}\" کی ملکیت {{memberName}} کو منتقل کریں؟ آپ عام رکن بن جائیں گے۔",
+    "confirmTransferTitle": "ملکیت منتقل کریں",
+    "create": "گروپ بنائیں",
+    "createClub": "گروپ بنائیں",
+    "createInfo": "آپ اس گروپ کے مالک ہوں گے اور اراکین اور ترتیبات کا انتظام کر سکیں گے۔",
+    "dangerZone": "خطرناک حصہ",
+    "decline": "مسترد کریں",
+    "delete": "حذف کریں",
+    "deleteClub": "گروپ حذف کریں",
+    "deleteConfirmMessage": "کیا آپ واقعی اس گروپ کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔",
+    "deleteWarning": "گروپ حذف ہونے کے بعد واپسی ممکن نہیں۔ براہ کرم یقینی بنائیں۔",
+    "description": "تفصیل",
+    "descriptionPlaceholder": "اپنے گروپ کے بارے میں بتائیں...",
+    "details": "تفصیلات",
+    "editClub": "گروپ میں ترمیم کریں",
+    "errors": {
+      "createFailed": "گروپ نہیں بن سکا۔ دوبارہ کوشش کریں۔",
+      "deleteFailed": "گروپ حذف نہیں ہو سکا",
+      "descriptionTooLong": "تفصیل بہت لمبی ہے (زیادہ سے زیادہ 500 حروف)",
+      "nameExists": "اس نام کا گروپ پہلے سے موجود ہے۔ کوئی دوسرا نام منتخب کریں۔",
+      "nameRequired": "گروپ کا نام ضروری ہے",
+      "nameTooShort": "گروپ کا نام کم از کم 3 حروف کا ہونا چاہیے",
+      "photoPickFailed": "تصویر منتخب نہیں ہو سکی",
+      "updateFailed": "گروپ اپ ڈیٹ نہیں ہو سکا"
+    },
+    "moreActions": "مزید اقدامات",
+    "myClubs": "میرے گروپس",
+    "name": "گروپ کا نام",
+    "namePlaceholder": "گروپ کا نام درج کریں",
+    "noOtherMembers": "ملکیت منتقل کرنے کے لیے کم از کم ایک اور رکن ہونا ضروری ہے۔",
+    "noRequests": "کوئی زیر التوا درخواست نہیں",
+    "notFound": "گروپ نہیں ملا",
+    "notFoundMessage": "یہ گروپ موجود نہیں ہے۔",
+    "optional": "(اختیاری)",
+    "pendingRequests": "زیر التوا درخواستیں",
+    "pendingRequestsButton": "شمولیت کی درخواستیں دیکھیں",
+    "photo": "گروپ کی تصویر",
+    "rejectFailed": "درخواست مسترد نہیں ہو سکی",
+    "rejectRequest": "درخواست مسترد کریں",
+    "removePhoto": "تصویر ہٹائیں",
+    "saveChanges": "تبدیلیاں محفوظ کریں",
+    "selectNewOwner": "نیا مالک منتخب کریں",
+    "selectNewOwnerDesc": "اس گروپ کا نیا مالک بننے کے لیے کسی رکن کو منتخب کریں۔"
   },
   "trips": {
     "shareToGroup": "Share to Group",
@@ -127,9 +176,83 @@
       "all": "سب",
       "male": "مرد",
       "female": "خواتین"
-    }
+    },
+    "allTime": "ہمیشہ",
+    "categories": {
+      "femaleRider": "بہترین خاتون سائیکلسٹ",
+      "maleRider": "بہترین مرد سائیکلسٹ",
+      "newFemaleRider": "بہترین نئی خاتون سائیکلسٹ",
+      "newMaleRider": "بہترین نئے مرد سائیکلسٹ",
+      "ridesDistance": "بہترین سائیکلسٹ - فاصلہ",
+      "ridesTrips": "بہترین سائیکلسٹ - سفر",
+      "walksDistance": "بہترین پیدل چلنے والے - فاصلہ",
+      "walksTrips": "بہترین پیدل چلنے والے - سفر"
+    },
+    "comingSoon": "کمیونٹی بورڈ جلد آ رہا ہے",
+    "empty": {
+      "noData": "اس مدت کے لیے کوئی ڈیٹا نہیں"
+    },
+    "filters": {
+      "distance": "فاصلہ",
+      "newFemale": "نئی خواتین",
+      "newMale": "نئے مرد",
+      "topFemale": "بہترین خواتین",
+      "topMale": "بہترین مرد",
+      "trips": "سفر"
+    },
+    "selectMonth": "مہینہ منتخب کریں",
+    "table": {
+      "distance": "فاصلہ",
+      "name": "نام",
+      "rank": "#",
+      "trips": "سفر"
+    },
+    "tabs": {
+      "gender": "جنس",
+      "rides": "سائیکل سواری",
+      "walks": "پیدل چلنا"
+    },
+    "title": "کمیونٹی بورڈ"
   },
   "photoViewer": {
     "counter": "{{current}} / {{total}}"
+  },
+  "common": {
+    "ok": "ٹھیک ہے"
+  },
+  "feed": {
+    "addComment": "تبصرہ شامل کریں...",
+    "commentFailed": "تبصرہ پوسٹ نہیں ہو سکا",
+    "comments": "تبصرے",
+    "daysAgo_one": "{{count}} دن پہلے",
+    "daysAgo_other": "{{count}} دن پہلے",
+    "distance": "فاصلہ",
+    "duration": "دورانیہ",
+    "hoursAgo_one": "{{count}} گھنٹہ پہلے",
+    "hoursAgo_other": "{{count}} گھنٹے پہلے",
+    "justNow": "ابھی ابھی",
+    "like": "پسند",
+    "likes": "پسندیدگیاں",
+    "minutesAgo_one": "{{count}} منٹ پہلے",
+    "minutesAgo_other": "{{count}} منٹ پہلے",
+    "noComments": "ابھی کوئی تبصرہ نہیں۔ پہلا تبصرہ آپ کریں!",
+    "post": "پوسٹ",
+    "postNotFound": "پوسٹ نہیں ملی",
+    "sendComment": "تبصرہ بھیجیں",
+    "type": "قسم"
+  },
+  "posts": {
+    "errors": {
+      "createFailed": "پوسٹ نہیں بن سکی",
+      "invalidGroup": "گروپ کی شناخت درست نہیں",
+      "pickPhotos": "تصاویر منتخب نہیں ہو سکیں"
+    },
+    "membersCount_one": "{{count}} رکن",
+    "membersCount_other": "{{count}} اراکین",
+    "noGroupsTitle": "ابھی کوئی گروپ نہیں",
+    "noTripsToShare": "ابھی کوئی سفر نہیں۔ شیئر کرنے کے لیے پہلے کوئی سفر مکمل کریں۔",
+    "removePhoto": "تصویر ہٹائیں",
+    "shareTrip": "سفر شیئر کریں",
+    "tripDateAt": "{{date}} بوقت {{time}}"
   }
 }

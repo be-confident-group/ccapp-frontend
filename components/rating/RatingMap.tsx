@@ -75,6 +75,8 @@ interface RatingMapProps {
   onCameraIdle?: () => void; // Fires when camera stops moving (for screen point sync)
   disableInteraction?: boolean; // Disable map scrolling when painting
   onLongPress?: (coordinate: Coordinate) => void; // Native long press on map
+  /** Camera fit padding [top, right, bottom, left] so the route clears floating panels. */
+  cameraPadding?: [number, number, number, number];
 }
 
 /**
@@ -237,8 +239,10 @@ function calculateBounds(
   ];
 }
 
+const DEFAULT_CAMERA_PADDING: [number, number, number, number] = [80, 80, 80, 80];
+
 const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
-  ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false, onLongPress }, ref) => {
+  ({ route: rawRoute, segments, previewSegment, pendingReportLocation, style, onMapReady, onCameraIdle, disableInteraction = false, onLongPress, cameraPadding = DEFAULT_CAMERA_PADDING }, ref) => {
     const { isDark } = useTheme();
     const { selectedLayer } = useMapLayer(isDark);
     const mapRef = useRef<RNMapView>(null);
@@ -297,7 +301,7 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
       },
       fitToRoute: () => {
         if (bounds && cameraRef.current) {
-          cameraRef.current.fitBounds(bounds[0], bounds[1], [80, 80, 80, 80], 500);
+          cameraRef.current.fitBounds(bounds[0], bounds[1], cameraPadding, 500);
         }
       },
     }));
@@ -307,10 +311,11 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
     useEffect(() => {
       if (isMapReady && bounds && cameraRef.current && !hasFitRef.current) {
         setTimeout(() => {
-          cameraRef.current?.fitBounds(bounds[0], bounds[1], [80, 80, 80, 80], 500);
+          cameraRef.current?.fitBounds(bounds[0], bounds[1], cameraPadding, 500);
           hasFitRef.current = true;
         }, 100);
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fit once on mount; padding is read at that moment
     }, [isMapReady, bounds]);
 
     const handleMapLoaded = useCallback(() => {
@@ -396,6 +401,8 @@ const RatingMap = forwardRef<RatingMapRef, RatingMapProps>(
           pitchEnabled={false}
           compassEnabled={false}
           logoEnabled={false}
+          // The scale bar sat under the floating back button.
+          scaleBarEnabled={false}
         >
           <Camera
             ref={cameraRef}
@@ -483,7 +490,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: 'hidden',
-    borderRadius: 12,
   },
   map: {
     flex: 1,

@@ -50,7 +50,26 @@
       "all": "Todo",
       "posts": "Publicaciones",
       "activities": "Actividades"
-    }
+    },
+    "addComment": "Añade un comentario...",
+    "commentFailed": "No se pudo publicar el comentario",
+    "comments": "Comentarios",
+    "daysAgo_one": "hace {{count}} d",
+    "daysAgo_other": "hace {{count}} d",
+    "distance": "Distancia",
+    "duration": "Duración",
+    "hoursAgo_one": "hace {{count}} h",
+    "hoursAgo_other": "hace {{count}} h",
+    "justNow": "Ahora mismo",
+    "like": "Me gusta",
+    "likes": "Me gusta",
+    "minutesAgo_one": "hace {{count}} min",
+    "minutesAgo_other": "hace {{count}} min",
+    "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+    "post": "Publicación",
+    "postNotFound": "Publicación no encontrada",
+    "sendComment": "Enviar comentario",
+    "type": "Tipo"
   },
   "empty": {
     "noGroups": "Aún no hay grupos",
@@ -104,7 +123,51 @@
     "pendingRequests_one": "{{count}} solicitud pendiente",
     "pendingRequests_other": "{{count}} solicitudes pendientes",
     "memberCount_one": "{{count}} miembro",
-    "memberCount_other": "{{count}} miembros"
+    "memberCount_other": "{{count}} miembros",
+    "accept": "Aceptar",
+    "acceptFailed": "No se pudo aceptar la solicitud",
+    "acceptRequest": "Aceptar solicitud",
+    "addPhoto": "Añadir foto",
+    "browseClubs": "Explorar grupos",
+    "changePhoto": "Cambiar",
+    "create": "Crear grupo",
+    "createClub": "Crear grupo",
+    "createInfo": "Serás el propietario de este grupo y podrás gestionar los miembros y los ajustes.",
+    "dangerZone": "Zona de peligro",
+    "decline": "Rechazar",
+    "delete": "Eliminar",
+    "deleteClub": "Eliminar grupo",
+    "deleteConfirmMessage": "¿Seguro que quieres eliminar este grupo? Esta acción no se puede deshacer.",
+    "deleteWarning": "Una vez que elimines un grupo, no hay vuelta atrás. Asegúrate de estar seguro.",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Describe tu grupo...",
+    "details": "Detalles",
+    "editClub": "Editar grupo",
+    "errors": {
+      "createFailed": "No se pudo crear el grupo. Inténtalo de nuevo.",
+      "deleteFailed": "No se pudo eliminar el grupo",
+      "descriptionTooLong": "La descripción es demasiado larga (máx. 500 caracteres)",
+      "nameExists": "Ya existe un grupo con este nombre. Elige un nombre diferente.",
+      "nameRequired": "El nombre del grupo es obligatorio",
+      "nameTooShort": "El nombre del grupo debe tener al menos 3 caracteres",
+      "photoPickFailed": "No se pudo seleccionar la foto",
+      "updateFailed": "No se pudo actualizar el grupo"
+    },
+    "moreActions": "Más acciones",
+    "myClubs": "Mis grupos",
+    "name": "Nombre del grupo",
+    "namePlaceholder": "Introduce el nombre del grupo",
+    "noRequests": "No hay solicitudes pendientes",
+    "notFound": "Grupo no encontrado",
+    "notFoundMessage": "Este grupo no existe.",
+    "optional": "(Opcional)",
+    "pendingRequests": "Solicitudes pendientes",
+    "pendingRequestsButton": "Ver solicitudes de unión",
+    "photo": "Foto del grupo",
+    "rejectFailed": "No se pudo rechazar la solicitud",
+    "rejectRequest": "Rechazar solicitud",
+    "removePhoto": "Quitar foto",
+    "saveChanges": "Guardar cambios"
   },
   "trips": {
     "shareToGroup": "Compartir al grupo",
@@ -175,9 +238,62 @@
       "all": "Todos",
       "male": "Hombres",
       "female": "Mujeres"
-    }
+    },
+    "allTime": "Histórico",
+    "categories": {
+      "femaleRider": "Mejores ciclistas mujeres",
+      "maleRider": "Mejores ciclistas hombres",
+      "newFemaleRider": "Mejores ciclistas mujeres nuevas",
+      "newMaleRider": "Mejores ciclistas hombres nuevos",
+      "ridesDistance": "Mejores ciclistas - Distancia",
+      "ridesTrips": "Mejores ciclistas - Viajes",
+      "walksDistance": "Mejores caminantes - Distancia",
+      "walksTrips": "Mejores caminantes - Viajes"
+    },
+    "comingSoon": "El Tablón de la comunidad llegará pronto",
+    "empty": {
+      "noData": "No hay datos para este período"
+    },
+    "filters": {
+      "distance": "Distancia",
+      "newFemale": "Nuevas",
+      "newMale": "Nuevos",
+      "topFemale": "Mejores mujeres",
+      "topMale": "Mejores hombres",
+      "trips": "Viajes"
+    },
+    "selectMonth": "Seleccionar mes",
+    "table": {
+      "distance": "Distancia",
+      "name": "Nombre",
+      "rank": "#",
+      "trips": "Viajes"
+    },
+    "tabs": {
+      "gender": "Género",
+      "rides": "Rutas en bici",
+      "walks": "Paseos"
+    },
+    "title": "Tablón de la comunidad"
   },
   "photoViewer": {
     "counter": "{{current}} / {{total}}"
+  },
+  "common": {
+    "ok": "OK"
+  },
+  "posts": {
+    "errors": {
+      "createFailed": "No se pudo crear la publicación",
+      "invalidGroup": "ID de grupo no válido",
+      "pickPhotos": "No se pudieron seleccionar las fotos"
+    },
+    "membersCount_one": "{{count}} miembro",
+    "membersCount_other": "{{count}} miembros",
+    "noGroupsTitle": "Aún no hay grupos",
+    "noTripsToShare": "Aún no hay viajes. Completa un viaje primero para compartirlo.",
+    "removePhoto": "Quitar foto",
+    "shareTrip": "Compartir un viaje",
+    "tripDateAt": "{{date}} a las {{time}}"
   }
 }

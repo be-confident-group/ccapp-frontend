@@ -1,13 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import { PostsScreen } from '@/components/posts/PostsScreen';
+import { FadeInUp } from '@/components/posts/FadeInUp';
+import { UserAvatar } from '@/components/feed';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 
 export default function UserProfileScreen() {
   const { colors } = useTheme();
@@ -17,38 +15,30 @@ export default function UserProfileScreen() {
   const displayName = params.name ?? t('profile.unknownUser');
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <Header title={displayName} showBack />
-      <ThemedView style={styles.container}>
-        <View style={styles.avatarSection}>
-          {params.avatar ? (
-            <Image source={{ uri: params.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-              <ThemedText style={[styles.avatarInitial, { color: colors.textSecondary }]}>
-                {displayName.charAt(0).toUpperCase()}
-              </ThemedText>
-            </View>
-          )}
-          <ThemedText style={[styles.name, { color: colors.text }]}>{displayName}</ThemedText>
+    <PostsScreen title={displayName}>
+      <FadeInUp style={styles.wrap}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <View style={[styles.avatarRing, { borderColor: colors.glassHighlight }]}>
+            <UserAvatar name={displayName} imageUri={params.avatar || undefined} size={64} />
+          </View>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+            {displayName}
+          </Text>
         </View>
-      </ThemedView>
-    </SafeAreaView>
+      </FadeInUp>
+    </PostsScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  container: { flex: 1, padding: Spacing.lg },
-  avatarSection: { alignItems: 'center', paddingTop: Spacing.xl, gap: Spacing.md },
-  avatar: { width: 96, height: 96, borderRadius: BorderRadius.full },
-  avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: BorderRadius.full,
+  wrap: { paddingHorizontal: 16 },
+  card: {
+    borderRadius: 24,
+    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 14,
   },
-  avatarInitial: { fontSize: FontSizes.xxl, fontWeight: '600' },
-  name: { fontSize: FontSizes.xl, fontWeight: '700' },
+  avatarRing: { borderWidth: 3, borderRadius: 999 },
+  name: { flex: 1, fontSize: 20, fontWeight: '700' },
 });

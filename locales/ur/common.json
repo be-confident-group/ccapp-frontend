@@ -16,7 +16,8 @@
     "filter": "فلٹر",
     "share": "شیئر کریں",
     "retry": "دوبارہ کوشش کریں",
-    "remove": "Remove"
+    "remove": "Remove",
+    "ok": "ٹھیک ہے"
   },
   "navigation": {
     "home": "ہوم",
@@ -110,5 +111,6 @@
     "humidity": "نمی",
     "windSpeed": "ہوا کی رفتار",
     "lastUpdated": "آخری اپ ڈیٹ: {{time}}"
-  }
+  },
+  "error": "خرابی"
 }

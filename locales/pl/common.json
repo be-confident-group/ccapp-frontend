@@ -16,7 +16,8 @@
     "filter": "Filtruj",
     "share": "Udostępnij",
     "retry": "Spróbuj ponownie",
-    "remove": "Remove"
+    "remove": "Remove",
+    "ok": "OK"
   },
   "navigation": {
     "home": "Strona główna",
@@ -110,5 +111,6 @@
     "humidity": "Wilgotność",
     "windSpeed": "Prędkość wiatru",
     "lastUpdated": "Ostatnia aktualizacja: {{time}}"
-  }
+  },
+  "error": "Błąd"
 }

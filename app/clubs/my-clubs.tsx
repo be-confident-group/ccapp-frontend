@@ -1,29 +1,32 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import {
-  FlatList,
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  Image,
-  RefreshControl,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View, RefreshControl, ActivityIndicator } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ThemedView } from '@/components/themed-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { UsersIcon, PlusIcon, LockClosedIcon } from 'react-native-heroicons/outline';
+import { ChevronRightIcon } from 'react-native-heroicons/mini';
 import { ThemedText } from '@/components/themed-text';
-import Header from '@/components/layout/Header';
+import { GlassButton } from '@/components/ui/GlassButton';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { useMyClubs } from '@/lib/hooks/useClubs';
-import { UsersIcon, PlusCircleIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
+import {
+  ClubChip,
+  ClubEmptyState,
+  ClubScreenHeader,
+  ClubSearchBar,
+  ClubThumb,
+  Entrance,
+  PressableCard,
+  useClubScroll,
+} from '@/components/clubs/clubUi';
 import type { Club } from '@/types/feed';
 
 export default function MyClubsScreen() {
   const { t } = useTranslation('groups');
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { scrollY, onScroll, topInset } = useClubScroll();
 
   const [searchQuery, setSearchQuery] = useState('');
   const { data: clubs, isLoading, refetch, isRefetching } = useMyClubs();
@@ -53,50 +56,47 @@ export default function MyClubsScreen() {
   }, []);
 
   const renderClubItem = useCallback(
-    ({ item }: { item: Club }) => (
-      <TouchableOpacity
-        style={[styles.clubCard, { backgroundColor: colors.card }]}
-        onPress={() => handleClubPress(item.id)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.clubHeader}>
-          {item.photo ? (
-            <Image source={{ uri: item.photo }} style={styles.clubPhoto} />
-          ) : (
-            <View style={[styles.clubPhotoPlaceholder, { backgroundColor: colors.border }]}>
-              <UsersIcon size={32} color={colors.textMuted} />
-            </View>
-          )}
-
-          <View style={styles.clubInfo}>
-            <ThemedText style={styles.clubName}>{item.name}</ThemedText>
-            {item.description && (
-              <ThemedText
-                style={[styles.clubDescription, { color: colors.textSecondary }]}
-                numberOfLines={2}
-              >
-                {item.description}
+    ({ item, index }: { item: Club; index: number }) => (
+      <Entrance index={index}>
+        <PressableCard onPress={() => handleClubPress(item.id)} accessibilityLabel={item.name}>
+          <View style={styles.cardRow}>
+            <ClubThumb uri={item.photo} />
+            <View style={styles.info}>
+              <ThemedText style={styles.name} numberOfLines={1}>
+                {item.name}
               </ThemedText>
-            )}
-            <View style={styles.clubMeta}>
-              <UsersIcon size={14} color={colors.textMuted} />
-              <ThemedText style={[styles.memberCount, { color: colors.textMuted }]}>
-                {t('clubs.memberCount', { count: item.members_count })}
-              </ThemedText>
+              {item.description ? (
+                <ThemedText style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+                  {item.description}
+                </ThemedText>
+              ) : null}
+              <View style={styles.chips}>
+                <ClubChip
+                  icon={<UsersIcon size={13} color={colors.glassTint} />}
+                  label={t('clubs.memberCount', { count: item.members_count })}
+                />
+                {item.visibility === 'private' ? (
+                  <ClubChip
+                    icon={<LockClosedIcon size={13} color={colors.glassTint} />}
+                    label={t('clubs.private', { defaultValue: 'Private' })}
+                  />
+                ) : null}
+              </View>
             </View>
+            <ChevronRightIcon size={20} color={colors.textSecondary} />
           </View>
-        </View>
-      </TouchableOpacity>
+        </PressableCard>
+      </Entrance>
     ),
-    [colors, handleClubPress]
+    [colors, handleClubPress, t]
   );
 
   const renderEmptyState = () => {
     if (isLoading) {
       return (
-        <View style={styles.emptyState}>
+        <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
+          <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
             {t('clubs.loading', 'Loading your groups...')}
           </ThemedText>
         </View>
@@ -104,183 +104,82 @@ export default function MyClubsScreen() {
     }
 
     return (
-      <View style={styles.emptyState}>
-        <UsersIcon size={64} color={colors.textMuted} />
-        <ThemedText style={[styles.emptyTitle, { color: colors.textSecondary }]}>
-          {t('clubs.noClubs', 'No Groups Yet')}
-        </ThemedText>
-        <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
-          {t('clubs.noClubsMessage', 'Join or create a group to connect with others!')}
-        </ThemedText>
-        <TouchableOpacity
-          style={[styles.browseButton, { backgroundColor: colors.primary }]}
-          onPress={handleBrowseClubs}
-          activeOpacity={0.8}
-        >
-          <ThemedText style={[styles.browseButtonText, { color: '#fff' }]}>
-            {t('clubs.browseClubs', 'Browse Groups')}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+      <ClubEmptyState
+        icon={<UsersIcon size={30} color={colors.glassTint} />}
+        title={t('clubs.noClubs', 'No Groups Yet')}
+        message={t('clubs.noClubsMessage', 'Join or create a group to connect with others!')}
+        actionLabel={t('clubs.browseClubs', 'Browse Groups')}
+        onAction={handleBrowseClubs}
+      />
     );
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      <ThemedView style={styles.container}>
-        <Header
-          title={t('clubs.myClubs', 'My Groups')}
-          showBack
-          rightElement={
-            <TouchableOpacity onPress={handleCreateClub} style={styles.headerButton}>
-              <PlusCircleIcon size={22} color={colors.primary} />
-            </TouchableOpacity>
-          }
-        />
-        {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <MagnifyingGlassIcon size={20} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('clubs.searchMyClubs', 'Search my groups...')}
-            placeholderTextColor={colors.textMuted}
+    <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
+      <Animated.FlatList
+        data={filteredClubs}
+        renderItem={renderClubItem}
+        keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={
+          <ClubSearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
+            placeholder={t('clubs.searchMyClubs', 'Search my groups...')}
           />
-        </View>
-        <FlatList
-          data={filteredClubs}
-          renderItem={renderClubItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={[
-            styles.listContent,
-            filteredClubs.length === 0 && styles.emptyListContent,
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={renderEmptyState}
-        />
-      </ThemedView>
-    </SafeAreaView>
+        }
+        ItemSeparatorComponent={Separator}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingTop: topInset, paddingBottom: insets.bottom + 32 },
+          filteredClubs.length === 0 && styles.emptyListContent,
+        ]}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentInsetAdjustmentBehavior="never"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+            progressViewOffset={topInset}
+          />
+        }
+        ListEmptyComponent={renderEmptyState}
+      />
+      <ClubScreenHeader
+        title={t('clubs.myClubs', 'My Groups')}
+        scrollY={scrollY}
+        rightElement={
+          <GlassButton
+            onPress={handleCreateClub}
+            accessibilityLabel={t('clubs.createClub', 'Create Group')}
+            size={40}
+          >
+            <PlusIcon size={22} color={colors.glassInactive} />
+          </GlassButton>
+        }
+      />
+    </View>
   );
 }
 
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-    marginRight: Spacing.sm,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    gap: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: FontSizes.md,
-    paddingVertical: Spacing.xs,
-  },
-  listContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  emptyListContent: {
-    flex: 1,
-  },
-  clubCard: {
-    borderRadius: 12,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  clubHeader: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  clubPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  clubPhotoPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clubInfo: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
-  clubName: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-  },
-  clubDescription: {
-    fontSize: FontSizes.sm,
-    lineHeight: 20,
-  },
-  clubMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  memberCount: {
-    fontSize: FontSizes.xs,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xl * 2,
-    gap: Spacing.md,
-  },
-  emptyTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-  },
-  emptyMessage: {
-    fontSize: FontSizes.sm,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  browseButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    marginTop: Spacing.md,
-  },
-  browseButtonText: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-  },
+  screen: { flex: 1 },
+  listContent: { paddingHorizontal: 16 },
+  emptyListContent: { flexGrow: 1 },
+  separator: { height: 12 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  info: { flex: 1, gap: 4 },
+  name: { fontSize: 17, fontWeight: '600' },
+  description: { fontSize: 14, lineHeight: 20 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 12 },
+  loadingText: { fontSize: 14 },
 });

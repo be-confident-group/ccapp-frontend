@@ -43,7 +43,9 @@
     "dailyReminder": "দৈনিক অনুস্মারক",
     "dailyReminderSubtitle": "আপনার রাইড লগ করার জন্য মনে করিয়ে দিন",
     "notificationSettings": "বিজ্ঞপ্তি সেটিংস",
-    "notificationSettingsSubtitle": "সমস্ত বিজ্ঞপ্তি পরিচালনা করুন"
+    "notificationSettingsSubtitle": "সমস্ত বিজ্ঞপ্তি পরিচালনা করুন",
+    "contactSupport": "সহায়তার সাথে যোগাযোগ করুন",
+    "contactSupportSubtitle": "সমস্যা জানান বা আমাদের দলের সাথে যোগাযোগ করুন"
   },
   "feedback": {
     "sendFeedback": "মতামত পাঠান",
@@ -88,9 +90,93 @@
   "trackingHealth": {
     "summaryOk": "এই ডিভাইসে ব্যাকগ্রাউন্ড ট্র্যাকিং নির্ভরযোগ্যভাবে চলার জন্য প্রস্তুত।",
     "summaryIssues": "কিছু সেটিং ব্যাকগ্রাউন্ডে রাইড রেকর্ড হওয়া বন্ধ করতে পারে। নিচের বিষয়গুলো ঠিক করুন।",
-    "checksHeader": "পরীক্ষা"
+    "checksHeader": "পরীক্ষা",
+    "allGood": "সব পরীক্ষা সফল",
+    "checks": {
+      "batteryOpt": "ব্যাটারি অপ্টিমাইজেশন",
+      "batteryOptActive": "অপ্টিমাইজ করা — অ্যাপ তথ্য → ব্যাটারি খুলে \"সীমাহীন\" বেছে নিন",
+      "batteryOptExempt": "ছাড় দেওয়া — অ্যাপ ব্যাকগ্রাউন্ডে স্বাধীনভাবে চলতে পারে",
+      "engineActive": "সক্রিয়",
+      "engineIdle": "নিষ্ক্রিয় — চলাচলের অপেক্ষায়",
+      "engineState": "ট্র্যাকিং ইঞ্জিন",
+      "locationAuth": "অবস্থানের অনুমতি",
+      "locationAuthAlways": "সবসময় — ব্যাকগ্রাউন্ড ট্র্যাকিং চালু",
+      "locationAuthDenied": "অস্বীকৃত — অনুমতি দিতে সেটিংসে যান",
+      "locationAuthWhenInUse": "ব্যবহারের সময় — ব্যাকগ্রাউন্ড ট্র্যাকিং বন্ধ",
+      "locationPrecise": "সুনির্দিষ্ট অবস্থান",
+      "locationPreciseDegraded": "সীমিত নির্ভুলতা — জিপিএসের নির্ভুলতা কমে গেছে",
+      "locationPreciseOk": "পূর্ণ নির্ভুলতা চালু",
+      "lowPowerMode": "লো পাওয়ার মোড",
+      "lowPowerModeOff": "বন্ধ — জিপিএস পূর্ণ গতিতে চলছে",
+      "lowPowerModeOn": "চালু — জিপিএস ও ব্যাকগ্রাউন্ড কাজ সীমিত",
+      "motion": "মোশন ও ফিটনেস",
+      "motionDenied": "অস্বীকৃত — কার্যকলাপ শনাক্তকরণ বন্ধ",
+      "motionGranted": "অনুমোদিত"
+    },
+    "degradationBanner": "অবস্থানের অনুমতি বদলে গেছে — ব্যাকগ্রাউন্ড ট্র্যাকিং কাজ নাও করতে পারে",
+    "fixIt": "ঠিক করুন",
+    "fixNow": "এখনই ঠিক করুন",
+    "issuesFound": "সমস্যা পাওয়া গেছে",
+    "loading": "পরীক্ষা চলছে...",
+    "refresh": "রিফ্রেশ",
+    "subtitle": "এই ডিভাইসে ব্যাকগ্রাউন্ড ট্র্যাকিং নির্ভরযোগ্যভাবে চলতে পারে কিনা তা পরীক্ষা করে",
+    "title": "ট্র্যাকিংয়ের অবস্থা"
   },
   "notifications": {
-    "title": "নোটিফিকেশন"
+    "title": "নোটিফিকেশন",
+    "subtitle": "আপনার নোটিফিকেশনের পছন্দ পরিচালনা করুন"
+  },
+  "card": {
+    "distance": "দূরত্ব",
+    "trips": "ট্রিপ",
+    "trophies": "ট্রফি"
+  },
+  "changePassword": {
+    "cancel": "বাতিল",
+    "confirmPasswordLabel": "নতুন পাসওয়ার্ড নিশ্চিত করুন",
+    "confirmPasswordPlaceholder": "নতুন পাসওয়ার্ড নিশ্চিত করুন",
+    "confirmPasswordRequired": "অনুগ্রহ করে নতুন পাসওয়ার্ড নিশ্চিত করুন",
+    "currentPasswordLabel": "বর্তমান পাসওয়ার্ড",
+    "currentPasswordPlaceholder": "বর্তমান পাসওয়ার্ড লিখুন",
+    "currentPasswordRequired": "বর্তমান পাসওয়ার্ড আবশ্যক",
+    "fallbackError": "পাসওয়ার্ড পরিবর্তন করা যায়নি। আবার চেষ্টা করুন।",
+    "newPasswordLabel": "নতুন পাসওয়ার্ড",
+    "newPasswordPlaceholder": "নতুন পাসওয়ার্ড লিখুন",
+    "newPasswordRequired": "নতুন পাসওয়ার্ড আবশ্যক",
+    "newPasswordTooShort": "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে",
+    "passwordsDoNotMatch": "পাসওয়ার্ড মিলছে না",
+    "save": "সংরক্ষণ",
+    "saving": "সংরক্ষণ হচ্ছে...",
+    "successMessage": "আপনার পাসওয়ার্ড পরিবর্তন হয়েছে।",
+    "successOk": "ঠিক আছে",
+    "successTitle": "সফল",
+    "title": "পাসওয়ার্ড পরিবর্তন"
+  },
+  "deleteAccount": "অ্যাকাউন্ট মুছুন",
+  "edit": {
+    "cancel": "বাতিল",
+    "dateOfBirthLabel": "জন্ম তারিখ",
+    "done": "সম্পন্ন",
+    "emailInvalid": "ইমেইলের ফরম্যাট সঠিক নয়",
+    "emailLabel": "ইমেইল",
+    "emailPlaceholder": "email@example.com",
+    "emailRequired": "ইমেইল আবশ্যক",
+    "firstNameLabel": "নামের প্রথম অংশ",
+    "firstNamePlaceholder": "আপনার নামের প্রথম অংশ লিখুন",
+    "firstNameRequired": "নামের প্রথম অংশ আবশ্যক",
+    "genderFemale": "নারী",
+    "genderLabel": "লিঙ্গ",
+    "genderMale": "পুরুষ",
+    "genderOther": "অন্যান্য",
+    "genderPreferNotToSay": "বলতে চাই না",
+    "lastNameLabel": "পদবি",
+    "lastNamePlaceholder": "আপনার পদবি লিখুন",
+    "save": "সংরক্ষণ",
+    "saving": "সংরক্ষণ হচ্ছে...",
+    "selectDateOfBirth": "জন্ম তারিখ বেছে নিন",
+    "selectGender": "লিঙ্গ বেছে নিন",
+    "selectGenderTitle": "লিঙ্গ বেছে নিন",
+    "tapToChangePhoto": "ছবি বদলাতে ট্যাপ করুন",
+    "title": "প্রোফাইল সম্পাদনা"
   }
 }

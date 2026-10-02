@@ -8,28 +8,48 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
-  FlatList,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
   Modal,
   Pressable,
-  TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from 'react-native';
+import Animated, {
+  FadeIn,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { ChevronLeftIcon, XMarkIcon } from 'react-native-heroicons/outline';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  LockClosedIcon,
+  MapPinIcon,
+  QuestionMarkCircleIcon,
+  ShieldCheckIcon,
+  StarIcon,
+  XMarkIcon,
+} from 'react-native-heroicons/outline';
+import { useTranslation } from 'react-i18next';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { UnratedTripCard } from '@/components/rating';
+import Header from '@/components/layout/Header';
+import { Button } from '@/components/ui';
+import { GlassSurface } from '@/components/ui/GlassSurface';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Spacing } from '@/constants/theme';
 import { database, type Trip } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 
-// Transform backend ApiTrip to local Trip format for the card component
+const HEADER_HEIGHT = 56;
+const PRESS_SPRING = { damping: 15, stiffness: 400 };
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
   return {
     id: apiTrip.client_id,
@@ -60,6 +80,14 @@ function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
 
 export default function UnratedTripsScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation('maps');
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const infoScale = useSharedValue(1);
+  const infoPressStyle = useAnimatedStyle(() => ({ transform: [{ scale: infoScale.value }] }));
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
   const [ratedTripIds, setRatedTripIds] = useState<Set<string>>(new Set());
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -125,241 +153,237 @@ export default function UnratedTripsScreen() {
     }
   };
 
-  const renderTrip = ({ item }: { item: Trip }) => (
-    <UnratedTripCard trip={item} onPress={() => handleTripPress(item)} />
+  const renderTrip = ({ item, index }: { item: Trip; index: number }) => (
+    <UnratedTripCard trip={item} index={index} onPress={() => handleTripPress(item)} />
   );
+
+  const headerTop = insets.top;
 
   if (isLoading) {
     return (
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: colors.background }]}
-        edges={['top']}
-      >
-        <ThemedView style={styles.container}>
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </ThemedView>
-      </SafeAreaView>
+      <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+        <View style={{ paddingTop: headerTop }}>
+          <Header showBack />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
     );
   }
 
+  const benefits = [
+    {
+      Icon: ExclamationTriangleIcon,
+      text: t('rating.benefitDangerous', {
+        defaultValue: 'Spot dangerous intersections and roads that need attention',
+      }),
+    },
+    {
+      Icon: MapPinIcon,
+      text: t('rating.benefitBikeLanes', {
+        defaultValue: 'Help councils prioritize where to add bike lanes',
+      }),
+    },
+    {
+      Icon: StarIcon,
+      text: t('rating.benefitGreatRoutes', {
+        defaultValue: 'Highlight the great routes so others can discover them',
+      }),
+    },
+    {
+      Icon: ShieldCheckIcon,
+      text: t('rating.benefitAnonymized', {
+        defaultValue: 'All feedback is anonymized to protect your privacy',
+      }),
+    },
+  ];
+
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-      edges={['top']}
-    >
-      <ThemedView style={styles.container}>
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            { backgroundColor: colors.background, borderBottomColor: colors.border },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              Rate My Routes
-            </ThemedText>
-            {unratedTrips.length > 0 && (
-              <View style={[styles.countBadge, { backgroundColor: colors.accent }]}>
-                <ThemedText style={styles.countText}>{unratedTrips.length}</ThemedText>
-              </View>
-            )}
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      {/* Content */}
+      {unratedTrips.length === 0 ? (
+        <View style={[styles.empty, { paddingTop: headerTop + HEADER_HEIGHT }]}>
+          <View style={[styles.emptyCircle, { backgroundColor: colors.glassHighlight }]}>
+            <CheckCircleIcon size={30} color={colors.glassTint} />
           </View>
-
-          <View style={styles.placeholder} />
-        </View>
-
-        {/* Content */}
-        {unratedTrips.length === 0 ? (
-          <View style={styles.empty}>
-            <MaterialCommunityIcons
-              name="check-circle-outline"
-              size={64}
-              color={colors.primary}
-            />
-            <ThemedText style={styles.emptyTitle}>All caught up!</ThemedText>
-            <ThemedText
-              style={[styles.emptySubtext, { color: colors.textSecondary }]}
-            >
-              You&apos;ve rated all your trips. New trips will appear here after
-              you complete them.
-            </ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            data={unratedTrips}
-            renderItem={renderTrip}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-            ListHeaderComponent={
-              <ThemedText
-                style={[styles.listHeader, { color: colors.textSecondary }]}
-              >
-                Select a trip to rate your experience
-              </ThemedText>
-            }
-          />
-        )}
-
-        {/* Floating Info Button */}
-        <TouchableOpacity
-          style={[styles.floatingInfoButton, { backgroundColor: colors.card }]}
-          onPress={() => setShowInfoModal(true)}
-          activeOpacity={0.9}
-        >
-          <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.primary} />
-          <ThemedText style={[styles.floatingInfoText, { color: colors.primary }]}>
-            Why rate routes?
+          <ThemedText style={styles.emptyTitle}>
+            {t('rating.allCaughtUp', { defaultValue: 'All caught up!' })}
           </ThemedText>
-        </TouchableOpacity>
+          <ThemedText style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            {t('rating.allCaughtUpText', {
+              defaultValue:
+                "You've rated all your trips. New trips will appear here after you complete them.",
+            })}
+          </ThemedText>
+          <Button
+            title={t('rating.done', { defaultValue: 'Done' })}
+            onPress={() => router.back()}
+            variant="primary"
+            size="medium"
+            style={styles.emptyButton}
+          />
+        </View>
+      ) : (
+        <Animated.FlatList
+          data={unratedTrips}
+          renderItem={renderTrip}
+          keyExtractor={(item) => item.id}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentContainerStyle={[
+            styles.list,
+            { paddingTop: headerTop + HEADER_HEIGHT + 8, paddingBottom: insets.bottom + 88 },
+          ]}
+          ItemSeparatorComponent={Separator}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              progressViewOffset={headerTop + HEADER_HEIGHT}
+            />
+          }
+          ListHeaderComponent={
+            <ThemedText style={[styles.listHeader, { color: colors.textSecondary }]}>
+              {t('rating.selectTripToRate', { defaultValue: 'Select a trip to rate your experience' })}
+            </ThemedText>
+          }
+        />
+      )}
 
-        {/* Info Modal */}
-        <Modal
-          visible={showInfoModal}
-          animationType="fade"
-          transparent
-          onRequestClose={() => setShowInfoModal(false)}
+      {/* Header */}
+      <View style={[styles.headerWrap, { paddingTop: headerTop }]}>
+        <Header
+          showBack
+          scrollY={scrollY}
+          title={t('rating.rateMyRoutes', { defaultValue: 'Rate My Routes' })}
+          rightElement={
+            unratedTrips.length > 0 ? (
+              <View style={[styles.countBadge, { backgroundColor: colors.glassHighlight }]}>
+                <ThemedText style={[styles.countText, { color: colors.glassTint }]}>
+                  {unratedTrips.length}
+                </ThemedText>
+              </View>
+            ) : undefined
+          }
+        />
+      </View>
+
+      {/* Floating glass info capsule */}
+      <Animated.View
+        entering={FadeIn.delay(200)}
+        style={[
+          styles.floatingInfo,
+          { bottom: insets.bottom + 16, shadowColor: colors.shadow },
+          infoPressStyle,
+        ]}
+      >
+        <AnimatedPressable
+          accessibilityRole="button"
+          accessibilityLabel={t('rating.whyRate', { defaultValue: 'Why rate routes?' })}
+          onPress={() => setShowInfoModal(true)}
+          onPressIn={() => {
+            infoScale.value = withSpring(0.96, PRESS_SPRING);
+            if (process.env.EXPO_OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            }
+          }}
+          onPressOut={() => {
+            infoScale.value = withSpring(1, PRESS_SPRING);
+          }}
+          style={styles.floatingInfoInner}
         >
+          <GlassSurface borderRadius={22} interactive />
+          <QuestionMarkCircleIcon size={20} color={colors.glassTint} />
+          <ThemedText style={[styles.floatingInfoText, { color: colors.glassTint }]}>
+            {t('rating.whyRate', { defaultValue: 'Why rate routes?' })}
+          </ThemedText>
+        </AnimatedPressable>
+      </Animated.View>
+
+      {/* Info Modal */}
+      <Modal
+        visible={showInfoModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowInfoModal(false)}>
           <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowInfoModal(false)}
+            style={[styles.modalCard, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
           >
             <Pressable
-              style={[styles.modalCard, { backgroundColor: colors.card }]}
-              onPress={(e) => e.stopPropagation()}
+              accessibilityRole="button"
+              accessibilityLabel={t('rating.close', { defaultValue: 'Close' })}
+              style={styles.modalCloseButton}
+              onPress={() => setShowInfoModal(false)}
+              hitSlop={8}
             >
-              {/* Close button */}
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowInfoModal(false)}
-                activeOpacity={0.7}
-              >
-                <XMarkIcon size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Header */}
-              <View style={styles.modalHeaderSection}>
-                <View style={[styles.modalIconBadge, { backgroundColor: colors.accent + '20' }]}>
-                  <MaterialCommunityIcons name="chart-line" size={28} color={colors.accent} />
-                </View>
-                <ThemedText style={[styles.modalTitle, { color: colors.text }]}>
-                  Your Routes Build Better Cities
-                </ThemedText>
-                <ThemedText style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
-                  Each rating you share becomes valuable data for urban planning
-                </ThemedText>
-              </View>
-
-              {/* Benefits List */}
-              <View style={styles.benefitsList}>
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitDot, { backgroundColor: '#4CAF50' }]} />
-                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
-                    Spot dangerous intersections and roads that need attention
-                  </ThemedText>
-                </View>
-
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitDot, { backgroundColor: '#2196F3' }]} />
-                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
-                    Help councils prioritize where to add bike lanes
-                  </ThemedText>
-                </View>
-
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitDot, { backgroundColor: '#FF9800' }]} />
-                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
-                    Highlight the great routes so others can discover them
-                  </ThemedText>
-                </View>
-
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitDot, { backgroundColor: '#9C27B0' }]} />
-                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>
-                    All feedback is anonymized to protect your privacy
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View style={[styles.modalFooterNote, { backgroundColor: colors.background }]}>
-                <MaterialCommunityIcons name="lock-outline" size={16} color={colors.textSecondary} />
-                <ThemedText style={[styles.footerNoteText, { color: colors.textSecondary }]}>
-                  Your exact routes are never shared — only aggregated patterns
-                </ThemedText>
-              </View>
+              <XMarkIcon size={22} color={colors.textSecondary} />
             </Pressable>
+
+            <View style={styles.modalHeaderSection}>
+              <ThemedText style={[styles.modalTitle, { color: colors.text }]}>
+                {t('rating.infoTitle', { defaultValue: 'Your Routes Build Better Cities' })}
+              </ThemedText>
+              <ThemedText style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                {t('rating.infoSubtitle', {
+                  defaultValue: 'Each rating you share becomes valuable data for urban planning',
+                })}
+              </ThemedText>
+            </View>
+
+            <View style={styles.benefitsList}>
+              {benefits.map(({ Icon, text }) => (
+                <View key={text} style={styles.benefitItem}>
+                  <Icon size={20} color={colors.glassTint} />
+                  <ThemedText style={[styles.benefitText, { color: colors.text }]}>{text}</ThemedText>
+                </View>
+              ))}
+            </View>
+
+            <View style={[styles.modalFooterNote, { backgroundColor: colors.backgroundSecondary }]}>
+              <LockClosedIcon size={16} color={colors.textSecondary} />
+              <ThemedText style={[styles.footerNoteText, { color: colors.textSecondary }]}>
+                {t('rating.privacyNote', {
+                  defaultValue: 'Your exact routes are never shared — only aggregated patterns',
+                })}
+              </ThemedText>
+            </View>
           </Pressable>
-        </Modal>
-      </ThemedView>
-    </SafeAreaView>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  headerWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   countBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    minWidth: 32,
+    height: 32,
+    borderRadius: 16,
+    paddingHorizontal: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   countText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
+    fontSize: 14,
+    fontWeight: '700',
   },
   centered: {
     flex: 1,
@@ -367,70 +391,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   list: {
-    padding: Spacing.lg,
+    paddingHorizontal: 16,
+  },
+  separator: {
+    height: 12,
   },
   listHeader: {
     fontSize: 14,
-    marginBottom: Spacing.md,
+    marginBottom: 12,
     textAlign: 'center',
   },
   empty: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
-    gap: Spacing.md,
+    paddingHorizontal: 32,
+    paddingBottom: 96,
+    gap: 12,
+  },
+  emptyCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginTop: Spacing.md,
+    marginTop: 4,
   },
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
-  // Floating Info Button
-  floatingInfoButton: {
+  emptyButton: {
+    marginTop: 8,
+    minWidth: 160,
+  },
+  // Floating glass info capsule
+  floatingInfo: {
     position: 'absolute',
-    bottom: Spacing.lg,
     alignSelf: 'center',
+    borderRadius: 22,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  floatingInfoInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    height: 44,
     paddingHorizontal: 16,
-    borderRadius: 20,
     gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 4,
   },
   floatingInfoText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
-  // Modal Styles
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: 16,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 360,
     borderRadius: 20,
-    padding: Spacing.lg,
-    paddingTop: Spacing.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    padding: 20,
+    paddingTop: 28,
+    gap: 16,
   },
   modalCloseButton: {
     position: 'absolute',
@@ -444,21 +479,13 @@ const styles = StyleSheet.create({
   },
   modalHeaderSection: {
     alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  modalIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
+    gap: 6,
+    paddingHorizontal: 16,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 6,
   },
   modalSubtitle: {
     fontSize: 14,
@@ -467,18 +494,11 @@ const styles = StyleSheet.create({
   },
   benefitsList: {
     gap: 14,
-    marginBottom: Spacing.lg,
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-  },
-  benefitDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
   },
   benefitText: {
     flex: 1,
@@ -490,7 +510,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
   },
   footerNoteText: {
     flex: 1,

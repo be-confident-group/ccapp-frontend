@@ -16,7 +16,8 @@
     "filter": "ফিল্টার",
     "share": "শেয়ার করুন",
     "retry": "আবার চেষ্টা করুন",
-    "remove": "Remove"
+    "remove": "Remove",
+    "ok": "ঠিক আছে"
   },
   "navigation": {
     "home": "হোম",
@@ -110,5 +111,6 @@
     "humidity": "আর্দ্রতা",
     "windSpeed": "বাতাসের গতি",
     "lastUpdated": "সর্বশেষ আপডেট: {{time}}"
-  }
+  },
+  "error": "ত্রুটি"
 }
