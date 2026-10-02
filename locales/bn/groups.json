@@ -140,7 +140,9 @@
     "removePhoto": "ছবি সরান",
     "saveChanges": "পরিবর্তন সংরক্ষণ করুন",
     "selectNewOwner": "নতুন মালিক বেছে নিন",
-    "selectNewOwnerDesc": "এই গ্রুপের নতুন মালিক হওয়ার জন্য একজন সদস্য বেছে নিন।"
+    "selectNewOwnerDesc": "এই গ্রুপের নতুন মালিক হওয়ার জন্য একজন সদস্য বেছে নিন।",
+    "newPost": "নতুন পোস্ট",
+    "about": "সম্পর্কে"
   },
   "trips": {
     "shareToGroup": "Share to Group",

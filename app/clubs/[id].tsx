@@ -33,7 +33,8 @@ import type { GlassMenuAnchor } from '@/components/ui/GlassMenu';
 import { GlassSurface } from '@/components/ui/GlassSurface';
 import { SettingsGroup } from '@/components/profile/SettingsGroup';
 import { SettingsItem } from '@/components/profile/SettingsItem';
-import { ClubChip, ClubEmptyState, ClubScreenHeader } from '@/components/clubs/clubUi';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ClubEmptyState, ClubScreenHeader } from '@/components/clubs/clubUi';
 import { useTheme } from '@/contexts/ThemeContext';
 import { showAlert } from '@/lib/utils/alert';
 import {
@@ -54,6 +55,7 @@ import {
   PlusIcon,
   ArrowLeftStartOnRectangleIcon,
   PencilSquareIcon,
+  MapIcon,
   ShareIcon,
   UserPlusIcon,
   LockClosedIcon,
@@ -67,6 +69,8 @@ import type { Post , ActivityPost } from '@/types/feed';
 
 const BUTTON_SIZE = 40;
 const SHEET_OVERLAP = 28;
+// Height of the primary pill and the round glass buttons beside it.
+const ACTION_SIZE = 52;
 
 type ClubMenuKey = 'edit' | 'requests' | 'none';
 
@@ -104,7 +108,7 @@ export default function ClubDetailScreen() {
   // --- Presentation: hero / scroll / menu state ---
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const heroHeight = Math.round(windowHeight * 0.3) + insets.top;
+  const heroHeight = Math.round(windowHeight * 0.34) + insets.top;
   const pillHideOffset = insets.top + BUTTON_SIZE + 24;
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -113,19 +117,15 @@ export default function ClubDetailScreen() {
   const moreRef = useRef<View>(null);
   const [menuAnchor, setMenuAnchor] = useState<GlassMenuAnchor | null>(null);
 
-  const heroAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: interpolate(
-          scrollY.value,
-          [-heroHeight, 0, heroHeight],
-          [-heroHeight / 2, 0, heroHeight * 0.5],
-          Extrapolation.CLAMP
-        ),
-      },
-      { scale: interpolate(scrollY.value, [-heroHeight, 0], [2, 1], Extrapolation.CLAMP) },
-    ],
-  }));
+  // Pull-down: stretch from the top edge so the photo always reaches the content.
+  // Scroll up: move at half speed (parallax) but never leave the top of the screen.
+  const heroAnimatedStyle = useAnimatedStyle(() => {
+    const y = scrollY.value;
+    if (y < 0) {
+      return { transform: [{ translateY: 0 }, { scale: 1 + -y / heroHeight }] };
+    }
+    return { transform: [{ translateY: -Math.min(y, heroHeight) * 0.5 }, { scale: 1 }] };
+  });
 
   const pillAnimatedStyle = useAnimatedStyle(() => {
     const start = heroHeight - insets.top - 120;
@@ -343,6 +343,15 @@ export default function ClubDetailScreen() {
     [handleLike, handleComment, handleUserPress, handlePhotoPress, handleOptionsPress, ownPostIds]
   );
 
+  // Members (not owners) get Leave in a menu rather than as a big button.
+  const memberMenuRef = useRef<View>(null);
+  const [memberMenuAnchor, setMemberMenuAnchor] = useState<GlassMenuAnchor | null>(null);
+  const openMemberMenu = () => {
+    memberMenuRef.current?.measureInWindow((x, y, width, height) => {
+      setMemberMenuAnchor({ x, y, width, height });
+    });
+  };
+
   const openMenu = () => {
     moreRef.current?.measureInWindow((x, y, width, height) => {
       setMenuAnchor({ x, y, width, height });
@@ -386,93 +395,105 @@ export default function ClubDetailScreen() {
 
   const headerElement = (
     <View>
-      <View style={{ height: heroHeight - SHEET_OVERLAP }} />
-      <View style={[styles.sheet, { backgroundColor: colors.backgroundSecondary }]}>
-        {/* Info card */}
-        <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
-          <ThemedText style={styles.clubName}>{club.name}</ThemedText>
-          <View style={styles.chips}>
-            <ClubChip
-              icon={<UsersIcon size={13} color={colors.glassTint} />}
-              label={t('clubs.memberCount', { count: club.members?.length ?? 0 })}
-            />
-            <ClubChip
-              icon={
-                isPrivateClub ? (
-                  <LockClosedIcon size={13} color={colors.glassTint} />
-                ) : (
-                  <GlobeAltIcon size={13} color={colors.glassTint} />
-                )
-              }
-              label={isPrivateClub ? t('clubs.private', 'Private') : t('clubs.public', 'Public')}
-            />
-          </View>
-          {club.description ? (
-            <ThemedText style={[styles.clubDescription, { color: colors.textSecondary }]}>
-              {club.description}
+      {/* Title over the photo; scrolls with the content */}
+      <View style={[styles.heroTitle, { height: heroHeight - SHEET_OVERLAP }]}>
+        <ThemedText style={styles.clubName} numberOfLines={2}>
+          {club.name}
+        </ThemedText>
+        <View style={styles.chips}>
+          <View style={styles.heroChip}>
+            <UsersIcon size={13} color="#FFFFFF" />
+            <ThemedText style={styles.heroChipText}>
+              {t('clubs.memberCount', { count: club.members?.length ?? 0 })}
             </ThemedText>
-          ) : null}
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          {!isOwner &&
-            (isMember ? (
-              <Button
-                title={t('clubs.leave', 'Leave Group')}
-                variant="outline"
-                size="large"
-                fullWidth
-                loading={mutationPending}
-                icon={<ArrowLeftStartOnRectangleIcon size={18} color={colors.primary} />}
-                onPress={handleJoinLeave}
-              />
-            ) : joinRequestPending ? (
-              <Button
-                title={t('clubs.requestPending', 'Requested')}
-                variant="glass"
-                size="large"
-                fullWidth
-                disabled
-                icon={<ClockIcon size={18} color={colors.textSecondary} />}
-                onPress={handleJoinLeave}
-              />
+          </View>
+          <View style={styles.heroChip}>
+            {isPrivateClub ? (
+              <LockClosedIcon size={13} color="#FFFFFF" />
             ) : (
-              <Button
-                title={isPrivateClub ? t('clubs.requestJoin', 'Request to Join') : t('clubs.join', 'Join Group')}
-                size="large"
-                fullWidth
-                loading={mutationPending}
-                icon={isPrivateClub ? <LockClosedIcon size={18} color="#fff" /> : undefined}
-                onPress={handleJoinLeave}
-              />
-            ))}
+              <GlobeAltIcon size={13} color="#FFFFFF" />
+            )}
+            <ThemedText style={styles.heroChipText}>
+              {isPrivateClub ? t('clubs.private', 'Private') : t('clubs.public', 'Public')}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+      <View style={[styles.sheet, { backgroundColor: colors.backgroundSecondary }]}>
+        {club.description ? (
+          <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
+            <ThemedText style={[styles.aboutLabel, { color: colors.textSecondary }]}>
+              {t('clubs.about', { defaultValue: 'About' })}
+            </ThemedText>
+            <ThemedText style={[styles.clubDescription, { color: colors.text }]}>{club.description}</ThemedText>
+          </View>
+        ) : null}
 
-          <View style={styles.actionRow}>
-            <View style={styles.actionFlex}>
-              <Button
-                title={t('clubs.createPost', 'Post')}
-                variant="glass"
-                size="small"
-                fullWidth
-                disabled={!isMember}
-                icon={<PlusIcon size={16} color={isMember ? colors.glassTint : colors.textMuted} />}
-                onPress={handleCreatePost}
-              />
-            </View>
-            {isMember && (
+        {/* Actions: one clear primary pill, secondary actions as round glass buttons */}
+        <View style={styles.actions}>
+          {isMember ? (
+            <View style={styles.actionRow}>
               <View style={styles.actionFlex}>
                 <Button
-                  title={t('clubs.shareTrip', 'Share Trip')}
-                  variant="glass"
-                  size="small"
+                  title={t('clubs.newPost', { defaultValue: 'New post' })}
+                  size="large"
                   fullWidth
-                  icon={<ShareIcon size={16} color={colors.glassTint} />}
-                  onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+                  icon={<PlusIcon size={20} color="#FFFFFF" />}
+                  onPress={handleCreatePost}
+                  style={styles.actionPill}
                 />
               </View>
-            )}
-          </View>
+              <GlassButton
+                onPress={() => router.push(`/posts/share-trip?clubId=${club.id}`)}
+                accessibilityLabel={t('clubs.shareTrip', 'Share Trip')}
+                size={ACTION_SIZE}
+              >
+                <MapIcon size={22} color={colors.glassTint} />
+              </GlassButton>
+              {!isOwner && (
+                <View ref={memberMenuRef} collapsable={false}>
+                  <GlassButton
+                    onPress={openMemberMenu}
+                    accessibilityLabel={t('clubs.moreActions', { defaultValue: 'More actions' })}
+                    size={ACTION_SIZE}
+                  >
+                    {mutationPending ? (
+                      <ActivityIndicator size="small" color={colors.glassTint} />
+                    ) : (
+                      <EllipsisHorizontalIcon size={22} color={colors.glassTint} />
+                    )}
+                  </GlassButton>
+                </View>
+              )}
+            </View>
+          ) : joinRequestPending ? (
+            <Button
+              title={t('clubs.requestPending', 'Requested')}
+              variant="glass"
+              size="large"
+              fullWidth
+              disabled
+              icon={<ClockIcon size={18} color={colors.textSecondary} />}
+              onPress={handleJoinLeave}
+              style={styles.actionPill}
+            />
+          ) : (
+            <Button
+              title={isPrivateClub ? t('clubs.requestJoin', 'Request to Join') : t('clubs.join', 'Join Group')}
+              size="large"
+              fullWidth
+              loading={mutationPending}
+              icon={
+                isPrivateClub ? (
+                  <LockClosedIcon size={18} color="#FFFFFF" />
+                ) : (
+                  <UserPlusIcon size={20} color="#FFFFFF" />
+                )
+              }
+              onPress={handleJoinLeave}
+              style={styles.actionPill}
+            />
+          )}
         </View>
 
         {/* Members */}
@@ -556,12 +577,28 @@ export default function ClubDetailScreen() {
       {/* Hero */}
       <Animated.View style={[styles.hero, { height: heroHeight }, heroAnimatedStyle]}>
         {club.photo ? (
-          <Image source={{ uri: club.photo }} style={StyleSheet.absoluteFill} />
+          <Image source={{ uri: club.photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
-          <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder, { backgroundColor: colors.glassHighlight }]}>
-            <UsersIcon size={64} color={colors.glassTint} />
-          </View>
+          <LinearGradient
+            colors={[colors.glassActiveFill, colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[StyleSheet.absoluteFill, styles.heroPlaceholder]}
+          >
+            <UsersIcon size={72} color="rgba(255,255,255,0.35)" />
+          </LinearGradient>
         )}
+        {/* Scrims keep the floating buttons and the title readable on any photo */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0)']}
+          style={[styles.scrimTop, { height: insets.top + 72 }]}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)']}
+          style={styles.scrimBottom}
+        />
       </Animated.View>
 
       <Animated.FlatList
@@ -645,6 +682,25 @@ export default function ClubDetailScreen() {
         )}
       </View>
 
+      {!isOwner && isMember && (
+        <GlassMenu<'leave' | 'none'>
+          anchor={memberMenuAnchor}
+          options={[
+            {
+              key: 'leave',
+              label: t('clubs.leave', 'Leave Group'),
+              icon: <ArrowLeftStartOnRectangleIcon size={18} color={colors.error} />,
+            },
+          ]}
+          selected="none"
+          onSelect={() => {
+            setMemberMenuAnchor(null);
+            handleJoinLeave();
+          }}
+          onClose={() => setMemberMenuAnchor(null)}
+        />
+      )}
+
       {isOwner && (
         <GlassMenu<ClubMenuKey>
           anchor={menuAnchor}
@@ -691,7 +747,21 @@ export default function ClubDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  hero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
+  hero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', transformOrigin: 'top' },
+  scrimTop: { position: 'absolute', top: 0, left: 0, right: 0 },
+  scrimBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' },
+  heroTitle: { justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, gap: 10 },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  heroChipText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
+  aboutLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   sheet: {
     borderTopLeftRadius: SHEET_OVERLAP,
@@ -699,12 +769,21 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   infoCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 20, padding: 16, gap: 12 },
-  clubName: { fontSize: 24, fontWeight: '700' },
+  clubName: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   clubDescription: { fontSize: 15, lineHeight: 22 },
   actions: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
-  actionRow: { flexDirection: 'row', gap: 12 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   actionFlex: { flex: 1 },
+  actionPill: { borderRadius: 999, minHeight: ACTION_SIZE },
   membersList: { gap: 16, paddingHorizontal: 16, paddingVertical: 14 },
   memberItem: { alignItems: 'center', gap: 6, width: 60 },
   memberAvatar: { width: 50, height: 50, borderRadius: 25 },

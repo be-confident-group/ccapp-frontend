@@ -194,7 +194,9 @@
     "details": "Details",
     "moreActions": "More actions",
     "pendingRequestsButton": "View join requests",
-    "removePhoto": "Remove photo"
+    "removePhoto": "Remove photo",
+    "newPost": "New post",
+    "about": "About"
   },
   "trips": {
     "shareToGroup": "Share to Group",

@@ -167,7 +167,9 @@
     "rejectFailed": "No se pudo rechazar la solicitud",
     "rejectRequest": "Rechazar solicitud",
     "removePhoto": "Quitar foto",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "newPost": "Nueva publicación",
+    "about": "Acerca de"
   },
   "trips": {
     "shareToGroup": "Compartir al grupo",

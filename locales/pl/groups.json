@@ -140,7 +140,9 @@
     "removePhoto": "Usuń zdjęcie",
     "saveChanges": "Zapisz zmiany",
     "selectNewOwner": "Wybierz nowego właściciela",
-    "selectNewOwnerDesc": "Wybierz członka, który zostanie nowym właścicielem tej grupy."
+    "selectNewOwnerDesc": "Wybierz członka, który zostanie nowym właścicielem tej grupy.",
+    "newPost": "Nowy post",
+    "about": "O grupie"
   },
   "trips": {
     "shareToGroup": "Share to Group",

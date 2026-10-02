@@ -140,7 +140,9 @@
     "removePhoto": "تصویر ہٹائیں",
     "saveChanges": "تبدیلیاں محفوظ کریں",
     "selectNewOwner": "نیا مالک منتخب کریں",
-    "selectNewOwnerDesc": "اس گروپ کا نیا مالک بننے کے لیے کسی رکن کو منتخب کریں۔"
+    "selectNewOwnerDesc": "اس گروپ کا نیا مالک بننے کے لیے کسی رکن کو منتخب کریں۔",
+    "newPost": "نئی پوسٹ",
+    "about": "تعارف"
   },
   "trips": {
     "shareToGroup": "Share to Group",
