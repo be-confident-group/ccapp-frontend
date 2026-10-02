@@ -142,7 +142,10 @@
     "selectNewOwner": "Wybierz nowego właściciela",
     "selectNewOwnerDesc": "Wybierz członka, który zostanie nowym właścicielem tej grupy.",
     "newPost": "Nowy post",
-    "about": "O grupie"
+    "about": "O grupie",
+    "emptyTitle": "Jeźdźcie razem",
+    "emptyMessage": "Dołącz do grupy, aby dzielić się przejazdami, wspinać się w rankingach i wzajemnie motywować.",
+    "suggested": "Proponowane dla Ciebie"
   },
   "trips": {
     "shareToGroup": "Share to Group",

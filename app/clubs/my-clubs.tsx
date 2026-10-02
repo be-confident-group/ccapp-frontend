@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useMyClubs } from '@/lib/hooks/useClubs';
+import { MyGroupsEmpty } from '@/components/clubs/MyGroupsEmpty';
 import {
   ClubChip,
   ClubEmptyState,
@@ -42,6 +43,9 @@ export default function MyClubsScreen() {
         club.description?.toLowerCase().includes(query)
     );
   }, [clubs, searchQuery]);
+
+  // Search only makes sense once there are groups to search.
+  const hasClubs = (clubs?.length ?? 0) > 0;
 
   const handleClubPress = useCallback((clubId: number) => {
     router.push(`/clubs/${clubId}`);
@@ -103,14 +107,18 @@ export default function MyClubsScreen() {
       );
     }
 
+    // Searching within existing groups found nothing.
+    if (hasClubs) {
+      return (
+        <ClubEmptyState
+          icon={<UsersIcon size={30} color={colors.glassTint} />}
+          title={t('clubs.noResults', { defaultValue: 'No matching groups' })}
+        />
+      );
+    }
+
     return (
-      <ClubEmptyState
-        icon={<UsersIcon size={30} color={colors.glassTint} />}
-        title={t('clubs.noClubs', 'No Groups Yet')}
-        message={t('clubs.noClubsMessage', 'Join or create a group to connect with others!')}
-        actionLabel={t('clubs.browseClubs', 'Browse Groups')}
-        onAction={handleBrowseClubs}
-      />
+      <MyGroupsEmpty onBrowse={handleBrowseClubs} onCreate={handleCreateClub} onOpenClub={handleClubPress} />
     );
   };
 
@@ -121,17 +129,19 @@ export default function MyClubsScreen() {
         renderItem={renderClubItem}
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
-          <ClubSearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('clubs.searchMyClubs', 'Search my groups...')}
-          />
+          hasClubs ? (
+            <ClubSearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('clubs.searchMyClubs', 'Search my groups...')}
+            />
+          ) : null
         }
         ItemSeparatorComponent={Separator}
         contentContainerStyle={[
           styles.listContent,
           { paddingTop: topInset, paddingBottom: insets.bottom + 32 },
-          filteredClubs.length === 0 && styles.emptyListContent,
+          filteredClubs.length === 0 && hasClubs && styles.emptyListContent,
         ]}
         onScroll={onScroll}
         scrollEventThrottle={16}

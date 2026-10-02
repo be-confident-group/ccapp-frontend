@@ -196,7 +196,10 @@
     "pendingRequestsButton": "View join requests",
     "removePhoto": "Remove photo",
     "newPost": "New post",
-    "about": "About"
+    "about": "About",
+    "emptyTitle": "Ride together",
+    "emptyMessage": "Join a group to share trips, climb the leaderboards and keep each other motivated.",
+    "suggested": "Suggested for you"
   },
   "trips": {
     "shareToGroup": "Share to Group",

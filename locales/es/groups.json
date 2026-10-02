@@ -169,7 +169,10 @@
     "removePhoto": "Quitar foto",
     "saveChanges": "Guardar cambios",
     "newPost": "Nueva publicación",
-    "about": "Acerca de"
+    "about": "Acerca de",
+    "emptyTitle": "Rueda en compañía",
+    "emptyMessage": "Únete a un grupo para compartir viajes, subir en las clasificaciones y motivaros mutuamente.",
+    "suggested": "Sugerencias para ti"
   },
   "trips": {
     "shareToGroup": "Compartir al grupo",

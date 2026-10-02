@@ -188,7 +188,7 @@ export function ClubEmptyState({
       ) : null}
       {actionLabel && onAction ? (
         <View style={styles.emptyAction}>
-          <Button title={actionLabel} onPress={onAction} />
+          <Button title={actionLabel} onPress={onAction} style={{ borderRadius: 999 }} />
         </View>
       ) : null}
     </View>
