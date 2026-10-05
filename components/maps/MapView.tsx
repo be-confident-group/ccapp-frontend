@@ -30,7 +30,6 @@ interface MapViewProps {
   followUserLocation?: boolean;
   selectedLayer?: MapLayer;
   style?: any;
-  onHeadingChange?: (heading: number) => void;
   onLongPress?: (event: any) => void;
 }
 
@@ -42,7 +41,6 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
   followUserLocation = false,
   selectedLayer,
   style,
-  onHeadingChange,
   onLongPress,
 }, ref) => {
   const { isDark } = useTheme();
@@ -137,19 +135,15 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(({
       ref={mapRef}
       style={[styles.map, style]}
       styleURL={mapStyleURL}
-      // The glass MapCompass in MapControls replaces the native compass.
-      compassEnabled={false}
       // Offsets clear the map bottom sheet peek, which now sits above the floating tab bar.
+      compassEnabled={true}
+      compassPosition={{ bottom: 215, right: 16 }}
+      compassFadeWhenNorth={false}
       scaleBarEnabled={true}
       scaleBarPosition={{ bottom: 190, left: 8 }}
       logoEnabled={true}
       logoPosition={{ bottom: 220, left: 8 }}
       attributionEnabled={false}
-      onCameraChanged={(state) => {
-        if (onHeadingChange && state.properties.heading !== undefined) {
-          onHeadingChange(state.properties.heading);
-        }
-      }}
       onDidFinishLoadingMap={() => {
         setIsMapLoaded(true);
       }}

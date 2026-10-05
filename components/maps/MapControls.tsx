@@ -2,10 +2,8 @@ import { Spacing } from '@/constants/theme';
 import type { FeedbackMode, MapViewMode } from '@/types/mapMode';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapActionButtons } from './MapActionButtons';
-import { MapCompass } from './MapCompass';
 import type { MapLayerPreference } from '@/lib/hooks/useMapLayer';
 import { MapLayerSelector, type MenuAnchor } from './MapLayerSelector';
 import { MapModeToggle } from './MapModeToggle';
@@ -19,9 +17,6 @@ interface MapControlsProps {
   onFeedbackModeChange: (mode: FeedbackMode) => void;
   onLayerChange: (layer: MapLayerPreference) => void;
   onFindLocation: () => void;
-  /** Map camera heading, driving the compass needle. */
-  heading: SharedValue<number>;
-  onCompassPress: () => void;
   on3DToggle: () => void;
   is3DEnabled?: boolean;
 }
@@ -34,8 +29,6 @@ export function MapControls({
   onFeedbackModeChange,
   onLayerChange,
   onFindLocation,
-  heading,
-  onCompassPress,
   on3DToggle,
   is3DEnabled = false,
 }: MapControlsProps) {
@@ -71,10 +64,6 @@ export function MapControls({
             onLayersPress={setLayerMenuAnchor}
             onFindLocation={onFindLocation}
           />
-        </View>
-
-        <View style={{ marginTop: buttonGap }}>
-          <MapCompass heading={heading} onPress={onCompassPress} />
         </View>
       </View>
 

@@ -24,7 +24,6 @@ import { LineLayer, ShapeSource } from '@rnmapbox/maps';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSharedValue } from 'react-native-reanimated';
 import { parseRouteData } from '@/lib/utils/geoCalculations';
 import { getTripTypeColor } from '@/types/trip';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
@@ -95,8 +94,6 @@ export default function MapsScreen() {
   const [selectedFeedback, setSelectedFeedback] = useState<MapFeedback | GlobalFeedback | null>(null);
   const [selectedRoadSection, setSelectedRoadSection] = useState<RoadSectionPersonal | RoadSectionCommunity | null>(null);
   const mapViewRef = useRef<any>(null);
-  // Camera heading for the compass; a shared value so rotating the map doesn't re-render.
-  const heading = useSharedValue(0);
 
   // Fetch trips from backend (including active trips that weren't properly stopped)
   const { data: backendTrips, refetch } = useTrips();
@@ -279,9 +276,6 @@ export default function MapsScreen() {
           followUserLocation={false}
           selectedLayer={selectedLayer}
           onLongPress={handleMapLongPress}
-          onHeadingChange={(value) => {
-            heading.value = value;
-          }}
         >
           {/* Render recent trips (journeys) in heatmap mode */}
           {viewMode === 'heatmap' && recentTrips.map((trip) => (
@@ -318,8 +312,6 @@ export default function MapsScreen() {
           onFeedbackModeChange={setFeedbackMode}
           onLayerChange={handleLayerChange}
           onFindLocation={handleFindLocation}
-          heading={heading}
-          onCompassPress={() => mapViewRef.current?.resetNorth()}
           on3DToggle={() => {}}
           is3DEnabled={false}
         />
