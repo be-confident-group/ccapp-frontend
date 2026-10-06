@@ -49,6 +49,9 @@ export function usePermissionToasts() {
 
       const missing = PRIORITY_ORDER.filter((key) => {
         if (dismissed.has(key)) return false;
+        // App Store guideline 5.1.1(iv): on iOS a dismissible message must not
+        // precede the system prompt, so only nudge towards Settings once denied.
+        if (Platform.OS === 'ios' && statuses[key] === 'undetermined') return false;
         return statuses[key] !== 'granted';
       });
 

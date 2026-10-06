@@ -26,6 +26,7 @@
     "required": "Obligatorio",
     "optional": "Opcional",
     "notNow": "Ahora no",
+    "continue": "Continuar",
     "fgLocation": {
       "title": "Saber dónde estás",
       "body": "Muestra tu posición en el mapa mientras pedaleas o caminas. Sin esto, el mapa no te seguirá.",
@@ -90,7 +91,7 @@
     }
   },
   "permissionToast": {
-    "allow": "Permitir",
+    "allow": "Continuar",
     "openSettings": "Abrir ajustes",
     "locationForeground": {
       "title": "Necesitas permiso de ubicación",

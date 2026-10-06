@@ -26,6 +26,7 @@
     "required": "ضروری",
     "optional": "اختیاری",
     "notNow": "ابھی نہیں",
+    "continue": "جاری رکھیں",
     "fgLocation": {
       "title": "مقام تک رسائی",
       "body": "Radzi کو آپ کے راستے نقشے پر دکھانے اور فاصلہ ناپنے کے لیے آپ کی لوکیشن درکار ہے۔",
@@ -61,7 +62,7 @@
     "permissionMissing": "کچھ اجازتیں نہیں ملی ہیں۔ جائزہ لینے کے لیے ٹیپ کریں۔"
   },
   "permissionToast": {
-    "allow": "اجازت دیں",
+    "allow": "جاری رکھیں",
     "openSettings": "ترتیبات کھولیں",
     "locationForeground": {
       "title": "لوکیشن تک رسائی درکار ہے",

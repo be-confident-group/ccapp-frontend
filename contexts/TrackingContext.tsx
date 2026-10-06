@@ -15,7 +15,7 @@ import {
   getTrackingPreference,
 } from '@/lib/services/LocationTrackingService';
 import { TrackingCoordinator } from '@/lib/services/TrackingCoordinator';
-import { requestLocationBackground } from '@/lib/permissions/wizard';
+import { openAppSettings, requestLocationBackground } from '@/lib/permissions/wizard';
 import { database } from '@/lib/database';
 import { streamingSegmenter, type LiveActivityState } from '@/lib/activity';
 import { showAlert, showConfirmAlert } from '@/lib/utils/alert';
@@ -156,6 +156,25 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         console.log('[TrackingContext] Tracking stopped');
       } else {
         // Check permissions first
+        if (!hasPermissions && Platform.OS === 'ios') {
+          // App Store guideline 5.1.1(iv): go straight to the system prompt on iOS;
+          // only explain and link to Settings once the user has declined.
+          const result = await requestLocationBackground();
+          if (result.status === 'granted') {
+            setHasPermissions(true);
+            await startTracking();
+          } else {
+            showConfirmAlert(
+              'alerts:backgroundPermission.title',
+              'alerts:backgroundPermission.iosMessage',
+              openAppSettings,
+              'alerts:backgroundPermission.openSettings',
+            );
+          }
+          setIsLoading(false);
+          return;
+        }
+
         if (!hasPermissions) {
           const alertKey = Platform.OS === 'android'
             ? 'alerts:backgroundPermission.androidMessage'

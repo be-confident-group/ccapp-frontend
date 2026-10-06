@@ -26,6 +26,7 @@
     "required": "Required",
     "optional": "Optional",
     "notNow": "Not now",
+    "continue": "Continue",
     "fgLocation": {
       "title": "Know where you are",
       "body": "Used to show your position on the map while you ride or walk. Without it, the map won't follow you.",
@@ -90,7 +91,7 @@
     }
   },
   "permissionToast": {
-    "allow": "Allow",
+    "allow": "Continue",
     "openSettings": "Open Settings",
     "locationForeground": {
       "title": "Location access needed",

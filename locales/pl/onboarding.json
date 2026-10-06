@@ -26,6 +26,7 @@
     "required": "Wymagane",
     "optional": "Opcjonalne",
     "notNow": "Nie teraz",
+    "continue": "Kontynuuj",
     "fgLocation": {
       "title": "Dostęp do lokalizacji",
       "body": "Radzi potrzebuje Twojej lokalizacji, aby mapować trasy i obliczać dystans.",
@@ -61,7 +62,7 @@
     "permissionMissing": "Brakuje niektórych uprawnień. Dotknij, aby sprawdzić."
   },
   "permissionToast": {
-    "allow": "Zezwól",
+    "allow": "Kontynuuj",
     "openSettings": "Otwórz ustawienia",
     "locationForeground": {
       "title": "Wymagany dostęp do lokalizacji",

@@ -67,6 +67,10 @@ function advanceStep(current: Step): Step {
 
 const ICON_SIZE = 64;
 
+// App Store guideline 5.1.1(iv): on iOS the pre-permission screen must lead
+// straight to the system prompt — neutral "Continue" wording, no way to defer.
+const IS_IOS = Platform.OS === 'ios';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
@@ -318,7 +322,7 @@ export default function PermissionsWizardScreen() {
           icon: <MapPinIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.fgLocation.title'),
           body: t('permissions.fgLocation.body'),
-          buttonLabel: t('permissions.fgLocation.allow'),
+          buttonLabel: IS_IOS ? t('permissions.continue') : t('permissions.fgLocation.allow'),
           required: true,
           skipLabel: t('permissions.fgLocation.skip'),
         };
@@ -329,8 +333,8 @@ export default function PermissionsWizardScreen() {
           body: Platform.OS === 'ios'
             ? t('permissions.bgLocation.bodyIos')
             : t('permissions.bgLocation.bodyAndroid'),
-          buttonLabel: Platform.OS === 'ios'
-            ? t('permissions.bgLocation.allowIos')
+          buttonLabel: IS_IOS
+            ? t('permissions.continue')
             : t('permissions.bgLocation.openSettings'),
           required: true,
           skipLabel: t('permissions.bgLocation.notNow'),
@@ -342,8 +346,8 @@ export default function PermissionsWizardScreen() {
           body: Platform.OS === 'ios'
             ? t('permissions.motion.bodyIos')
             : t('permissions.motion.bodyAndroid'),
-          buttonLabel: Platform.OS === 'ios'
-            ? t('permissions.motion.allowIos')
+          buttonLabel: IS_IOS
+            ? t('permissions.continue')
             : t('permissions.motion.allowAndroid'),
           required: true,
           skipLabel: t('permissions.motion.skip'),
@@ -353,7 +357,7 @@ export default function PermissionsWizardScreen() {
           icon: <BellIcon size={ICON_SIZE} color={colors.primary} />,
           title: t('permissions.notifications.title'),
           body: t('permissions.notifications.body'),
-          buttonLabel: t('permissions.notifications.allow'),
+          buttonLabel: IS_IOS ? t('permissions.continue') : t('permissions.notifications.allow'),
           required: false,
           skipLabel: t('permissions.notifications.skip'),
         };
@@ -418,15 +422,17 @@ export default function PermissionsWizardScreen() {
           loading={loading}
         />
 
-        <TouchableOpacity
-          onPress={handleSkip}
-          activeOpacity={0.7}
-          style={styles.skipButton}
-        >
-          <Text style={[styles.skipText, { color: colors.textMuted }]}>
-            {config.skipLabel}
-          </Text>
-        </TouchableOpacity>
+        {!IS_IOS && (
+          <TouchableOpacity
+            onPress={handleSkip}
+            activeOpacity={0.7}
+            style={styles.skipButton}
+          >
+            <Text style={[styles.skipText, { color: colors.textMuted }]}>
+              {config.skipLabel}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
