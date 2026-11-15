@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '@/lib/api';
 import { apiClient } from '@/lib/api/client';
+import { TokenUnavailableError } from '@/lib/api/tokenStorage';
 import type { User } from '@/lib/api/auth';
 import PushNotificationService from '@/lib/services/PushNotificationService';
 import * as onboardingState from '@/lib/onboarding/state';
@@ -76,10 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // True when the start-up check could not read secure storage (e.g. the app
+  // was launched in the background before the phone was unlocked). The user is
+  // not signed out in that case, so the check runs again on the next foreground.
+  const storageUnreadable = useRef(false);
+
   useEffect(() => {
     async function checkAuthStatus() {
       try {
         const authenticated = await authApi.isAuthenticated();
+        storageUnreadable.current = false;
         setIsAuthenticated(authenticated);
         if (authenticated) {
           // Re-register push token if the session is still valid (token may have rotated)
@@ -97,12 +105,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (e) {
+        storageUnreadable.current = e instanceof TokenUnavailableError;
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     }
     checkAuthStatus();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && storageUnreadable.current) checkAuthStatus();
+    });
+    return () => subscription.remove();
   }, [loadOnboardingState]);
 
   const signIn = useCallback(() => {

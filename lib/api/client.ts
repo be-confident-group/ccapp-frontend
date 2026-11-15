@@ -54,6 +54,13 @@ class ApiClient {
     return readAuthToken();
   }
 
+  /** Concurrent requests can all fail at once; notify the app only for the first. */
+  private signOutOnce() {
+    if (this.isLoggingOut) return;
+    this.isLoggingOut = true;
+    this.onUnauthorized?.();
+  }
+
   private async request<T>(
     endpoint: string,
     config: RequestConfig = {}
@@ -77,14 +84,19 @@ class ApiClient {
       ...(headers as Record<string, string>),
     };
 
-    // Add auth token if required
+    // Add auth token if required. Reading it throws when secure storage is
+    // unreadable (device locked in the background): the request then fails
+    // here instead of going out unauthenticated and being mistaken for an
+    // expired session.
+    let token: string | null = null;
     if (requiresAuth) {
-      const token = await this.getAuthToken();
-      if (token) {
-        requestHeaders['Authorization'] = `Bearer ${token}`;
-      } else if (__DEV__) {
-        console.warn('[API] requiresAuth=true but no auth token found for:', endpoint);
+      token = await this.getAuthToken();
+      if (!token) {
+        // Nothing stored: the user really is signed out.
+        this.signOutOnce();
+        throw new Error('Session expired. Please sign in again.');
       }
+      requestHeaders['Authorization'] = `Bearer ${token}`;
     }
 
     const controller = new AbortController();
@@ -101,14 +113,14 @@ class ApiClient {
       if (!response.ok) {
         // Handle 401 Unauthorized — token is invalid/expired
         if (response.status === 401 && requiresAuth) {
-          // Concurrent requests can all 401 at once; sign out only for the first.
-          if (!this.isLoggingOut) {
-            this.isLoggingOut = true;
+          // Only clear the session if the rejected token is still the stored one:
+          // a late 401 for an old token must not wipe a newer sign-in, and an
+          // unreadable store (null here) is never a reason to sign out.
+          const stored = await readAuthToken().catch(() => null);
+          if (stored === token) {
             console.warn('[API] 401 Unauthorized — clearing invalid token');
             await deleteAuthToken();
-            if (this.onUnauthorized) {
-              this.onUnauthorized();
-            }
+            this.signOutOnce();
           }
           throw new Error('Session expired. Please sign in again.');
         }
