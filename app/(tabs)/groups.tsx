@@ -172,7 +172,7 @@ export default function FeedScreen() {
     if (isLoading) {
       return (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
           <ThemedText style={[styles.emptyMessage, { color: colors.textMuted }]}>
             {t('feed.loading')}
           </ThemedText>
@@ -197,7 +197,7 @@ export default function FeedScreen() {
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footer}>
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size="small" color={colors.glassTint} />
       </View>
     );
   };
@@ -231,6 +231,9 @@ export default function FeedScreen() {
           data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={9}
           ListFooterComponent={renderFooter}
           contentContainerStyle={[
             styles.listContent,
@@ -244,7 +247,7 @@ export default function FeedScreen() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={handleRefresh}
-              tintColor={colors.primary}
+              tintColor={colors.glassTint}
             />
           }
           onEndReached={handleLoadMore}

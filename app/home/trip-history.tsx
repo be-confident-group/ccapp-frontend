@@ -99,8 +99,6 @@ export default function TripHistoryScreen() {
   const onScroll = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
-  const { unitSystem, formatWeight } = useUnits();
-
   // Fetch trips from backend API
   const { data: backendTrips, isLoading, refetch, isRefetching, isFetched, isError: backendError } = useTrips({ status: 'completed' });
   const listRef = useRef<FlatList<TripListRow<DisplayTrip>>>(null);
@@ -286,15 +284,6 @@ export default function TripHistoryScreen() {
     setSelectedIds(new Set());
   }
 
-  function toggleSelection(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   function selectAll() {
     setSelectedIds(new Set(displayTrips.map((trip) => trip.id)));
   }
@@ -472,118 +461,56 @@ export default function TripHistoryScreen() {
 
   const rows = useMemo(() => buildTripRows(displayTrips), [displayTrips]);
 
-  function renderTrip(item: DisplayTrip, index: number) {
-    const tripName = getTripTypeName(item.type);
-    const isRated = ratedTripIds.has(item.clientId);
-    const isSelected = selectedIds.has(item.id);
-
-    // Navigate to trip detail - use backend ID if available, otherwise local ID
-    const handlePress = () => {
+  const handleTripPress = useCallback(
+    (trip: DisplayTrip) => {
       if (selectionMode) {
-        toggleSelection(item.id);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(trip.id)) next.delete(trip.id);
+          else next.add(trip.id);
+          return next;
+        });
         return;
       }
-      if (item.backendId) {
-        router.push(`/home/trip-detail?id=${item.backendId}`);
+      // Navigate to trip detail - use backend ID if available, otherwise local ID
+      if (trip.backendId) {
+        router.push(`/home/trip-detail?id=${trip.backendId}`);
       } else {
-        // Navigate to local trip detail using local client ID
-        router.push(`/home/trip-detail?id=${item.clientId}&local=true`);
+        router.push(`/home/trip-detail?id=${trip.clientId}&local=true`);
       }
-    };
+    },
+    [selectionMode]
+  );
 
-    const handleLongPress = () => {
-      if (!selectionMode) enterSelectionMode(item.id);
-    };
+  const handleTripLongPress = useCallback(
+    (trip: DisplayTrip) => {
+      if (selectionMode) return;
+      setSelectionMode(true);
+      setSelectedIds(new Set([trip.id]));
+    },
+    [selectionMode]
+  );
 
-    const handleShare = () => {
-      if (!item.backendId) return;
-      setShareModalTripId(item.backendId);
-      setShareModalDistance(item.distance / 1000); // metres → km
-    };
-
-    const statusBadge = () => {
-      if (!item.isSynced) {
-        return (
-          <TripChip
-            label={t('tripList.notSynced', { defaultValue: 'Not synced' })}
-            icon={CloudArrowUpIcon}
-            tone="#E08600"
-          />
-        );
-      }
-      if (item.userConfirmed === true) {
-        return (
-          <TripChip label={t('tripList.confirmed', { defaultValue: 'Confirmed' })} icon={CheckCircleIcon} />
-        );
-      }
-      if (item.userConfirmed === false) {
-        return <TripChip label={t('tripList.flagged', { defaultValue: 'Flagged' })} icon={XCircleIcon} />;
-      }
-      if (item.isValid === false) {
-        return (
-          <TripChip
-            label={t('tripList.unverified', { defaultValue: 'Unverified' })}
-            icon={ExclamationCircleIcon}
-            tone="#E0481E"
-          />
-        );
-      }
-      return <CheckCircleIcon size={18} color={colors.textSecondary} />;
-    };
-
-    const dateLabel = `${item.startTime.toLocaleDateString(undefined, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    })} · ${item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-
-    return (
-      <TripCard
-        type={item.type}
-        typeName={tripName}
-        dateLabel={dateLabel}
-        index={index}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        selectionMode={selectionMode}
-        selected={isSelected}
-        badges={
-          <>
-            {item.isManual && <TripChip label={t('tripList.manual', { defaultValue: 'Manual' })} />}
-            {statusBadge()}
-            {/* Rating Badge - only show for trips with route data */}
-            {item.hasRoute && <RatedBadge isRated={isRated} size="small" />}
-          </>
-        }
-        stats={[
-          { label: t('tripList.distance', { defaultValue: 'Distance' }), value: formatDistanceUtil(item.distance, unitSystem) },
-          { label: t('tripList.duration', { defaultValue: 'Duration' }), value: formatDuration(item.duration) },
-          { label: t('tripList.co2', { defaultValue: 'CO₂' }), value: formatWeight(item.co2Saved) },
-        ]}
-        footer={
-          !selectionMode && item.backendId ? (
-            <Pressable
-              onPress={handleShare}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.shareFooter,
-                { borderTopColor: colors.border, opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <ShareIcon size={16} color={colors.glassTint} />
-              <Text style={[styles.shareFooterText, { color: colors.glassTint }]}>
-                {t('tripList.shareToGroup', { defaultValue: 'Share to Group' })}
-              </Text>
-            </Pressable>
-          ) : undefined
-        }
-      />
-    );
-  }
+  const handleTripShare = useCallback((trip: DisplayTrip) => {
+    if (!trip.backendId) return;
+    setShareModalTripId(trip.backendId);
+    setShareModalDistance(trip.distance / 1000); // metres → km
+  }, []);
 
   function renderRow({ item }: { item: TripListRow<DisplayTrip> }) {
     if (item.kind === 'header') return <TripSectionHeader label={item.label} />;
-    return renderTrip(item.trip, item.index);
+    return (
+      <TripRow
+        trip={item.trip}
+        index={item.index}
+        isRated={ratedTripIds.has(item.trip.clientId)}
+        selectionMode={selectionMode}
+        selected={selectedIds.has(item.trip.id)}
+        onPress={handleTripPress}
+        onLongPress={handleTripLongPress}
+        onShare={handleTripShare}
+      />
+    );
   }
 
   const allSelected = displayTrips.length > 0 && selectedIds.size === displayTrips.length;
@@ -675,7 +602,7 @@ export default function TripHistoryScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={[styles.centered, { paddingTop: insets.top + HEADER_HEIGHT }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
         </View>
         {headerShell}
       </View>
@@ -738,7 +665,10 @@ export default function TripHistoryScreen() {
         ref={listRef}
         data={rows}
         renderItem={renderRow}
-        keyExtractor={(row) => row.key}
+        keyExtractor={rowKey}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={9}
         extraData={{ selectionMode, selectedIds, ratedTripIds }}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
@@ -765,7 +695,7 @@ export default function TripHistoryScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
+            tintColor={colors.glassTint}
             progressViewOffset={insets.top + HEADER_HEIGHT}
           />
         }
@@ -794,7 +724,7 @@ export default function TripHistoryScreen() {
               variant="outline"
               size="medium"
               disabled={isBatching}
-              icon={<NoSymbolIcon size={18} color={colors.primary} />}
+              icon={<NoSymbolIcon size={18} color={colors.glassTint} />}
               style={styles.actionBarButton}
             />
           </View>
@@ -808,6 +738,140 @@ export default function TripHistoryScreen() {
       />
     </View>
   );
+}
+
+interface TripRowProps {
+  trip: DisplayTrip;
+  index: number;
+  isRated: boolean;
+  selectionMode: boolean;
+  selected: boolean;
+  onPress: (trip: DisplayTrip) => void;
+  onLongPress: (trip: DisplayTrip) => void;
+  onShare: (trip: DisplayTrip) => void;
+}
+
+/** Trips are rebuilt as new objects on every data reload, so compare them by value. */
+function sameTrip(a: DisplayTrip, b: DisplayTrip) {
+  return (
+    a.id === b.id &&
+    a.backendId === b.backendId &&
+    a.clientId === b.clientId &&
+    a.type === b.type &&
+    a.isManual === b.isManual &&
+    a.startTime.getTime() === b.startTime.getTime() &&
+    a.distance === b.distance &&
+    a.duration === b.duration &&
+    a.co2Saved === b.co2Saved &&
+    a.isSynced === b.isSynced &&
+    a.hasRoute === b.hasRoute &&
+    a.isValid === b.isValid &&
+    a.userConfirmed === b.userConfirmed
+  );
+}
+
+/**
+ * One trip card. Memoized so the 30-second local-data reload (and any other
+ * screen state change) only re-renders rows whose trip or selection changed.
+ */
+const TripRow = React.memo(
+  function TripRow({ trip: item, index, isRated, selectionMode, selected, onPress, onLongPress, onShare }: TripRowProps) {
+    const { colors } = useTheme();
+    const { t } = useTranslation('maps');
+    const { unitSystem, formatWeight } = useUnits();
+
+    const statusBadge = () => {
+      if (!item.isSynced) {
+        return (
+          <TripChip
+            label={t('tripList.notSynced', { defaultValue: 'Not synced' })}
+            icon={CloudArrowUpIcon}
+            tone="#E08600"
+          />
+        );
+      }
+      if (item.userConfirmed === true) {
+        return (
+          <TripChip label={t('tripList.confirmed', { defaultValue: 'Confirmed' })} icon={CheckCircleIcon} />
+        );
+      }
+      if (item.userConfirmed === false) {
+        return <TripChip label={t('tripList.flagged', { defaultValue: 'Flagged' })} icon={XCircleIcon} />;
+      }
+      if (item.isValid === false) {
+        return (
+          <TripChip
+            label={t('tripList.unverified', { defaultValue: 'Unverified' })}
+            icon={ExclamationCircleIcon}
+            tone="#E0481E"
+          />
+        );
+      }
+      return <CheckCircleIcon size={18} color={colors.textSecondary} />;
+    };
+
+    const dateLabel = `${item.startTime.toLocaleDateString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })} · ${item.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    return (
+      <TripCard
+        type={item.type}
+        typeName={getTripTypeName(item.type)}
+        dateLabel={dateLabel}
+        index={index}
+        onPress={() => onPress(item)}
+        onLongPress={() => onLongPress(item)}
+        selectionMode={selectionMode}
+        selected={selected}
+        badges={
+          <>
+            {item.isManual && <TripChip label={t('tripList.manual', { defaultValue: 'Manual' })} />}
+            {statusBadge()}
+            {/* Rating Badge - only show for trips with route data */}
+            {item.hasRoute && <RatedBadge isRated={isRated} size="small" />}
+          </>
+        }
+        stats={[
+          { label: t('tripList.distance', { defaultValue: 'Distance' }), value: formatDistanceUtil(item.distance, unitSystem) },
+          { label: t('tripList.duration', { defaultValue: 'Duration' }), value: formatDuration(item.duration) },
+          { label: t('tripList.co2', { defaultValue: 'CO₂' }), value: formatWeight(item.co2Saved) },
+        ]}
+        footer={
+          !selectionMode && item.backendId ? (
+            <Pressable
+              onPress={() => onShare(item)}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.shareFooter,
+                { borderTopColor: colors.border, opacity: pressed ? 0.6 : 1 },
+              ]}
+            >
+              <ShareIcon size={16} color={colors.glassTint} />
+              <Text style={[styles.shareFooterText, { color: colors.glassTint }]}>
+                {t('tripList.shareToGroup', { defaultValue: 'Share to Group' })}
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
+    );
+  },
+  (prev, next) =>
+    prev.index === next.index &&
+    prev.isRated === next.isRated &&
+    prev.selectionMode === next.selectionMode &&
+    prev.selected === next.selected &&
+    prev.onPress === next.onPress &&
+    prev.onLongPress === next.onLongPress &&
+    prev.onShare === next.onShare &&
+    sameTrip(prev.trip, next.trip)
+);
+
+function rowKey(row: TripListRow<DisplayTrip>) {
+  return row.key;
 }
 
 function Separator() {

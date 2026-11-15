@@ -159,7 +159,7 @@ export default function CreateStandalonePostScreen() {
   if (loadingClubs) {
     return (
       <PostsScreen title={t('posts.createPost', 'Create Post')} scroll={false}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.glassTint} />
       </PostsScreen>
     );
   }

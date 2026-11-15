@@ -6,7 +6,7 @@ import { useUnits } from '@/contexts/UnitsContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   ArrowsPointingOutIcon,
   ChevronDownIcon,
@@ -48,6 +48,8 @@ import { useHomeMessages } from '@/lib/hooks/useHomeMessages';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
 import { useQueryClient } from '@tanstack/react-query';
 import { registerTripSyncCallback } from '@/lib/services/TripManager';
+import { Springs } from '@/constants/motion';
+import { Touchable } from '@/components/ui/Touchable';
 
 // Header row height (matches the 44px glass action pill) and its gap below the status bar.
 const HEADER_HEIGHT = 44;
@@ -56,7 +58,10 @@ const HEADER_TOP_GAP = 8;
 const GREETING_FADE_DISTANCE = 48;
 // Scroll offset at which the tracking tile reaches the header and docks into it.
 const TRACKING_DOCK_AT = HEADER_HEIGHT + Spacing.md + 8;
-const DOCK_SPRING = { damping: 14, stiffness: 180, mass: 0.8 };
+// Android uses the rounder Material 3 Expressive shapes.
+const MATERIAL = Platform.OS === 'android';
+const TILE_RADIUS = MATERIAL ? 20 : 10;
+const CARD_RADIUS = MATERIAL ? 28 : 20;
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -82,7 +87,7 @@ export default function HomeScreen() {
   useAnimatedReaction(
     () => (scrollY.value > TRACKING_DOCK_AT ? 1 : 0),
     (docked, previous) => {
-      if (docked !== previous) trackingDock.value = withSpring(docked, DOCK_SPRING);
+      if (docked !== previous) trackingDock.value = withSpring(docked, Springs.spatial);
     }
   );
 
@@ -285,7 +290,7 @@ export default function HomeScreen() {
             <View style={styles.tileRow}>
               {/* Background Tracking Toggle */}
               <Animated.View style={[tileWideStyle, trackingTileStyle]}>
-              <TouchableOpacity
+              <Touchable
                 ref={toggleRef}
                 style={[styles.tile, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => openMenu()}
@@ -312,11 +317,11 @@ export default function HomeScreen() {
                   </ThemedText>
                 </View>
                 <ChevronDownIcon size={16} color={colors.icon} />
-              </TouchableOpacity>
+              </Touchable>
               </Animated.View>
 
               {/* Weather Display */}
-              <TouchableOpacity
+              <Touchable
                 style={[styles.tile, tileNarrowStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => setIsWeatherModalOpen(true)}
                 activeOpacity={0.8}
@@ -332,11 +337,11 @@ export default function HomeScreen() {
                     {weatherLoading ? 'Loading...' : weather?.city ?? 'Unknown'}
                   </ThemedText>
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             </View>
 
             <View style={styles.tileRow}>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.tile, tileWideStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => router.push('/home/unrated-trips')}
                 activeOpacity={0.8}
@@ -350,9 +355,9 @@ export default function HomeScreen() {
                     {unratedTripsCount > 0 ? `${unratedTripsCount} trips to rate` : 'All rated!'}
                   </ThemedText>
                 </View>
-              </TouchableOpacity>
+              </Touchable>
 
-              <TouchableOpacity
+              <Touchable
                 style={[styles.tile, tileNarrowStyle, styles.buttonShadow, { backgroundColor: colors.card }]}
                 onPress={() => router.push('/home/trip-history')}
                 activeOpacity={0.8}
@@ -366,7 +371,7 @@ export default function HomeScreen() {
                     Past trips
                   </ThemedText>
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             </View>
           </View>
 
@@ -520,7 +525,7 @@ export default function HomeScreen() {
                 {/* Streak Summary */}
                 <View style={styles.streakSummary}>
                   <View style={styles.streakHeader}>
-                    <FireIcon size={18} color={colors.primary} />
+                    <FireIcon size={18} color={colors.glassTint} />
                     <ThemedText style={styles.streakTitle}>
                       {t('home:streak.title', { count: userProfile?.streak?.current || 0 })}
                     </ThemedText>
@@ -564,7 +569,7 @@ export default function HomeScreen() {
                     </View>
                   ) : (
                     trophies.map((trophy, index) => (
-                      <TouchableOpacity
+                      <Touchable
                         key={trophy.code}
                         style={styles.trophyItem}
                         onPress={() => {
@@ -576,7 +581,7 @@ export default function HomeScreen() {
                         <ThemedText style={styles.trophyTitle} numberOfLines={2}>
                           {trophy.name}
                         </ThemedText>
-                      </TouchableOpacity>
+                      </Touchable>
                     ))
                   )}
                 </ScrollView>
@@ -591,12 +596,12 @@ export default function HomeScreen() {
                       <TrophyIcon size={18} color="#F59E0B" />
                       <ThemedText style={styles.trophiesSummaryTitle}>Trophies</ThemedText>
                     </View>
-                    <TouchableOpacity
+                    <Touchable
                       style={styles.expandIconButton}
                       onPress={() => router.push('/home/trophies')}
                     >
                       <ArrowsPointingOutIcon size={18} color={colors.icon} />
-                    </TouchableOpacity>
+                    </Touchable>
                   </View>
                   <ThemedText style={[styles.trophiesSummaryText, { color: colors.textSecondary }]}>
                     {homeMessages?.trophy_message || trophySummaryMessage}
@@ -660,12 +665,12 @@ export default function HomeScreen() {
                     <View style={styles.goalsTitleRow}>
                       <ThemedText style={styles.goalsSummaryTitle}>Goals</ThemedText>
                     </View>
-                    <TouchableOpacity
+                    <Touchable
                       style={styles.expandIconButton}
                       onPress={() => router.push('/home/goals')}
                     >
                       <ArrowsPointingOutIcon size={18} color={colors.icon} />
-                    </TouchableOpacity>
+                    </Touchable>
                   </View>
                   <ThemedText style={[styles.goalsSummaryText, { color: colors.textSecondary }]}>
                     You're doing great! Keep pushing towards your weekly and monthly targets.
@@ -704,11 +709,11 @@ export default function HomeScreen() {
                 accessibilityLabel={isTracking ? t('home:header.tracking.on') : t('home:header.tracking.off')}
                 onPress={() => openMenu(dockedTrackingRef)}
                 onPressIn={() => {
-                  dockedPress.value = withSpring(0.94, { damping: 15, stiffness: 400 });
+                  dockedPress.value = withSpring(0.94, Springs.press);
                   if (process.env.EXPO_OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
                 onPressOut={() => {
-                  dockedPress.value = withSpring(1, { damping: 15, stiffness: 400 });
+                  dockedPress.value = withSpring(1, Springs.press);
                 }}
                 style={styles.dockedTrackingContent}
               >
@@ -842,7 +847,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: TILE_RADIUS,
     gap: 8,
   },
   tileIcon: {
@@ -857,7 +862,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
   },
   tileTextContainer: {
     flex: 1,
@@ -894,17 +898,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   statsCardContainer: {
-    borderRadius: 20,
+    borderRadius: CARD_RADIUS,
   },
   cardShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
   },
   cardInner: {
-    borderRadius: 20,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
   },
   cardTopHighlight: {
@@ -913,8 +916,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 60,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: CARD_RADIUS,
+    borderTopRightRadius: CARD_RADIUS,
     zIndex: 1,
   },
   statsCard: {
@@ -944,7 +947,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 4,
   },
   statValue: {
     fontSize: 20,
@@ -986,7 +988,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   streakCardContainer: {
-    borderRadius: 20,
+    borderRadius: CARD_RADIUS,
   },
   streakCalendar: {
     paddingHorizontal: Spacing.lg,
@@ -1042,7 +1044,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   trophiesCardContainer: {
-    borderRadius: 20,
+    borderRadius: CARD_RADIUS,
   },
   trophiesScroll: {
     paddingTop: Spacing.lg,
@@ -1180,7 +1182,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     gap: 8,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1195,7 +1196,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     gap: 6,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1210,7 +1210,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     gap: 6,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

@@ -7,10 +7,10 @@ import {
   StyleSheet,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GALLERY_PADDING = Spacing.md;
@@ -64,7 +64,7 @@ export const PhotoGallery = React.memo(function PhotoGallery({ photos, onPhotoPr
         scrollEnabled={!isSinglePhoto}
       >
         {photos.map((photo, index) => (
-          <TouchableOpacity
+          <Touchable
             key={index}
             activeOpacity={0.9}
             onPress={() => onPhotoPress?.(index)}
@@ -83,7 +83,7 @@ export const PhotoGallery = React.memo(function PhotoGallery({ photos, onPhotoPr
               ]}
               resizeMode="cover"
             />
-          </TouchableOpacity>
+          </Touchable>
         ))}
       </ScrollView>
 

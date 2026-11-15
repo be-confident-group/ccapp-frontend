@@ -113,7 +113,7 @@ export function LeaderboardRow({ user, valueType, index }: LeaderboardRowProps) 
         <ThemedText
           style={[
             styles.name,
-            isCurrentUser && { fontWeight: '600', color: colors.primary },
+            isCurrentUser && { fontWeight: '600', color: colors.glassTint },
           ]}
           numberOfLines={1}
         >
@@ -126,7 +126,7 @@ export function LeaderboardRow({ user, valueType, index }: LeaderboardRowProps) 
         <ThemedText
           style={[
             styles.value,
-            isCurrentUser && { fontWeight: '600', color: colors.primary },
+            isCurrentUser && { fontWeight: '600', color: colors.glassTint },
           ]}
         >
           {formatValue()}

@@ -28,7 +28,7 @@ export function FeedSearchBar({
         styles.container,
         {
           backgroundColor: colors.card,
-          borderColor: isFocused ? colors.primary : colors.border,
+          borderColor: isFocused ? colors.glassTint : colors.border,
         },
       ]}
     >

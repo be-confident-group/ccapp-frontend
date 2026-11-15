@@ -22,7 +22,7 @@ export default function OnboardingWelcomeScreen() {
           source={require('@/assets/images/icon.png')}
           style={styles.logo}
         />
-        <Text style={[styles.title, { color: colors.primary }]}>
+        <Text style={[styles.title, { color: colors.glassTint }]}>
           {t('welcome.title')}
         </Text>
         <Text style={[styles.tagline, { color: colors.textSecondary }]}>

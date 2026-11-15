@@ -19,6 +19,7 @@ import {
   MapIcon,
 } from 'react-native-heroicons/solid';
 
+import { Springs } from '@/constants/motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Trophy, TrophyType } from '@/lib/api/trophies';
 
@@ -78,8 +79,10 @@ export function TrophyBadge({ trophy, size = 72, showTarget = true, index = 0 }:
   const appear = useSharedValue(0);
   const ring = useSharedValue(0);
   useEffect(() => {
-    appear.value = withDelay(index * 50, withSpring(1, { damping: 12, stiffness: 160 }));
-    ring.value = withDelay(index * 50 + 150, withTiming(progress, { duration: 700, easing: Easing.out(Easing.cubic) }));
+    // Capped so badges far down a long grid don't wait seconds to appear.
+    const delay = Math.min(index, 8) * 50;
+    appear.value = withDelay(delay, withSpring(1, Springs.spatial));
+    ring.value = withDelay(delay + 150, withTiming(progress, { duration: 700, easing: Easing.out(Easing.cubic) }));
   }, [appear, ring, progress, index]);
 
   const medalStyle = useAnimatedStyle(() => ({

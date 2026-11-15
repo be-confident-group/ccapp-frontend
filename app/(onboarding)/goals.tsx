@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +14,7 @@ import Button from '@/components/ui/Button';
 import { saveGoals } from '@/lib/onboarding/state';
 import { authApi } from '@/lib/api/auth';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 const WHITE = '#FFFFFF'; // contrast against primary brand red — does not vary with theme
 
@@ -77,11 +77,11 @@ export default function GoalsScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* Skip link in top-right */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
-          <Text style={[styles.skipText, { color: colors.primary }]}>
+        <Touchable onPress={handleSkip} activeOpacity={0.7}>
+          <Text style={[styles.skipText, { color: colors.glassTint }]}>
             {t('goals.skip')}
           </Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
 
       <ScrollView
@@ -101,7 +101,7 @@ export default function GoalsScreen() {
           {WEEKLY_DISTANCE_OPTIONS.map((km) => {
             const selected = weeklyDistanceKm === km;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={km}
                 style={[
                   styles.chip,
@@ -116,12 +116,12 @@ export default function GoalsScreen() {
                 <Text
                   style={[
                     styles.chipText,
-                    { color: selected ? WHITE : colors.primary },
+                    { color: selected ? WHITE : colors.glassTint },
                   ]}
                 >
                   {`${km} km`}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </View>
@@ -134,7 +134,7 @@ export default function GoalsScreen() {
           {ACTIVE_DAYS_OPTIONS.map((days) => {
             const selected = activeDaysPerWeek === days;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={days}
                 style={[
                   styles.chip,
@@ -149,12 +149,12 @@ export default function GoalsScreen() {
                 <Text
                   style={[
                     styles.chipText,
-                    { color: selected ? WHITE : colors.primary },
+                    { color: selected ? WHITE : colors.glassTint },
                   ]}
                 >
                   {String(days)}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </View>

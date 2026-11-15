@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing, BorderRadius, FontSizes, FontWeights } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -41,9 +42,9 @@ export default function StatCard({ icon, label, value, unit, onPress }: StatCard
 
   if (onPress) {
     return (
-      <TouchableOpacity style={styles.wrapper} onPress={onPress} activeOpacity={0.7}>
+      <Touchable style={styles.wrapper} onPress={onPress} activeOpacity={0.7}>
         {content}
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 

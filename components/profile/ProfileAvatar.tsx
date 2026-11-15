@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface ProfileAvatarProps {
   imageUri?: string;
@@ -83,7 +84,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
+      <Touchable
         onPress={pickImage}
         disabled={!editable}
         activeOpacity={0.8}
@@ -159,7 +160,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
             <CameraIcon size={18} color="#FFFFFF" />
           </View>
         )}
-      </TouchableOpacity>
+      </Touchable>
     </View>
   );
 };

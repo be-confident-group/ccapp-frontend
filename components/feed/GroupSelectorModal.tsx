@@ -3,7 +3,6 @@ import {
   View,
   Modal,
   Pressable,
-  TouchableOpacity,
   FlatList,
   StyleSheet,
   Dimensions,
@@ -21,6 +20,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { FeedGroup } from '@/types/feed';
 import { useTranslation } from 'react-i18next';
+import { Touchable } from '@/components/ui/Touchable';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -49,6 +49,7 @@ export function GroupSelectorModal({
       translateY.value = withSpring(0, {
         damping: 30,
         stiffness: 200,
+        mass: 1,
       });
     } else {
       translateY.value = SCREEN_HEIGHT;
@@ -59,6 +60,7 @@ export function GroupSelectorModal({
     translateY.value = withSpring(SCREEN_HEIGHT, {
       damping: 30,
       stiffness: 200,
+      mass: 1,
     });
     setTimeout(onClose, 200);
   };
@@ -78,6 +80,7 @@ export function GroupSelectorModal({
         translateY.value = withSpring(0, {
           damping: 30,
           stiffness: 200,
+          mass: 1,
         });
       }
     });
@@ -95,19 +98,19 @@ export function GroupSelectorModal({
     const isSelected = item.id === selectedGroupId;
 
     return (
-      <TouchableOpacity
+      <Touchable
         style={[
           styles.groupItem,
           {
             backgroundColor: colors.card,
-            borderColor: isSelected ? colors.primary : colors.border,
+            borderColor: isSelected ? colors.glassTint : colors.border,
           },
         ]}
         onPress={() => handleSelectGroup(item)}
         activeOpacity={0.7}
       >
         <View style={[styles.groupIcon, { backgroundColor: colors.primary + '20' }]}>
-          <UserGroupIcon size={20} color={colors.primary} />
+          <UserGroupIcon size={20} color={colors.glassTint} />
         </View>
         <View style={styles.groupInfo}>
           <ThemedText style={styles.groupName}>{item.name}</ThemedText>
@@ -116,9 +119,9 @@ export function GroupSelectorModal({
           </ThemedText>
         </View>
         {isSelected && (
-          <CheckIcon size={20} color={colors.primary} />
+          <CheckIcon size={20} color={colors.glassTint} />
         )}
-      </TouchableOpacity>
+      </Touchable>
     );
   };
 
@@ -149,19 +152,19 @@ export function GroupSelectorModal({
             <ThemedText style={styles.title}>{t('feed.selectGroup')}</ThemedText>
 
             {/* All Groups Option */}
-            <TouchableOpacity
+            <Touchable
               style={[
                 styles.groupItem,
                 {
                   backgroundColor: colors.card,
-                  borderColor: !selectedGroupId ? colors.primary : colors.border,
+                  borderColor: !selectedGroupId ? colors.glassTint : colors.border,
                 },
               ]}
               onPress={() => handleSelectGroup(null)}
               activeOpacity={0.7}
             >
               <View style={[styles.groupIcon, { backgroundColor: colors.primary + '20' }]}>
-                <UserGroupIcon size={20} color={colors.primary} />
+                <UserGroupIcon size={20} color={colors.glassTint} />
               </View>
               <View style={styles.groupInfo}>
                 <ThemedText style={styles.groupName}>{t('feed.allGroups')}</ThemedText>
@@ -170,9 +173,9 @@ export function GroupSelectorModal({
                 </ThemedText>
               </View>
               {!selectedGroupId && (
-                <CheckIcon size={20} color={colors.primary} />
+                <CheckIcon size={20} color={colors.glassTint} />
               )}
-            </TouchableOpacity>
+            </Touchable>
 
             {/* Divider */}
             <View style={[styles.divider, { backgroundColor: colors.border }]} />

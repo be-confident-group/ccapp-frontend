@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
   Alert,
   TextInput as RNTextInput,
 } from 'react-native';
@@ -23,6 +22,7 @@ import { authApi } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { showAlert } from '@/lib/utils/alert';
 import i18n from '@/lib/i18n';
+import { Touchable } from '@/components/ui/Touchable';
 
 type ResetStep = 'email' | 'code' | 'password';
 const CODE_LENGTH = 6;
@@ -221,11 +221,11 @@ export default function ForgotPasswordScreen() {
               style={styles.submitButton}
             />
 
-            <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-              <Text style={[styles.backLinkText, { color: colors.primary }]}>
+            <Touchable onPress={() => router.back()} style={styles.backLink}>
+              <Text style={[styles.backLinkText, { color: colors.glassTint }]}>
                 {t('auth:resetPassword.backToLogin')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           </>
         );
 
@@ -253,7 +253,7 @@ export default function ForgotPasswordScreen() {
                     styles.codeInput,
                     {
                       backgroundColor: colors.inputBackground,
-                      borderColor: digit ? colors.primary : colors.border,
+                      borderColor: digit ? colors.glassTint : colors.border,
                       color: colors.text,
                     },
                   ]}
@@ -277,11 +277,11 @@ export default function ForgotPasswordScreen() {
                   {t('auth:resetPassword.resendCooldown', { seconds: resendCooldown })}
                 </Text>
               ) : (
-                <TouchableOpacity onPress={handleResendCode}>
-                  <Text style={[styles.resendButton, { color: colors.primary }]}>
+                <Touchable onPress={handleResendCode}>
+                  <Text style={[styles.resendButton, { color: colors.glassTint }]}>
                     {t('auth:resetPassword.resendCode')}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               )}
             </View>
           </>
@@ -341,9 +341,9 @@ export default function ForgotPasswordScreen() {
       >
         {/* Back button */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Touchable onPress={handleBack} style={styles.backButton}>
             <ChevronLeftIcon color={colors.text} size={24} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <ScrollView

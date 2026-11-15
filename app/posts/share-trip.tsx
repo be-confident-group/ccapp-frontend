@@ -80,7 +80,7 @@ export default function ShareTripScreen() {
     <>
       {isLoading ? (
         <PostsScreen title={title} scroll={false}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
         </PostsScreen>
       ) : visibleTrips.length === 0 ? (
         <PostsScreen title={title} scroll={false}>

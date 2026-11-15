@@ -19,7 +19,6 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -58,6 +57,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/i18n/formatters';
 import { TripNoteEditor } from '@/components/tracking/TripNoteEditor';
 import { isDebugEnabled } from '@/lib/utils/debugAccess';
+import { Touchable } from '@/components/ui/Touchable';
 
 const SHEET_OVERLAP = 28;
 const BUTTON_SIZE = 44;
@@ -239,7 +239,7 @@ export default function TripDetailScreen() {
   });
 
   useEffect(() => {
-    sheetProgress.value = withSpring(1, { damping: 18, stiffness: 140 });
+    sheetProgress.value = withSpring(1, { damping: 18, stiffness: 140, mass: 1 });
   }, [sheetProgress]);
 
   const heroAnimatedStyle = useAnimatedStyle(() => ({
@@ -361,7 +361,7 @@ export default function TripDetailScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
         </View>
       </SafeAreaView>
     );
@@ -622,7 +622,7 @@ export default function TripDetailScreen() {
 
               <View style={styles.confirmActions}>
                 {updateTrip.isPending ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={colors.glassTint} />
                 ) : (
                   <>
                     <Button
@@ -731,7 +731,7 @@ export default function TripDetailScreen() {
           {/* Beta Diagnostics drawer */}
           {isDebugBuild && (
             <View style={[styles.card, cardStyle]}>
-              <TouchableOpacity
+              <Touchable
                 style={styles.infoRow}
                 onPress={() => setShowDiagnostics(!showDiagnostics)}
                 activeOpacity={0.7}
@@ -743,7 +743,7 @@ export default function TripDetailScreen() {
                   ? <ChevronUpIcon size={18} color={colors.textSecondary} />
                   : <ChevronDownIcon size={18} color={colors.textSecondary} />
                 }
-              </TouchableOpacity>
+              </Touchable>
 
               {showDiagnostics && (
                 <>

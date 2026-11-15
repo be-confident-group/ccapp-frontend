@@ -8,8 +8,8 @@ import { ThemedText } from '@/components/themed-text';
 import { GlassSurface } from '@/components/ui/GlassSurface';
 import { Spacing } from '@/constants/theme';
 import type { MainTab, RidesWalksSubFilter, GenderSubFilter } from '@/types/leaderboard';
+import { Springs } from '@/constants/motion';
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 const CHIP_RADIUS = 16;
 
 interface SubFilterChipsProps {
@@ -49,13 +49,13 @@ function GlassChip({ label, selected, onPress }: GlassChipProps) {
         accessibilityLabel={label}
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withSpring(0.94, PRESS_SPRING);
+          scale.value = withSpring(0.94, Springs.press);
           if (!selected && process.env.EXPO_OS !== 'web') {
             Haptics.selectionAsync();
           }
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.value = withSpring(1, Springs.press);
         }}
         style={styles.chip}
       >
@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 4,
   },
   chip: {
     height: CHIP_RADIUS * 2,

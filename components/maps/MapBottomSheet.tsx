@@ -102,7 +102,8 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
   const { colors, isDark } = useTheme();
   const { formatDistance } = useUnits();
   const { t } = useTranslation();
-  const tabBarInset = useTabBarInset();
+  // The Maps tab hides the FAB, so the sheet only has to clear the bar.
+  const tabBarInset = useTabBarInset(false);
   const router = useRouter();
 
   // Collapsed: the header row sits fully above the floating tab bar.
@@ -164,7 +165,7 @@ export function MapBottomSheet({ onTripPress, onExpandChange, selectedTripId, tr
 
   const handleTripPress = (tripId: string) => {
     // Collapse the bottom sheet
-    translateY.value = withSpring(collapsedY, { damping: 30, stiffness: 260 });
+    translateY.value = withSpring(collapsedY, { damping: 30, stiffness: 260, mass: 1 });
     expandedSV.value = false;
     handleExpandChange(false);
 

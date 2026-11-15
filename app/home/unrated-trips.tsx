@@ -45,9 +45,9 @@ import { database, type Trip } from '@/lib/database';
 import { useTrips } from '@/lib/hooks/useTrips';
 import type { ApiTrip } from '@/lib/api/trips';
 import { isVisibleTripType } from '@/lib/utils/tripTypeUi';
+import { Springs } from '@/constants/motion';
 
 const HEADER_HEIGHT = 56;
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function transformApiTripToLocal(apiTrip: ApiTrip): Trip {
@@ -166,7 +166,7 @@ export default function UnratedTripsScreen() {
           <Header showBack />
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
         </View>
       </View>
     );
@@ -240,7 +240,7 @@ export default function UnratedTripsScreen() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={onRefresh}
-              tintColor={colors.primary}
+              tintColor={colors.glassTint}
               progressViewOffset={headerTop + HEADER_HEIGHT}
             />
           }
@@ -284,13 +284,13 @@ export default function UnratedTripsScreen() {
           accessibilityLabel={t('rating.whyRate', { defaultValue: 'Why rate routes?' })}
           onPress={() => setShowInfoModal(true)}
           onPressIn={() => {
-            infoScale.value = withSpring(0.96, PRESS_SPRING);
+            infoScale.value = withSpring(0.96, Springs.press);
             if (process.env.EXPO_OS !== 'web') {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             }
           }}
           onPressOut={() => {
-            infoScale.value = withSpring(1, PRESS_SPRING);
+            infoScale.value = withSpring(1, Springs.press);
           }}
           style={styles.floatingInfoInner}
         >

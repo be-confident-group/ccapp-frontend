@@ -15,8 +15,8 @@ import { ChevronRightIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getTripTypeColor, type TripType } from '@/types/trip';
 import { TRIP_TYPE_ICONS } from '@/components/trips/tripTypeIcons';
+import { Springs } from '@/constants/motion';
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface TripCardStat {
@@ -84,13 +84,13 @@ export function TripCard({
         onPress={onPress}
         onLongPress={onLongPress}
         onPressIn={() => {
-          scale.value = withSpring(0.98, PRESS_SPRING);
+          scale.value = withSpring(0.98, Springs.press);
           if (process.env.EXPO_OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           }
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.value = withSpring(1, Springs.press);
         }}
         style={[
           styles.card,

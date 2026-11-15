@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SunIcon, MoonIcon, DevicePhoneMobileIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Touchable } from '@/components/ui/Touchable';
 
 export default function ThemeToggle() {
   const { themeMode, setThemeMode, colors } = useTheme();
@@ -17,7 +18,7 @@ export default function ThemeToggle() {
       {themes.map(({ mode, icon: Icon, label }) => {
         const isActive = themeMode === mode;
         return (
-          <TouchableOpacity
+          <Touchable
             key={mode}
             style={[
               styles.option,
@@ -38,7 +39,7 @@ export default function ThemeToggle() {
             >
               {label}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
     </View>

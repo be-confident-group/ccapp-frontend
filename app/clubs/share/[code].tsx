@@ -40,7 +40,7 @@ export default function ShareCodeResolverScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       <View style={[styles.content, { paddingTop: insets.top + CLUB_HEADER_HEIGHT }]}>
-        {isLoading && <ActivityIndicator size="large" color={colors.primary} />}
+        {isLoading && <ActivityIndicator size="large" color={colors.glassTint} />}
       </View>
       <ClubScreenHeader />
     </View>

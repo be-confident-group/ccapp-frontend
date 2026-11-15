@@ -36,7 +36,7 @@ export default function TextInput({
           styles.inputContainer,
           {
             backgroundColor: colors.surface,
-            borderColor: error ? '#F44336' : isFocused ? colors.primary : colors.border,
+            borderColor: error ? '#F44336' : isFocused ? colors.glassTint : colors.border,
           },
         ]}
       >

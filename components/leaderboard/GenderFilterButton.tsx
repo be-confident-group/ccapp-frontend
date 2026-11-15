@@ -1,9 +1,10 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
+import { StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { ChevronDownIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 type GenderFilter = 'all' | 'male' | 'female';
 
@@ -53,7 +54,7 @@ export function GenderFilterButton({ selected, onSelect }: GenderFilterButtonPro
   };
 
   return (
-    <TouchableOpacity
+    <Touchable
       style={[
         styles.button,
         {
@@ -68,7 +69,7 @@ export function GenderFilterButton({ selected, onSelect }: GenderFilterButtonPro
         Gender: {selectedLabel}
       </ThemedText>
       <ChevronDownIcon size={16} color={colors.textSecondary} />
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 

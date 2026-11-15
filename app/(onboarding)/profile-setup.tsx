@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   ScrollView,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { saveLocalPreferences } from '@/lib/onboarding/state';
 import { authApi } from '@/lib/api/auth';
 import { showAlert } from '@/lib/utils/alert';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 const AVATAR_SIZE = 100;
 const WHITE = '#FFFFFF'; // contrast against primary brand red — does not vary with theme
@@ -96,7 +96,7 @@ export default function ProfileSetupScreen() {
 
           {/* Avatar section */}
           <View style={styles.avatarSection}>
-            <TouchableOpacity
+            <Touchable
               style={[styles.avatarWrapper, { borderColor: colors.border }]}
               onPress={handlePickAvatar}
               activeOpacity={0.8}
@@ -115,7 +115,7 @@ export default function ProfileSetupScreen() {
               <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
                 <CameraIcon size={14} color={WHITE} />
               </View>
-            </TouchableOpacity>
+            </Touchable>
 
             <Text style={[styles.avatarHint, { color: colors.textSecondary }]}>
               {t('profile.avatarHint')}
@@ -128,7 +128,7 @@ export default function ProfileSetupScreen() {
           </Text>
 
           <View style={styles.modeRow}>
-            <TouchableOpacity
+            <Touchable
               style={[
                 styles.modePill,
                 {
@@ -144,14 +144,14 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'walk' ? WHITE : colors.primary },
+                  { color: defaultMode === 'walk' ? WHITE : colors.glassTint },
                 ]}
               >
                 {t('profile.walk')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
 
-            <TouchableOpacity
+            <Touchable
               style={[
                 styles.modePill,
                 {
@@ -167,12 +167,12 @@ export default function ProfileSetupScreen() {
               <Text
                 style={[
                   styles.modePillText,
-                  { color: defaultMode === 'cycle' ? WHITE : colors.primary },
+                  { color: defaultMode === 'cycle' ? WHITE : colors.glassTint },
                 ]}
               >
                 {t('profile.cycle')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           {/* Continue button */}

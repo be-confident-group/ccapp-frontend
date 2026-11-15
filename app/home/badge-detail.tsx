@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, ScrollView, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
@@ -8,6 +8,7 @@ import { Spacing, BorderRadius } from '@/constants/theme';
 import { mockBadges } from '@/lib/utils/mockData';
 import { ChevronLeftIcon } from 'react-native-heroicons/outline';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Touchable } from '@/components/ui/Touchable';
 
 export default function BadgeDetailScreen() {
   const { colors } = useTheme();
@@ -33,13 +34,13 @@ export default function BadgeDetailScreen() {
       <ThemedView style={styles.container}>
         {/* Header with Back Button */}
         <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
+          <Touchable
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
             <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
 
           <View style={styles.placeholder} />
         </View>

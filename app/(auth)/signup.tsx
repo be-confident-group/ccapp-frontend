@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
   Alert,
   BackHandler,
   TextInput as RNTextInput,
@@ -28,6 +27,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { authApi } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
 import { showAlert } from '@/lib/utils/alert';
+import { Touchable } from '@/components/ui/Touchable';
 
 type SignupStep = 'email' | 'password' | 'name' | 'dob' | 'gender' | 'verify';
 
@@ -517,7 +517,7 @@ export default function SignupScreen() {
                 {t('auth:signup.dobStepSubtitle')}
               </Text>
             </View>
-            <TouchableOpacity
+            <Touchable
               style={[
                 styles.dateButton,
                 { backgroundColor: colors.inputBackground, borderColor: colors.border },
@@ -532,7 +532,7 @@ export default function SignupScreen() {
                   day: 'numeric',
                 })}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
             {showDatePicker && (
               <DateTimePicker
                 value={formData.dateOfBirth}
@@ -566,7 +566,7 @@ export default function SignupScreen() {
                 { value: 'other', label: t('auth:signup.genderOther') },
                 { value: 'prefer_not_to_say', label: t('auth:signup.genderPreferNotToSay') },
               ].map((option) => (
-                <TouchableOpacity
+                <Touchable
                   key={option.value}
                   style={[
                     styles.genderOption,
@@ -589,13 +589,13 @@ export default function SignupScreen() {
                       styles.genderOptionText,
                       {
                         color:
-                          formData.gender === option.value ? colors.primary : colors.text,
+                          formData.gender === option.value ? colors.glassTint : colors.text,
                       },
                     ]}
                   >
                     {option.label}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               ))}
             </View>
           </>
@@ -624,7 +624,7 @@ export default function SignupScreen() {
                     styles.codeInput,
                     {
                       backgroundColor: colors.inputBackground,
-                      borderColor: digit ? colors.primary : colors.border,
+                      borderColor: digit ? colors.glassTint : colors.border,
                       color: colors.text,
                     },
                   ]}
@@ -642,7 +642,7 @@ export default function SignupScreen() {
 
             {loading && (
               <View style={styles.verifyingContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={colors.glassTint} />
                 <Text style={[styles.verifyingText, { color: colors.textSecondary }]}>
                   {t('auth:signup.verifyingText')}
                 </Text>
@@ -659,11 +659,11 @@ export default function SignupScreen() {
                   {t('auth:signup.resendIn', { seconds: resendCooldown })}
                 </Text>
               ) : (
-                <TouchableOpacity onPress={handleResendCode}>
-                  <Text style={[styles.resendButton, { color: colors.primary }]}>
+                <Touchable onPress={handleResendCode}>
+                  <Text style={[styles.resendButton, { color: colors.glassTint }]}>
                     {t('auth:signup.resendCode')}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               )}
             </View>
           </>
@@ -680,9 +680,9 @@ export default function SignupScreen() {
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           {currentStep !== 'email' && currentStep !== 'verify' && (
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Touchable onPress={handleBack} style={styles.backButton}>
               <ChevronLeftIcon color={colors.text} size={24} />
-            </TouchableOpacity>
+            </Touchable>
           )}
           <View style={[styles.progressBarBackground, { backgroundColor: colors.border }]}>
             <View

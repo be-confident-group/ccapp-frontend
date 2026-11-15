@@ -3,7 +3,6 @@ import {
   Alert,
   StyleSheet,
   View,
-  TouchableOpacity,
   Image,
   RefreshControl,
   ActivityIndicator,
@@ -66,6 +65,7 @@ import {
 } from 'react-native-heroicons/outline';
 import { ChevronLeftIcon } from 'react-native-heroicons/solid';
 import type { Post , ActivityPost } from '@/types/feed';
+import { Touchable } from '@/components/ui/Touchable';
 
 const BUTTON_SIZE = 40;
 const SHEET_OVERLAP = 28;
@@ -365,7 +365,7 @@ export default function ClubDetailScreen() {
       <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={[styles.loading, { paddingTop: insets.top + 56 }]}>
           {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.glassTint} />
           ) : (
             <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
           )}
@@ -619,7 +619,7 @@ export default function ClubDetailScreen() {
               refetch();
               refetchPosts();
             }}
-            tintColor={colors.primary}
+            tintColor={colors.glassTint}
             progressViewOffset={insets.top}
           />
         }
@@ -721,7 +721,7 @@ export default function ClubDetailScreen() {
         animationType="fade"
         onRequestClose={() => setPhotoViewer(null)}
       >
-        <TouchableOpacity
+        <Touchable
           style={styles.photoViewerOverlay}
           activeOpacity={1}
           onPress={() => setPhotoViewer(null)}
@@ -733,7 +733,7 @@ export default function ClubDetailScreen() {
               resizeMode="contain"
             />
           )}
-        </TouchableOpacity>
+        </Touchable>
       </Modal>
       <PostModerationSheet
         visible={moderationTarget != null}

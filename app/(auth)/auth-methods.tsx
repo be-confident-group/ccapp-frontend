@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { EnvelopeIcon } from 'react-native-heroicons/outline';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 import { TermsPrivacyNotice } from '@/components/TermsPrivacyNotice';
 import { useTranslation } from 'react-i18next';
+import { Touchable } from '@/components/ui/Touchable';
 
 export default function AuthMethodsScreen() {
   const { colors } = useTheme();
@@ -33,7 +34,7 @@ export default function AuthMethodsScreen() {
 
         <View style={styles.buttonGroup}>
           {/* Google Button */}
-          <TouchableOpacity
+          <Touchable
             style={[styles.socialButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={handleGoogleSignIn}
             disabled={socialLoading}
@@ -44,11 +45,11 @@ export default function AuthMethodsScreen() {
                 {t('auth:welcome.continueWithGoogle')}
               </Text>
             </View>
-          </TouchableOpacity>
+          </Touchable>
 
           {/* Apple Button (iOS only) */}
           {Platform.OS === 'ios' && appleAuthAvailable && (
-            <TouchableOpacity
+            <Touchable
               style={[styles.socialButton, { backgroundColor: '#000000' }]}
               onPress={handleAppleSignIn}
               disabled={socialLoading}
@@ -59,11 +60,11 @@ export default function AuthMethodsScreen() {
                   {t('auth:welcome.continueWithApple')}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </Touchable>
           )}
 
           {/* Email Button */}
-          <TouchableOpacity
+          <Touchable
             style={[styles.socialButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={handleEmailSignIn}
           >
@@ -73,14 +74,14 @@ export default function AuthMethodsScreen() {
                 {t('auth:welcome.continueWithEmail')}
               </Text>
             </View>
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textSecondary }]}>
             {t('auth:signup.haveAccount')}
             <Text
-              style={[styles.footerLink, { color: colors.primary }]}
+              style={[styles.footerLink, { color: colors.glassTint }]}
               onPress={handleEmailSignUp}
             >
               {t('auth:signup.signIn')}

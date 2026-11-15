@@ -151,7 +151,7 @@ export default function LeaderboardsScreen() {
         <View style={styles.tableContainer}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={colors.glassTint} />
               <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
                 Loading community board...
               </ThemedText>

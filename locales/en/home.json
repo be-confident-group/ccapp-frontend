@@ -48,5 +48,12 @@
     "noActivityMessage": "Start your first ride to see your stats here",
     "noGoals": "No goals set",
     "noGoalsMessage": "Set your first goal to track your progress"
+  },
+  "trophies": {
+    "title": "Trophies Case",
+    "loading": "Loading trophies...",
+    "loadFailed": "Failed to load trophies",
+    "emptyTitle": "No trophies available",
+    "emptyMessage": "Trophies will appear here once they are configured. Start riding and walking to earn them!"
   }
 }

@@ -691,11 +691,11 @@ export default function DebugTrackingScreen() {
       {/* Header */}
       <View style={[s.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} style={s.back}>
-          <Text style={[s.backText, { color: colors.primary }]}>← Back</Text>
+          <Text style={[s.backText, { color: colors.glassTint }]}>← Back</Text>
         </Pressable>
         <Text style={[s.title, { color: colors.text }]}>Debug</Text>
         <Pressable onPress={() => { refreshNativeLogs(); loadTripData(); }} style={s.back}>
-          <Text style={[s.backText, { color: colors.primary }]}>↻</Text>
+          <Text style={[s.backText, { color: colors.glassTint }]}>↻</Text>
         </Pressable>
       </View>
 
@@ -703,7 +703,7 @@ export default function DebugTrackingScreen() {
       <View style={[s.tabBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         {TABS.map(t => (
           <Pressable key={t.key} style={s.tabItem} onPress={() => setTab(t.key)}>
-            <Text style={[s.tabLabel, { color: tab === t.key ? colors.primary : colors.textSecondary }]}>
+            <Text style={[s.tabLabel, { color: tab === t.key ? colors.glassTint : colors.textSecondary }]}>
               {t.label}
             </Text>
             {tab === t.key && <View style={[s.tabUnderline, { backgroundColor: colors.primary }]} />}

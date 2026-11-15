@@ -29,7 +29,7 @@ import { GlassSurface } from '@/components/ui/GlassSurface';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const ZOOM_SPRING = { damping: 17, stiffness: 220 };
+const ZOOM_SPRING = { damping: 17, stiffness: 220, mass: 1 };
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 900;
 

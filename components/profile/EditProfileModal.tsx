@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ChevronDownIcon, CalendarIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { TextInput, Button } from '@/components/ui';
 import { GlassSheet } from '@/components/ui/GlassSheet';
 import { ProfileAvatar } from './ProfileAvatar';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface UserProfile {
   firstName: string;
@@ -194,7 +195,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         {/* Date of Birth Picker */}
         <View>
           <Text style={[styles.label, { color: colors.text }]}>{t('edit.dateOfBirthLabel')}</Text>
-          <TouchableOpacity
+          <Touchable
             onPress={() => {
               setShowGenderPicker(false);
               setShowDatePicker((open) => (Platform.OS === 'ios' ? !open : true));
@@ -210,7 +211,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             >
               {formatDate(formData.dateOfBirth) || t('edit.selectDateOfBirth')}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
 
           {/* Inline spinner for iOS */}
           {Platform.OS === 'ios' && showDatePicker && (
@@ -224,9 +225,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 minimumDate={new Date(1900, 0, 1)}
                 textColor={colors.text}
               />
-              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.inlineDone}>
-                <Text style={[styles.pickerDone, { color: colors.primary }]}>{t('edit.done')}</Text>
-              </TouchableOpacity>
+              <Touchable onPress={() => setShowDatePicker(false)} style={styles.inlineDone}>
+                <Text style={[styles.pickerDone, { color: colors.glassTint }]}>{t('edit.done')}</Text>
+              </Touchable>
             </View>
           )}
         </View>
@@ -246,7 +247,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         {/* Gender Picker */}
         <View>
           <Text style={[styles.label, { color: colors.text }]}>{t('edit.genderLabel')}</Text>
-          <TouchableOpacity
+          <Touchable
             onPress={() => {
               setShowDatePicker(false);
               setShowGenderPicker((open) => !open);
@@ -262,14 +263,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               {getGenderLabel(formData.gender)}
             </Text>
             <ChevronDownIcon size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          </Touchable>
 
           {showGenderPicker && (
             <View style={[styles.inlinePanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {GENDER_OPTIONS.map((option, index) => {
                 const selected = formData.gender === option.value;
                 return (
-                  <TouchableOpacity
+                  <Touchable
                     key={option.value}
                     onPress={() => handleGenderSelect(option.value)}
                     style={[
@@ -284,14 +285,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                       style={[
                         styles.pickerItemText,
                         {
-                          color: selected ? colors.primary : colors.text,
+                          color: selected ? colors.glassTint : colors.text,
                           fontWeight: selected ? '600' : '400',
                         },
                       ]}
                     >
                       {option.label}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 );
               })}
             </View>

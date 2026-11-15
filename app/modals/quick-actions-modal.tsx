@@ -2,7 +2,7 @@ import { router, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import {
   MegaphoneIcon,
   PencilSquareIcon,
@@ -25,9 +25,11 @@ import Animated, {
 import { ThemedText } from '@/components/themed-text';
 import { GlassSurface } from '@/components/ui/GlassSurface';
 import {
+  TAB_BAR_ACTION_RADIUS,
+  TAB_BAR_ACTION_SIDE,
   TAB_BAR_ACTION_SIZE,
   TAB_BAR_MARGIN,
-  useTabBarBottomOffset,
+  useTabBarActionBottom,
 } from '@/contexts/TabBarContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -44,6 +46,8 @@ const CLOSE_DURATION = 180;
 const STAGGER = 35;
 const MENU_GAP = 12;
 const MENU_RADIUS = 28;
+// Android's "+" is a filled FAB, so its close state stays filled too.
+const MATERIAL = Platform.OS === 'android';
 
 /**
  * Quick actions menu that grows out of the "+" bubble in the tab bar: the
@@ -53,7 +57,7 @@ const MENU_RADIUS = 28;
 export default function QuickActionsModal() {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const bottom = useTabBarBottomOffset();
+  const bottom = useTabBarActionBottom();
   const isClosing = useRef(false);
 
   const actions: ActionItem[] = [
@@ -102,7 +106,7 @@ export default function QuickActionsModal() {
     opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
   }));
 
-  // Grow from the bottom-left corner, right where the "+" bubble sits.
+  // Grow from the bottom corner where the "+" button sits.
   const menuStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: interpolate(progress.value, [0, 1], [MENU_GAP + TAB_BAR_ACTION_SIZE / 2, 0]) },
@@ -140,9 +144,13 @@ export default function QuickActionsModal() {
         onPress={() => close()}
         style={[styles.closeButton, { bottom, shadowColor: colors.shadow }]}
       >
-        <GlassSurface borderRadius={TAB_BAR_ACTION_SIZE / 2} interactive />
+        <GlassSurface
+          borderRadius={TAB_BAR_ACTION_RADIUS}
+          interactive
+          style={MATERIAL && { backgroundColor: colors.glassActiveFill }}
+        />
         <Animated.View style={closeIconStyle}>
-          <PlusIcon size={28} color={colors.glassTint} />
+          <PlusIcon size={MATERIAL ? 24 : 28} color={MATERIAL ? '#FFFFFF' : colors.glassTint} />
         </Animated.View>
       </Pressable>
     </View>
@@ -189,11 +197,11 @@ const styles = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    left: TAB_BAR_MARGIN,
+    [TAB_BAR_ACTION_SIDE]: TAB_BAR_MARGIN,
     minWidth: 240,
     padding: 8,
     borderRadius: MENU_RADIUS,
-    transformOrigin: 'left bottom',
+    transformOrigin: `${TAB_BAR_ACTION_SIDE} bottom`,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
@@ -220,10 +228,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    left: TAB_BAR_MARGIN,
+    [TAB_BAR_ACTION_SIDE]: TAB_BAR_MARGIN,
     width: TAB_BAR_ACTION_SIZE,
     height: TAB_BAR_ACTION_SIZE,
-    borderRadius: TAB_BAR_ACTION_SIZE / 2,
+    borderRadius: TAB_BAR_ACTION_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 8 },

@@ -85,7 +85,7 @@ export default function BrowseClubsScreen() {
     if (isLoading) {
       return (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
           <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
             {t('clubs.searching', 'Searching groups...')}
           </ThemedText>
@@ -141,7 +141,7 @@ export default function BrowseClubsScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            tintColor={colors.primary}
+            tintColor={colors.glassTint}
             progressViewOffset={topInset}
           />
         }

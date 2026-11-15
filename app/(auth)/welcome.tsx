@@ -8,7 +8,6 @@ import {
   Image,
   ViewToken,
   Animated,
-  TouchableOpacity,
   PanResponder,
   TextInput,
   Platform,
@@ -28,6 +27,7 @@ import { TermsPrivacyNotice } from '@/components/TermsPrivacyNotice';
 import { useSocialAuth } from '@/lib/hooks/useSocialAuth';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
+import { Touchable } from '@/components/ui/Touchable';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -313,9 +313,9 @@ export default function WelcomeScreen() {
       >
         {/* Chevron (shown when expanded) - positioned at top */}
         <Animated.View style={[styles.chevronContainer, { opacity: chevronOpacity }]}>
-          <TouchableOpacity onPress={handleCollapsePress} style={styles.chevronButton}>
+          <Touchable onPress={handleCollapsePress} style={styles.chevronButton}>
             <ChevronDownIcon color={colors.textSecondary} size={28} />
-          </TouchableOpacity>
+          </Touchable>
         </Animated.View>
 
         {/* Main Content Container - uses flex to create relationships */}
@@ -381,13 +381,13 @@ export default function WelcomeScreen() {
               style={[styles.signUpButtonContainer, { opacity: buttonOpacity }]}
               pointerEvents={isExpanded ? 'none' : 'auto'}
             >
-              <TouchableOpacity
+              <Touchable
                 style={[styles.signUpButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={handleSignUpPress}
               >
                 <UserIcon color={colors.text} size={24} />
                 <Text style={[styles.signUpButtonText, { color: colors.text }]}>{t('auth:welcome.subtitle')}</Text>
-              </TouchableOpacity>
+              </Touchable>
             </Animated.View>
 
             {/* Auth Content (shown when expanded) */}
@@ -411,7 +411,7 @@ export default function WelcomeScreen() {
 
                   <View style={styles.authButtons}>
                     {/* Google Button */}
-                    <TouchableOpacity
+                    <Touchable
                       style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                       onPress={handleGoogleSignIn}
                       disabled={socialLoading}
@@ -420,11 +420,11 @@ export default function WelcomeScreen() {
                         <FontAwesome name="google" size={20} color={colors.text} />
                         <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithGoogle')}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </Touchable>
 
                     {/* Apple Button (iOS only) */}
                     {Platform.OS === 'ios' && appleAuthAvailable && (
-                      <TouchableOpacity
+                      <Touchable
                         style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                         onPress={handleAppleSignIn}
                         disabled={socialLoading}
@@ -433,11 +433,11 @@ export default function WelcomeScreen() {
                           <FontAwesome name="apple" size={20} color={colors.text} />
                           <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithApple')}</Text>
                         </View>
-                      </TouchableOpacity>
+                      </Touchable>
                     )}
 
                     {/* Email Button */}
-                    <TouchableOpacity
+                    <Touchable
                       style={[styles.authButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                       onPress={handleEmailButtonPress}
                     >
@@ -445,7 +445,7 @@ export default function WelcomeScreen() {
                         <EnvelopeIcon color={colors.text} size={20} />
                         <Text style={[styles.authButtonText, { color: colors.text }]}>{t('auth:welcome.continueWithEmail')}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </Touchable>
                   </View>
                 </>
               ) : !showPasswordInput ? (
@@ -470,7 +470,7 @@ export default function WelcomeScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
+                  <Touchable
                     style={[styles.sendButton, { backgroundColor: colors.primary, opacity: loading || !email.trim() ? 0.5 : 1 }]}
                     onPress={handleEmailSubmit}
                     disabled={loading || !email.trim()}
@@ -480,7 +480,7 @@ export default function WelcomeScreen() {
                     ) : (
                       <Text style={styles.sendButtonText}>{t('auth:signup.continueButton')}</Text>
                     )}
-                  </TouchableOpacity>
+                  </Touchable>
                 </>
               ) : (
                 <>
@@ -504,7 +504,7 @@ export default function WelcomeScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
+                  <Touchable
                     style={[styles.sendButton, { backgroundColor: colors.primary, opacity: loading || !password.trim() ? 0.5 : 1 }]}
                     onPress={handlePasswordSubmit}
                     disabled={loading || !password.trim()}
@@ -514,16 +514,16 @@ export default function WelcomeScreen() {
                     ) : (
                       <Text style={styles.sendButtonText}>{t('auth:login.signInButton')}</Text>
                     )}
-                  </TouchableOpacity>
+                  </Touchable>
 
-                  <TouchableOpacity
+                  <Touchable
                     style={styles.forgotPasswordLink}
                     onPress={() => router.push('/(auth)/forgot-password')}
                   >
-                    <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+                    <Text style={[styles.forgotPasswordText, { color: colors.glassTint }]}>
                       {t('auth:login.forgotPassword')}
                     </Text>
-                  </TouchableOpacity>
+                  </Touchable>
                 </>
               )}
             </Animated.View>
@@ -552,7 +552,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     overflow: 'hidden',
     shadowColor: 'transparent',
-    elevation: 0,
   },
   imageSlide: {
     width: SCREEN_WIDTH - 40,

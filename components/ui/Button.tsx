@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Platform,
   Pressable,
   Text,
   StyleSheet,
@@ -12,10 +13,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { GlassSurface } from '@/components/ui/GlassSurface';
+import { Springs } from '@/constants/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 const GLASS_RADIUS = 999;
+// Material buttons are fully rounded, use a 1dp outline and show a ripple.
+const MATERIAL = Platform.OS === 'android';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text' | 'danger' | 'glass';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -55,14 +58,14 @@ export default function Button({
 
   const handlePressIn = () => {
     if (inactive) return;
-    scale.value = withSpring(0.96, PRESS_SPRING);
+    scale.value = withSpring(0.96, Springs.press);
     if (process.env.EXPO_OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, PRESS_SPRING);
+    scale.value = withSpring(1, Springs.press);
   };
 
   const getButtonStyle = (): ViewStyle => {
@@ -90,8 +93,8 @@ export default function Button({
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
-          borderWidth: 2,
-          borderColor: disabled ? colors.border : colors.primary,
+          borderWidth: MATERIAL ? 1 : 2,
+          borderColor: disabled ? colors.border : colors.glassTint,
         };
       case 'text':
         return {
@@ -132,12 +135,12 @@ export default function Button({
       case 'outline':
         return {
           ...baseTextStyle,
-          color: disabled ? colors.textSecondary : colors.primary,
+          color: disabled ? colors.textSecondary : colors.glassTint,
         };
       case 'text':
         return {
           ...baseTextStyle,
-          color: disabled ? colors.textSecondary : colors.primary,
+          color: disabled ? colors.textSecondary : colors.glassTint,
         };
       case 'glass':
         return {
@@ -155,7 +158,7 @@ export default function Button({
         <ActivityIndicator
           size={size === 'small' ? 'small' : 'small'}
           color={variant === 'outline' || variant === 'text'
-              ? colors.primary
+              ? colors.glassTint
               : variant === 'glass'
                 ? colors.glassTint
                 : '#fff'}
@@ -181,6 +184,11 @@ export default function Button({
       disabled={inactive}
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive, busy: loading }}
+      android_ripple={{
+        color: variant === 'primary' || variant === 'secondary' || variant === 'danger'
+          ? 'rgba(255, 255, 255, 0.24)'
+          : colors.glassHighlight,
+      }}
     >
       {variant === 'glass' && <GlassSurface borderRadius={GLASS_RADIUS} interactive />}
       {renderContent()}
@@ -190,7 +198,9 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
+    borderRadius: MATERIAL ? 999 : 12,
+    // Clips the ripple to the button's shape.
+    overflow: MATERIAL ? 'hidden' : 'visible',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',

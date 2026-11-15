@@ -15,11 +15,11 @@ export function TermsPrivacyNotice({ style }: TermsPrivacyNoticeProps) {
   return (
     <Text style={style}>
       {t('auth:welcome.termsPrefix')}
-      <Text style={{ color: colors.primary }} onPress={() => Linking.openURL(TERMS_OF_SERVICE_URL)}>
+      <Text style={{ color: colors.glassTint }} onPress={() => Linking.openURL(TERMS_OF_SERVICE_URL)}>
         {t('auth:welcome.terms')}
       </Text>
       {t('auth:welcome.and')}
-      <Text style={{ color: colors.primary }} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+      <Text style={{ color: colors.glassTint }} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
         {t('auth:welcome.privacy')}
       </Text>
     </Text>

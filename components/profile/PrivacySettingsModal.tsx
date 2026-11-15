@@ -11,7 +11,6 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Dimensions,
   Pressable,
@@ -33,6 +32,7 @@ import { XMarkIcon ,
 import { ThemedText } from '@/components/themed-text';
 import { SettingsItem } from '@/components/profile/SettingsItem';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Touchable } from '@/components/ui/Touchable';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -57,8 +57,8 @@ export function PrivacySettingsModal({ visible, onClose }: PrivacySettingsModalP
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(0, { damping: 30, stiffness: 200 });
-      backdropOpacity.value = withSpring(1, { damping: 30, stiffness: 200 });
+      translateY.value = withSpring(0, { damping: 30, stiffness: 200, mass: 1 });
+      backdropOpacity.value = withSpring(1, { damping: 30, stiffness: 200, mass: 1 });
     } else {
       translateY.value = SCREEN_HEIGHT;
       backdropOpacity.value = 0;
@@ -158,13 +158,13 @@ export function PrivacySettingsModal({ visible, onClose }: PrivacySettingsModalP
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.headerLeft}>
               <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
-                <ShieldCheckIcon size={24} color={colors.primary} />
+                <ShieldCheckIcon size={24} color={colors.glassTint} />
               </View>
               <ThemedText style={styles.title}>Privacy Settings</ThemedText>
             </View>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Touchable onPress={handleClose} style={styles.closeButton}>
               <XMarkIcon size={24} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           {/* Content */}
@@ -344,7 +344,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
   },
   infoSection: {
     marginTop: 8,

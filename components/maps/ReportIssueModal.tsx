@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { GlassSheet } from '@/components/ui/GlassSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TextInput, Button } from '@/components/ui';
 import { useCreateMapFeedback } from '@/lib/hooks/useMapFeedback';
 import type { MapFeedbackCategory, GeoJSONPoint } from '@/lib/api/mapFeedback';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface CategoryOption {
   value: MapFeedbackCategory;
@@ -111,7 +112,7 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
         </Text>
         <View style={styles.categoryGrid}>
           {categories.map((cat) => (
-            <TouchableOpacity
+            <Touchable
               key={cat.value}
               onPress={() => setSelectedCategory(cat.value)}
               style={[
@@ -119,7 +120,7 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
                 { backgroundColor: colors.card, borderColor: colors.border },
                 selectedCategory === cat.value && {
                   backgroundColor: colors.primary + '20',
-                  borderColor: colors.primary,
+                  borderColor: colors.glassTint,
                   borderWidth: 2,
                 },
               ]}
@@ -135,7 +136,7 @@ export function ReportIssueModal({ visible, coordinates, onClose }: ReportIssueM
               >
                 {t(`maps:reportIssue.categories.${cat.value}.description`, cat.description)}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </View>
       </View>

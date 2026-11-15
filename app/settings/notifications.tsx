@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Switch } from 'react-native';
+import {  } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,6 +18,7 @@ import {
   updateNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/api/notifications';
+import { Switch } from '@/components/ui/Switch';
 
 type PrefKey = keyof NotificationPreferences;
 

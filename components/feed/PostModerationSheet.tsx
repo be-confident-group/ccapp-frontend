@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Modal, TouchableOpacity, ScrollView, Linking, StyleSheet } from 'react-native';
+import { View, Modal, ScrollView, Linking, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   FlagIcon,
@@ -13,6 +13,7 @@ import { Spacing, BorderRadius, FontSizes } from '@/constants/theme';
 import { showConfirmAlert, showAlert } from '@/lib/utils/alert';
 import { useBlockUser } from '@/lib/hooks/useBlockedUsers';
 import { SUPPORT_EMAIL } from '@/config/env';
+import { Touchable } from '@/components/ui/Touchable';
 
 const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'misinformation', 'other'] as const;
 type ReportReason = (typeof REPORT_REASONS)[number];
@@ -124,22 +125,22 @@ export function PostModerationSheet({ visible, target, onClose }: PostModeration
             <ThemedText style={styles.headerTitle}>
               {mode === 'menu' ? t('groups:moderation.report') : t('groups:moderation.reportTitle')}
             </ThemedText>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Touchable onPress={handleClose} style={styles.closeButton}>
               <XMarkIcon size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
           {mode === 'menu' ? (
             <View style={styles.menu}>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.menuRow, { borderBottomColor: colors.border }]}
                 onPress={() => setMode('report')}
                 activeOpacity={0.7}
               >
                 <FlagIcon size={20} color={colors.text} />
                 <ThemedText style={styles.menuLabel}>{t('groups:moderation.report')}</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={styles.menuRow}
                 onPress={handleBlock}
                 activeOpacity={0.7}
@@ -148,27 +149,27 @@ export function PostModerationSheet({ visible, target, onClose }: PostModeration
                 <ThemedText style={[styles.menuLabel, { color: colors.error }]}>
                   {t('groups:moderation.block', { name: target.authorName })}
                 </ThemedText>
-              </TouchableOpacity>
+              </Touchable>
             </View>
           ) : (
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
               <ThemedText style={styles.label}>{t('groups:moderation.reportReasonLabel')}</ThemedText>
               <View style={styles.reasonList}>
                 {REPORT_REASONS.map((r) => (
-                  <TouchableOpacity
+                  <Touchable
                     key={r}
                     onPress={() => setReason(r)}
                     style={[
                       styles.reasonChip,
                       { borderColor: colors.border, backgroundColor: colors.card },
-                      reason === r && { borderColor: colors.primary, backgroundColor: colors.primary + '20' },
+                      reason === r && { borderColor: colors.glassTint, backgroundColor: colors.primary + '20' },
                     ]}
                     activeOpacity={0.7}
                   >
-                    <ThemedText style={reason === r ? { color: colors.primary, fontWeight: '600' } : undefined}>
+                    <ThemedText style={reason === r ? { color: colors.glassTint, fontWeight: '600' } : undefined}>
                       {t(`groups:moderation.reasons.${r}`)}
                     </ThemedText>
-                  </TouchableOpacity>
+                  </Touchable>
                 ))}
               </View>
 

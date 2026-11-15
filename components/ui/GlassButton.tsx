@@ -5,8 +5,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { GlassSurface } from '@/components/ui/GlassSurface';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Springs } from '@/constants/motion';
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 
 interface GlassButtonProps {
   onPress: () => void;
@@ -40,13 +40,13 @@ export function GlassButton({ onPress, accessibilityLabel, children, size = 44, 
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withSpring(0.88, PRESS_SPRING);
+          scale.value = withSpring(0.88, Springs.press);
           if (process.env.EXPO_OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.value = withSpring(1, Springs.press);
         }}
         style={styles.content}
       >

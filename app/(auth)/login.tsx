@@ -117,7 +117,7 @@ export default function LoginScreen() {
             />
 
             <Text
-              style={[styles.forgotPassword, { color: colors.primary }]}
+              style={[styles.forgotPassword, { color: colors.glassTint }]}
               onPress={() => router.push('/(auth)/forgot-password')}
             >
               {t('auth:login.forgotPassword')}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Platform, View, StyleSheet, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
@@ -48,11 +48,16 @@ export default function Header({
 
   const backdrop = scrollY ? (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, backdropStyle]}>
-      <BlurView
-        intensity={60}
-        tint={isDark ? 'dark' : 'light'}
-        style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassFallback, opacity: 0.85 }]}
-      />
+      {Platform.OS === 'android' ? (
+        // Material app bars turn into an opaque tonal container on scroll; no blur.
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassFallback }]} />
+      ) : (
+        <BlurView
+          intensity={60}
+          tint={isDark ? 'dark' : 'light'}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassFallback, opacity: 0.85 }]}
+        />
+      )}
       <View style={[styles.hairline, { backgroundColor: colors.glassBorder }]} />
     </Animated.View>
   ) : null;

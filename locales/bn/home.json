@@ -48,5 +48,12 @@
     "noActivityMessage": "Start your first ride to see your stats here",
     "noGoals": "No goals set",
     "noGoalsMessage": "Set your first goal to track your progress"
+  },
+  "trophies": {
+    "title": "ট্রফি কেস",
+    "loading": "ট্রফি লোড হচ্ছে...",
+    "loadFailed": "ট্রফি লোড করা যায়নি",
+    "emptyTitle": "কোনো ট্রফি নেই",
+    "emptyMessage": "ট্রফি কনফিগার করা হলে এখানে দেখা যাবে। সেগুলো অর্জন করতে সাইকেল চালানো ও হাঁটা শুরু করুন!"
   }
 }

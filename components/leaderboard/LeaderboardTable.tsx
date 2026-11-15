@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { TrophyIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -14,6 +14,8 @@ interface LeaderboardTableProps {
   valueLabel: string;
 }
 
+const MemoLeaderboardRow = React.memo(LeaderboardRow);
+
 export function LeaderboardTable({
   title,
   users,
@@ -21,6 +23,14 @@ export function LeaderboardTable({
   valueLabel,
 }: LeaderboardTableProps) {
   const { colors } = useTheme();
+
+  const keyExtractor = useCallback((item: LeaderboardUser) => item.id, []);
+  const renderItem = useCallback(
+    ({ item, index }: { item: LeaderboardUser; index: number }) => (
+      <MemoLeaderboardRow user={item} valueType={valueType} index={index} />
+    ),
+    [valueType]
+  );
 
   const renderHeader = () => (
     <View>
@@ -71,10 +81,8 @@ export function LeaderboardTable({
   return (
     <FlatList
       data={users}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item, index }) => (
-        <LeaderboardRow user={item} valueType={valueType} index={index} />
-      )}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
       ListHeaderComponent={renderHeader}
       ListEmptyComponent={renderEmpty}
       showsVerticalScrollIndicator={false}

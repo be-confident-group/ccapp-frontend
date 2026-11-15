@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   Platform,
   Alert,
@@ -22,6 +21,7 @@ import { SettingsScreen, SettingsFootnote } from '@/components/settings/Settings
 import { useSubmitFeedback } from '@/lib/hooks/useFeedback';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import type { FeedbackCategory } from '@/lib/api/feedback';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface Attachment {
   uri: string; // Local URI for display
@@ -232,20 +232,20 @@ export default function FeedbackScreen() {
                   style={[styles.attachmentItem, { backgroundColor: colors.inputBackground }]}
                 >
                   <Image source={{ uri: attachment.uri }} style={styles.attachmentImage} />
-                  <TouchableOpacity
+                  <Touchable
                     onPress={() => handleRemoveAttachment(index)}
                     accessibilityRole="button"
                     accessibilityLabel={t('attachments.remove', { defaultValue: 'Remove image' })}
                     style={[styles.removeButton, { backgroundColor: colors.error }]}
                   >
                     <XMarkIcon size={14} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </Touchable>
                 </View>
               ))}
             </View>
           )}
           {attachments.length < 3 && (
-            <TouchableOpacity
+            <Touchable
               onPress={handlePickImage}
               style={[
                 styles.attachButton,
@@ -257,7 +257,7 @@ export default function FeedbackScreen() {
               <Text style={[styles.attachButtonText, { color: colors.textSecondary }]}>
                 {t('attachments.add', { defaultValue: 'Add Image' })}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           )}
         </View>
       </SettingsGroup>

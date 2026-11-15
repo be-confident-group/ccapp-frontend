@@ -228,7 +228,7 @@ export default function TrackingHealthScreen() {
           onPress={refresh}
           variant="outline"
           fullWidth
-          icon={<ArrowPathIcon size={16} color={colors.primary} />}
+          icon={<ArrowPathIcon size={16} color={colors.glassTint} />}
         />
       </View>
     </SettingsScreen>

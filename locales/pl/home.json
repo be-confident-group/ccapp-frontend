@@ -48,5 +48,12 @@
     "noActivityMessage": "Start your first ride to see your stats here",
     "noGoals": "No goals set",
     "noGoalsMessage": "Set your first goal to track your progress"
+  },
+  "trophies": {
+    "title": "Gablota z trofeami",
+    "loading": "Ładowanie trofeów...",
+    "loadFailed": "Nie udało się wczytać trofeów",
+    "emptyTitle": "Brak dostępnych trofeów",
+    "emptyMessage": "Trofea pojawią się tutaj po ich skonfigurowaniu. Zacznij jeździć i chodzić, aby je zdobywać!"
   }
 }

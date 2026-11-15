@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
 import { Circle } from '@shopify/react-native-skia';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Touchable } from '@/components/ui/Touchable';
 
 type TimeRange = 'week' | 'month' | '3months';
 type ActivityType = 'ride' | 'walk';
@@ -123,7 +124,7 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
         {/* Activity Type Chips */}
         <View style={styles.chipGroup}>
           {activityTabs.map((tab) => (
-            <TouchableOpacity
+            <Touchable
               key={tab.key}
               onPress={() => setActivityType(tab.key)}
               style={[
@@ -143,14 +144,14 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
               >
                 {tab.label}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </View>
 
         {/* Time Range Minimal Toggle */}
         <View style={[styles.rangeToggle, { backgroundColor: colors.backgroundSecondary }]}>
           {tabs.map((tab) => (
-            <TouchableOpacity
+            <Touchable
               key={tab.key}
               onPress={() => setSelectedRange(tab.key)}
               style={[
@@ -170,7 +171,7 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
               >
                 {tab.label === 'Week' ? '1W' : tab.label === 'Month' ? '1M' : '3M'}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </View>
       </View>
@@ -216,7 +217,7 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
                 <>
                   <Line
                     points={points.distance}
-                    color={activityTabs.find(t => t.key === activityType)?.color || colors.primary}
+                    color={activityTabs.find(t => t.key === activityType)?.color || colors.glassTint}
                     strokeWidth={2}
                     curveType="catmullRom"
                     animate={{ type: 'timing', duration: 300 }}
@@ -226,7 +227,7 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({ data }) => {
                       cx={state.x.position}
                       cy={state.y.distance.position}
                       r={6}
-                      color={activityTabs.find(t => t.key === activityType)?.color || colors.primary}
+                      color={activityTabs.find(t => t.key === activityType)?.color || colors.glassTint}
                       opacity={0.8}
                     />
                   )}

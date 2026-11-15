@@ -1,4 +1,5 @@
 import React, { createContext, ReactNode, useCallback, useContext, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import {
   SharedValue,
@@ -14,8 +15,18 @@ export const TAB_BAR_HEIGHT = 64;
 export const TAB_BAR_COLLAPSED_HEIGHT = 52;
 /** Horizontal screen margin of the bar. */
 export const TAB_BAR_MARGIN = 16;
-/** Diameter of the quick-action bubble left of the pill (as tall as the pill). */
-export const TAB_BAR_ACTION_SIZE = TAB_BAR_HEIGHT;
+
+// Android docks a Material navigation bar to the bottom edge and floats the
+// quick-action button above it as a FAB; iOS floats a glass pill with the
+// action bubble on its left.
+const MATERIAL = Platform.OS === 'android';
+const FAB_GAP = 16;
+
+/** Size of the quick-action button: a bubble as tall as the pill, or a Material FAB. */
+export const TAB_BAR_ACTION_SIZE = MATERIAL ? 56 : TAB_BAR_HEIGHT;
+export const TAB_BAR_ACTION_RADIUS = MATERIAL ? 16 : TAB_BAR_ACTION_SIZE / 2;
+/** Screen edge the quick-action button (and the menu growing out of it) sits on. */
+export const TAB_BAR_ACTION_SIDE = MATERIAL ? 'right' : 'left';
 
 /** Shared spring used by the tab bar so every transition feels the same. */
 export const TAB_BAR_SPRING = { damping: 20, stiffness: 240, mass: 0.8 };
@@ -106,13 +117,23 @@ export function useTabBarScrollHandler(scrollY?: SharedValue<number>) {
   });
 }
 
-/** Distance between the bottom of the screen and the bottom of the tab bar pill. */
+/** Distance between the bottom of the screen and the bottom of the tab bar's items. */
 export function useTabBarBottomOffset() {
   const insets = useSafeAreaInsets();
-  return Math.max(insets.bottom - 10, 12);
+  return MATERIAL ? insets.bottom : Math.max(insets.bottom - 10, 12);
 }
 
-/** Bottom padding a scrollable tab screen needs so content clears the floating bar. */
-export function useTabBarInset() {
-  return useTabBarBottomOffset() + TAB_BAR_HEIGHT + 16;
+/** Distance between the bottom of the screen and the bottom of the quick-action button. */
+export function useTabBarActionBottom() {
+  const bottom = useTabBarBottomOffset();
+  return MATERIAL ? bottom + TAB_BAR_HEIGHT + FAB_GAP : bottom;
+}
+
+/**
+ * Bottom padding a scrollable tab screen needs so content clears the bar and,
+ * on Android, the FAB above it. Pass `false` on screens that hide the FAB.
+ */
+export function useTabBarInset(clearAction = true) {
+  const clearance = MATERIAL && clearAction ? FAB_GAP + TAB_BAR_ACTION_SIZE : 0;
+  return useTabBarBottomOffset() + TAB_BAR_HEIGHT + clearance + 16;
 }

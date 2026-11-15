@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { HeartIcon as HeartIconSolid, ChatBubbleOvalLeftIcon } from 'react-native-heroicons/solid';
 import { HeartIcon as HeartIconOutline } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, FontSizes } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface PostActionsProps {
   likeCount: number;
@@ -30,7 +31,7 @@ export const PostActions = React.memo(function PostActions({
   return (
     <View style={styles.container}>
       {/* Likes - LEFT side */}
-      <TouchableOpacity
+      <Touchable
         style={styles.actionButton}
         onPress={onLike}
         activeOpacity={0.7}
@@ -43,10 +44,10 @@ export const PostActions = React.memo(function PostActions({
         <ThemedText style={[styles.actionText, { color: colors.textSecondary }]}>
           {formatCount(likeCount, 'like', 'likes')}
         </ThemedText>
-      </TouchableOpacity>
+      </Touchable>
 
       {/* Comments - RIGHT side */}
-      <TouchableOpacity
+      <Touchable
         style={styles.actionButton}
         onPress={onComment}
         activeOpacity={0.7}
@@ -55,7 +56,7 @@ export const PostActions = React.memo(function PostActions({
         <ThemedText style={[styles.actionText, { color: colors.textSecondary }]}>
           {formatCount(commentCount, 'comment', 'comments')}
         </ThemedText>
-      </TouchableOpacity>
+      </Touchable>
     </View>
   );
 });

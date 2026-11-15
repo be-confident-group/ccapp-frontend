@@ -74,7 +74,7 @@ export interface ThemeColors {
   glassActiveFill: string; // solid active segment / icon chip on glass (white content)
 }
 
-export const Colors: Record<ColorScheme, ThemeColors> = {
+const baseColors: Record<ColorScheme, ThemeColors> = {
   light: {
     // Brand colors
     primary: '#0d4d63',
@@ -187,6 +187,69 @@ export const Colors: Record<ColorScheme, ThemeColors> = {
   },
 };
 
+/**
+ * Android follows Material 3 Expressive: tonal surfaces generated from the
+ * brand teal instead of white cards with drop shadows, and opaque containers
+ * instead of glass. The `glass*` tokens hold the Material equivalents here
+ * (container, active indicator, on-container content) so shared components
+ * need no platform checks.
+ */
+const materialColors: Record<ColorScheme, Partial<ThemeColors>> = {
+  light: {
+    text: '#171C1F',
+    textSecondary: '#40484C',
+    textMuted: '#626C70',
+    textTertiary: '#8A9296',
+    background: '#EDF2F5', // surface container
+    backgroundSecondary: '#E3EAEE', // surface container high
+    card: '#FBFDFE', // surface bright
+    cardSecondary: '#E9EFF2',
+    surface: '#E3EAEE',
+    border: '#C3CBD0', // outline variant
+    divider: '#DFE5E9',
+    icon: '#40484C',
+    tabIconDefault: '#40484C',
+    inputBackground: '#E3EAEE',
+    inputBorder: '#C3CBD0',
+    inputPlaceholder: '#626C70',
+    glassFallback: '#DCE5EA', // surface container highest
+    glassBorder: 'transparent',
+    glassHighlight: '#C5E3EF', // secondary container
+    glassInactive: '#40484C',
+  },
+  dark: {
+    text: '#DEE3E6',
+    textSecondary: '#C0C8CC',
+    textMuted: '#8A9296',
+    textTertiary: '#626C70',
+    background: '#0F1416', // surface
+    backgroundSecondary: '#171C1F', // surface container low
+    card: '#1D2326', // surface container
+    cardSecondary: '#272D30', // surface container high
+    surface: '#272D30',
+    border: '#40484C', // outline variant
+    divider: '#2B3235',
+    icon: '#C0C8CC',
+    tabIconDefault: '#C0C8CC',
+    inputBackground: '#272D30',
+    inputBorder: '#40484C',
+    inputPlaceholder: '#8A9296',
+    glassFallback: '#30373A', // surface container highest
+    glassBorder: 'transparent',
+    glassHighlight: '#27505E', // secondary container
+    glassTint: '#B6E3F3',
+    glassInactive: '#C0C8CC',
+  },
+};
+
+export const Colors: Record<ColorScheme, ThemeColors> =
+  Platform.OS === 'android'
+    ? {
+        light: { ...baseColors.light, ...materialColors.light },
+        dark: { ...baseColors.dark, ...materialColors.dark },
+      }
+    : baseColors;
+
 export const Spacing = {
   xs: 4,
   sm: 8,
@@ -196,13 +259,11 @@ export const Spacing = {
   xxl: 48,
 };
 
-export const BorderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  full: 9999,
-};
+// Android uses the rounder Material 3 Expressive shape scale.
+export const BorderRadius = Platform.select({
+  android: { sm: 8, md: 16, lg: 20, xl: 28, full: 9999 },
+  default: { sm: 8, md: 12, lg: 16, xl: 24, full: 9999 },
+});
 
 export const FontSizes = {
   xs: 12,

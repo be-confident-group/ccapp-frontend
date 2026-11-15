@@ -30,7 +30,7 @@ import { getTripTypeName, type TripType } from '@/types/trip';
 import { formatDistance } from '@/lib/utils/geoCalculations';
 import type { Trip } from '@/lib/database';
 
-const PRESS_SPRING = { damping: 26, stiffness: 420 };
+const PRESS_SPRING = { damping: 26, stiffness: 420, mass: 1 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const TRIP_TYPE_ICONS: Record<TripType, typeof UserIcon> = {

@@ -48,5 +48,12 @@
     "noActivityMessage": "Start your first ride to see your stats here",
     "noGoals": "No goals set",
     "noGoalsMessage": "Set your first goal to track your progress"
+  },
+  "trophies": {
+    "title": "ٹرافی کیس",
+    "loading": "ٹرافیاں لوڈ ہو رہی ہیں...",
+    "loadFailed": "ٹرافیاں لوڈ نہیں ہو سکیں",
+    "emptyTitle": "کوئی ٹرافی دستیاب نہیں",
+    "emptyMessage": "ٹرافیاں ترتیب دیے جانے کے بعد یہاں نظر آئیں گی۔ انہیں حاصل کرنے کے لیے سائیکل چلانا اور پیدل چلنا شروع کریں!"
   }
 }

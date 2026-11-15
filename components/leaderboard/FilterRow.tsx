@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
+import { View, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { ChevronDownIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { generateMonthOptions } from '@/lib/utils/mockLeaderboardData';
 import type { Club } from '@/types/feed';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface FilterRowProps {
   selectedMonth: string | null;
@@ -96,7 +97,7 @@ export function FilterRow({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
+      <Touchable
         style={[
           styles.filterButton,
           {
@@ -111,9 +112,9 @@ export function FilterRow({
           {selectedMonthLabel}
         </ThemedText>
         <ChevronDownIcon size={16} color={colors.textSecondary} />
-      </TouchableOpacity>
+      </Touchable>
 
-      <TouchableOpacity
+      <Touchable
         style={[
           styles.filterButton,
           {
@@ -128,7 +129,7 @@ export function FilterRow({
           {selectedGroupLabel}
         </ThemedText>
         <ChevronDownIcon size={16} color={colors.textSecondary} />
-      </TouchableOpacity>
+      </Touchable>
     </View>
   );
 }

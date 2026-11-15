@@ -9,7 +9,6 @@ import {
   Modal,
   View,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Dimensions,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Spacing } from '@/constants/theme';
 import type { Trophy } from '@/lib/api/trophies';
 import { trophyAPI } from '@/lib/api/trophies';
+import { Touchable } from '@/components/ui/Touchable';
 
 const { width, height } = Dimensions.get('window');
 
@@ -211,13 +211,13 @@ export function TrophyUnlockModal({ visible, trophy, onClose }: TrophyUnlockModa
           </ThemedText>
 
           {/* Continue Button */}
-          <TouchableOpacity
+          <Touchable
             style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={handleClose}
             activeOpacity={0.8}
           >
             <ThemedText style={styles.buttonText}>Continue</ThemedText>
-          </TouchableOpacity>
+          </Touchable>
         </Animated.View>
       </View>
     </Modal>

@@ -1,7 +1,7 @@
 import { Tabs, router } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { HomeIcon, MapIcon, PlusIcon, UserGroupIcon, UserIcon } from 'react-native-heroicons/solid';
 import {
   HomeIcon as HomeOutlineIcon,
@@ -11,11 +11,14 @@ import {
 } from 'react-native-heroicons/outline';
 
 import { GlassTabBar } from '@/components/navigation/GlassTabBar';
+import { MaterialTabBar } from '@/components/navigation/MaterialTabBar';
 import { PermissionToast } from '@/components/onboarding/PermissionToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { TabBarProvider } from '@/contexts/TabBarContext';
 
 const QUICK_ACTIONS_ROUTE = 'quick-actions';
+const MATERIAL = Platform.OS === 'android';
+const TabBar = MATERIAL ? MaterialTabBar : GlassTabBar;
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -32,8 +35,11 @@ export default function TabLayout() {
     <TabBarProvider>
       <View style={styles.container}>
         <Tabs
-          tabBar={(props) => <GlassTabBar {...props} actionRouteName={QUICK_ACTIONS_ROUTE} />}
-          screenOptions={{ headerShown: false }}>
+          tabBar={(props) => (
+            <TabBar {...props} actionRouteName={QUICK_ACTIONS_ROUTE} actionHiddenOnRoute="maps" />
+          )}
+          // Material switches top-level destinations with a fade-through.
+          screenOptions={{ headerShown: false, animation: MATERIAL ? 'fade' : 'none' }}>
           <Tabs.Screen
             name="index"
             options={{

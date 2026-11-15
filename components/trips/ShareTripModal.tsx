@@ -3,7 +3,6 @@ import {
   Modal,
   StyleSheet,
   View,
-  TouchableOpacity,
   TextInput,
   ScrollView,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { useMyClubs } from '@/lib/hooks/useClubs';
 import { tripAPI, type TripShareResult } from '@/lib/api/trips';
 import { XMarkIcon, CheckIcon, CheckCircleIcon } from 'react-native-heroicons/outline';
 import type { Club } from '@/types/feed';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface ShareTripModalProps {
   visible: boolean;
@@ -134,12 +134,12 @@ export function ShareTripModal({
       const isSelected = selectedClubIds.has(club.id);
 
       return (
-        <TouchableOpacity
+        <Touchable
           key={club.id}
           style={[
             styles.clubItem,
             { backgroundColor: colors.card, borderColor: colors.border },
-            isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+            isSelected && { borderColor: colors.glassTint, backgroundColor: colors.primary + '15' },
           ]}
           onPress={() => toggleClub(club.id)}
           activeOpacity={0.7}
@@ -156,7 +156,7 @@ export function ShareTripModal({
               <CheckIcon size={16} color="#fff" />
             </View>
           )}
-        </TouchableOpacity>
+        </Touchable>
       );
     },
     [selectedClubIds, colors, isSharing, toggleClub, t]
@@ -178,18 +178,18 @@ export function ShareTripModal({
           <ThemedText style={styles.headerTitle}>
             {t('trips.shareToGroup')}
           </ThemedText>
-          <TouchableOpacity
+          <Touchable
             style={styles.closeButton}
             onPress={handleClose}
             disabled={isSharing}
           >
             <XMarkIcon size={24} color={colors.text} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {shareSuccessMessage ? (
           <View style={styles.successContainer}>
-            <CheckCircleIcon size={56} color={colors.primary} />
+            <CheckCircleIcon size={56} color={colors.glassTint} />
             <ThemedText style={styles.successTitle}>{t('trips.shareResult.title')}</ThemedText>
             <ThemedText style={[styles.successMessage, { color: colors.textSecondary }]}>
               {shareSuccessMessage}
@@ -208,7 +208,7 @@ export function ShareTripModal({
               {t('trips.selectGroup')} *
             </ThemedText>
             {isLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.glassTint} />
             ) : myClubs && myClubs.length > 0 ? (
               <View style={styles.clubsList}>
                 {myClubs.map(renderClubItem)}
@@ -250,7 +250,7 @@ export function ShareTripModal({
 
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <TouchableOpacity
+          <Touchable
             style={[
               styles.shareButton,
               { backgroundColor: colors.primary },
@@ -269,7 +269,7 @@ export function ShareTripModal({
                   : t('trips.share')}
               </ThemedText>
             )}
-          </TouchableOpacity>
+          </Touchable>
         </View>
           </>
         )}

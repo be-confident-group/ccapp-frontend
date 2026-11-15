@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { GlassSurface } from '@/components/ui/GlassSurface';
+import { Springs } from '@/constants/motion';
 import { BorderRadius } from '@/constants/theme';
 import {
   TAB_BAR_ACTION_SIZE,
@@ -43,7 +44,6 @@ const COLLAPSED_SCALE = TAB_BAR_COLLAPSED_HEIGHT / TAB_BAR_HEIGHT;
 
 // Slightly bouncier than the bar spring so the bubble feels liquid.
 const BUBBLE_SPRING = { damping: 16, stiffness: 200, mass: 0.9 };
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 
 type Route = NavigationRoute<ParamListBase, string>;
 
@@ -175,13 +175,13 @@ function usePressFeedback(haptic: Haptics.ImpactFeedbackStyle) {
   return {
     scale,
     onPressIn: () => {
-      scale.value = withSpring(0.86, PRESS_SPRING);
+      scale.value = withSpring(0.86, Springs.press);
       if (process.env.EXPO_OS !== 'web') {
         Haptics.impactAsync(haptic);
       }
     },
     onPressOut: () => {
-      scale.value = withSpring(1, PRESS_SPRING);
+      scale.value = withSpring(1, Springs.press);
     },
   };
 }
@@ -194,7 +194,7 @@ function TabItem({ options, label, focused, collapse, onPress, onLongPress }: It
   const pop = useSharedValue(1);
   useEffect(() => {
     if (focused) {
-      pop.value = withSequence(withSpring(1.18, PRESS_SPRING), withSpring(1, TAB_BAR_SPRING));
+      pop.value = withSequence(withSpring(1.18, Springs.press), withSpring(1, TAB_BAR_SPRING));
     }
   }, [focused, pop]);
 

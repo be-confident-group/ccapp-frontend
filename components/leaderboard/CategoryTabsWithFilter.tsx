@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
+import { View, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { ChevronDownIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { GlassTextSegments } from '@/components/ui/GlassTextSegments';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import type { MainTab, RidesWalksSubFilter, GenderSubFilter } from '@/types/leaderboard';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface CategoryTabsWithFilterProps {
   selectedTab: MainTab;
@@ -91,7 +92,7 @@ export function CategoryTabsWithFilter({
       />
 
       {/* Filter Dropdown */}
-      <TouchableOpacity
+      <Touchable
         style={[
           styles.filterButton,
           {
@@ -106,7 +107,7 @@ export function CategoryTabsWithFilter({
           {getFilterLabel()}
         </ThemedText>
         <ChevronDownIcon size={16} color={colors.textSecondary} />
-      </TouchableOpacity>
+      </Touchable>
     </View>
   );
 }

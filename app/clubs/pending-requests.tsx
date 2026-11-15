@@ -127,7 +127,7 @@ export default function PendingRequestsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
       {isLoading ? (
         <View style={[styles.center, { paddingTop: topInset }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
         </View>
       ) : (
         <Animated.FlatList
@@ -145,7 +145,7 @@ export default function PendingRequestsScreen() {
           contentInsetAdjustmentBehavior="never"
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} progressViewOffset={topInset} />
+            <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.glassTint} progressViewOffset={topInset} />
           }
           ListEmptyComponent={
             <ClubEmptyState

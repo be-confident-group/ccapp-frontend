@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { database } from '@/lib/database';
 import { syncService } from '@/lib/services/SyncService';
 import { Spacing } from '@/constants/theme';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface Props {
   tripId: string;
@@ -50,23 +51,23 @@ export function TripNoteEditor({ tripId, initialValue, onSaved }: Props) {
           style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
         />
         <View style={styles.actions}>
-          <TouchableOpacity onPress={handleCancel} style={[styles.btn, { borderColor: colors.border }]}>
+          <Touchable onPress={handleCancel} style={[styles.btn, { borderColor: colors.border }]}>
             <ThemedText style={{ color: colors.textSecondary }}>{t('trip_detail.notes_cancel')}</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={[styles.btn, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+          </Touchable>
+          <Touchable onPress={handleSave} style={[styles.btn, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
             <ThemedText style={{ color: '#fff', fontWeight: '600' }}>{t('trip_detail.notes_save')}</ThemedText>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </View>
     );
   }
 
   return (
-    <TouchableOpacity onPress={() => setIsEditing(true)} activeOpacity={0.7} style={styles.container}>
+    <Touchable onPress={() => setIsEditing(true)} activeOpacity={0.7} style={styles.container}>
       <ThemedText style={[styles.noteText, !value && { color: colors.textSecondary, fontStyle: 'italic' }]}>
         {value || t('trip_detail.notes_placeholder')}
       </ThemedText>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 

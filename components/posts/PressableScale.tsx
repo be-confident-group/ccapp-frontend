@@ -2,9 +2,9 @@ import React, { ReactNode } from 'react';
 import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Springs } from '@/constants/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 
 interface PressableScaleProps extends Omit<PressableProps, 'style' | 'children'> {
   style?: StyleProp<ViewStyle>;
@@ -35,14 +35,14 @@ export function PressableScale({
       disabled={disabled}
       {...rest}
       onPressIn={(e) => {
-        scale.value = withSpring(scaleTo, PRESS_SPRING);
+        scale.value = withSpring(scaleTo, Springs.press);
         if (!silent && process.env.EXPO_OS !== 'web') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        scale.value = withSpring(1, PRESS_SPRING);
+        scale.value = withSpring(1, Springs.press);
         onPressOut?.(e);
       }}
       style={[style, animatedStyle]}

@@ -19,10 +19,10 @@ import { ThemedText } from '@/components/themed-text';
 import Button from '@/components/ui/Button';
 import { GlassSurface } from '@/components/ui/GlassSurface';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Springs } from '@/constants/motion';
 
 export const CLUB_HEADER_HEIGHT = 56;
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 
 /** Scroll tracking + safe-area metrics shared by the club screens. */
 export function useClubScroll() {
@@ -100,13 +100,13 @@ export function PressableCard({
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withSpring(0.98, PRESS_SPRING);
+          scale.value = withSpring(0.98, Springs.press);
           if (process.env.EXPO_OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           }
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.value = withSpring(1, Springs.press);
         }}
         style={[styles.card, { backgroundColor: colors.card }, style]}
       >

@@ -46,7 +46,7 @@ export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsMo
             style={[
               styles.statusText,
               {
-                color: trophy.is_earned ? colors.primary : colors.textSecondary,
+                color: trophy.is_earned ? colors.glassTint : colors.textSecondary,
               },
             ]}
           >
@@ -64,7 +64,7 @@ export function TrophyDetailsModal({ visible, onClose, trophy }: TrophyDetailsMo
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <ThemedText style={styles.progressLabel}>{t('common:trophyDetails.progress', 'Progress')}</ThemedText>
-              <ThemedText style={[styles.progressPercentage, { color: colors.primary }]}>
+              <ThemedText style={[styles.progressPercentage, { color: colors.glassTint }]}>
                 {Math.round(trophy.progress)}%
               </ThemedText>
             </View>

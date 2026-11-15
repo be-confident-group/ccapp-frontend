@@ -341,7 +341,7 @@ export default function YouScreen() {
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       {fetchingProfile ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
           <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
             {t('common:loading.profile')}
           </ThemedText>

@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, ViewStyle, TouchableOpacity } from 'react-native';
+import { Platform, Pressable, View, ViewStyle } from 'react-native';
+import { BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface CardProps {
   children: React.ReactNode;
@@ -22,7 +24,7 @@ export default function Card({
   const getCardStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       backgroundColor: colors.card,
-      borderRadius: 16,
+      borderRadius: BorderRadius.lg,
       padding: noPadding ? 0 : 16,
     };
 
@@ -34,7 +36,7 @@ export default function Card({
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
-          elevation: 3,
+          elevation: 1,
         };
       case 'outlined':
         return {
@@ -48,15 +50,28 @@ export default function Card({
     }
   };
 
+  // Material cards respond with a ripple instead of fading.
+  if (onPress && Platform.OS === 'android') {
+    return (
+      <Pressable
+        style={[getCardStyle(), { overflow: 'hidden' }, style]}
+        onPress={onPress}
+        android_ripple={{ color: colors.glassHighlight }}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
   if (onPress) {
     return (
-      <TouchableOpacity
+      <Touchable
         style={[getCardStyle(), style]}
         onPress={onPress}
         activeOpacity={0.7}
       >
         {children}
-      </TouchableOpacity>
+      </Touchable>
     );
   }
 

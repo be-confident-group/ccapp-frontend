@@ -152,7 +152,7 @@ export default function EditClubScreen() {
       <View style={[styles.screen, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={[styles.loading, { paddingTop: topInset }]}>
           {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.glassTint} />
           ) : (
             <ThemedText>{t('clubs.notFoundMessage', 'This group does not exist.')}</ThemedText>
           )}

@@ -10,8 +10,8 @@ import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUnits } from '@/contexts/UnitsContext';
 import { trophyAPI } from '@/lib/api/trophies';
+import { Springs } from '@/constants/motion';
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 
 interface ProfileCardProps {
   firstName?: string;
@@ -67,11 +67,11 @@ export function ProfileCard({ firstName, lastName, fullName, email, imageUri, on
         accessibilityLabel={t('profile:account.editProfile')}
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withSpring(0.98, PRESS_SPRING);
+          scale.value = withSpring(0.98, Springs.press);
           if (process.env.EXPO_OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.value = withSpring(1, Springs.press);
         }}
         style={[styles.card, { backgroundColor: colors.card }]}
       >

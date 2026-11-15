@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { EllipsisHorizontalIcon } from 'react-native-heroicons/outline';
@@ -11,6 +11,7 @@ import type { ActivityPost } from '@/types/feed';
 import { UserAvatar } from './UserAvatar';
 import { PhotoGallery } from './PhotoGallery';
 import { PostActions } from './PostActions';
+import { Touchable } from '@/components/ui/Touchable';
 
 function fmtDuration(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -68,7 +69,7 @@ export const FeedPost = React.memo(function FeedPost({
 
           {/* User info section */}
           <View style={styles.headerRow}>
-            <TouchableOpacity
+            <Touchable
               style={styles.userSection}
               onPress={() => onUserPress?.(post.user.id)}
               activeOpacity={0.7}
@@ -91,16 +92,16 @@ export const FeedPost = React.memo(function FeedPost({
                   </ThemedText>
                 )}
               </View>
-            </TouchableOpacity>
+            </Touchable>
             {onOptionsPress && (
-              <TouchableOpacity
+              <Touchable
                 onPress={() => onOptionsPress(post.id)}
                 style={styles.optionsButton}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityLabel={t('moderation.postOptions')}
               >
                 <EllipsisHorizontalIcon size={20} color={colors.textMuted} />
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
 
@@ -183,7 +184,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
   },
   cardInner: {
     borderRadius: BorderRadius.xl,

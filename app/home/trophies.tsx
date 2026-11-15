@@ -3,16 +3,19 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrophyBadge } from '@/components/trophies/TrophyBadge';
-import { router, useFocusEffect } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { ChevronLeftIcon } from 'react-native-heroicons/outline';
+import { useFocusEffect } from 'expo-router';
+import { ScrollView, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { trophyAPI, type Trophy } from '@/lib/api/trophies';
 import { TrophyDetailsModal } from '@/components/modals/TrophyDetailsModal';
+import Header from '@/components/layout/Header';
+import { Touchable } from '@/components/ui/Touchable';
 
 export default function TrophiesScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation('home');
   const [trophies, setTrophies] = useState<Trophy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +30,7 @@ export default function TrophiesScreen() {
       setTrophies(fetchedTrophies);
     } catch (err) {
       console.error('[TrophiesScreen] Error loading trophies:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load trophies');
+      setError(err instanceof Error ? err.message : t('trophies.loadFailed'));
       // Fallback to cached trophies if available
       const cached = await trophyAPI.getCachedTrophies();
       if (cached) {
@@ -36,7 +39,7 @@ export default function TrophiesScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Refresh trophies when screen comes into focus
   useFocusEffect(
@@ -54,21 +57,7 @@ export default function TrophiesScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
       <ThemedView style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ChevronLeftIcon size={28} color={colors.text} />
-          </TouchableOpacity>
-          
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            Trophies Case
-          </ThemedText>
-          
-          <View style={styles.placeholder} />
-        </View>
+        <Header showBack title={t('trophies.title')} />
 
         <ScrollView
           style={styles.scrollView}
@@ -78,31 +67,31 @@ export default function TrophiesScreen() {
           {/* Loading State */}
           {loading && trophies.length === 0 && (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <ThemedText style={styles.loadingText}>Loading trophies...</ThemedText>
+              <ActivityIndicator size="large" color={colors.glassTint} />
+              <ThemedText style={styles.loadingText}>{t('trophies.loading')}</ThemedText>
             </View>
           )}
 
           {/* Error State */}
           {error && !loading && trophies.length === 0 && (
             <View style={styles.centerContainer}>
-              <ThemedText style={styles.errorText}>Failed to load trophies</ThemedText>
+              <ThemedText style={styles.errorText}>{t('trophies.loadFailed')}</ThemedText>
               <ThemedText style={[styles.errorSubtext, { color: colors.textSecondary }]}>{error}</ThemedText>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.retryButton, { backgroundColor: colors.primary }]}
                 onPress={loadTrophies}
               >
-                <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
-              </TouchableOpacity>
+                <ThemedText style={styles.retryButtonText}>{t('common:buttons.retry')}</ThemedText>
+              </Touchable>
             </View>
           )}
 
           {/* Empty State - No trophies available */}
           {!loading && !error && trophies.length === 0 && (
             <View style={styles.centerContainer}>
-              <ThemedText style={styles.emptyTitle}>No trophies available</ThemedText>
+              <ThemedText style={styles.emptyTitle}>{t('trophies.emptyTitle')}</ThemedText>
               <ThemedText style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                Trophies will appear here once they are configured. Start riding and walking to earn them!
+                {t('trophies.emptyMessage')}
               </ThemedText>
             </View>
           )}
@@ -111,7 +100,7 @@ export default function TrophiesScreen() {
           {!loading && trophies.length > 0 && (
             <View style={styles.trophiesGrid}>
                 {trophies.map((trophy, index) => (
-                  <TouchableOpacity
+                  <Touchable
                     key={trophy.code}
                     style={styles.trophyWrapper}
                     onPress={() => handleTrophyPress(trophy)}
@@ -134,7 +123,7 @@ export default function TrophiesScreen() {
                         {trophy.name}
                       </ThemedText>
                     </View>
-                  </TouchableOpacity>
+                  </Touchable>
                 ))}
             </View>
           )}
@@ -157,27 +146,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
   },
   scrollView: {
     flex: 1,

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ChevronRightIcon } from 'react-native-heroicons/mini';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Switch } from '@/components/ui/Switch';
 
 const TILE_SIZE = 30;
 const ROW_PADDING = 16;

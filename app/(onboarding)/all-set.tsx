@@ -40,7 +40,7 @@ export default function AllSetScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <CheckCircleIcon size={80} color={colors.primary} />
+        <CheckCircleIcon size={80} color={colors.glassTint} />
         <Text style={[styles.title, { color: colors.text }]}>
           {t('allSet.title')}
         </Text>

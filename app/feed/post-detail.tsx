@@ -136,7 +136,7 @@ export default function PostDetailScreen() {
   if (isLoading) {
     return (
       <PostsScreen title={title} scroll={false}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.glassTint} />
       </PostsScreen>
     );
   }

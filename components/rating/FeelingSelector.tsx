@@ -27,8 +27,8 @@ import {
 } from '@/types/rating';
 
 // Near-critically damped: quick and settled, no visible wobble.
-const PRESS_SPRING = { damping: 26, stiffness: 420 };
-const SELECT_SPRING = { damping: 28, stiffness: 320 };
+const PRESS_SPRING = { damping: 26, stiffness: 420, mass: 1 };
+const SELECT_SPRING = { damping: 28, stiffness: 320, mass: 1 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const FEELING_ICONS: Record<FeelingType, typeof FaceFrownIcon> = {

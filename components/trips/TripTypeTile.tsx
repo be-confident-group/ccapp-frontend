@@ -5,8 +5,8 @@ import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Springs } from '@/constants/motion';
 
-const PRESS_SPRING = { damping: 15, stiffness: 400 };
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface TripTypeTileProps {
@@ -31,13 +31,13 @@ export function TripTypeTile({ label, color, selected, onPress, icon: Icon }: Tr
       accessibilityLabel={label}
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(0.94, PRESS_SPRING);
+        scale.value = withSpring(0.94, Springs.press);
         if (process.env.EXPO_OS !== 'web') {
           Haptics.selectionAsync().catch(() => {});
         }
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, PRESS_SPRING);
+        scale.value = withSpring(1, Springs.press);
       }}
       style={[
         styles.tile,

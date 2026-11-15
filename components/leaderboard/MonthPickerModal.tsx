@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   View,
   Modal,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -17,6 +16,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import type { MonthOption } from '@/types/leaderboard';
+import { Touchable } from '@/components/ui/Touchable';
 
 interface MonthPickerModalProps {
   visible: boolean;
@@ -41,6 +41,7 @@ export function MonthPickerModal({
       translateY.value = withSpring(0, {
         damping: 30,
         stiffness: 200,
+        mass: 1,
       });
     } else {
       translateY.value = 300;
@@ -85,7 +86,7 @@ export function MonthPickerModal({
           showsVerticalScrollIndicator={false}
         >
           {options.map((option) => (
-            <TouchableOpacity
+            <Touchable
               key={option.value ?? 'all-time'}
               style={[
                 styles.optionItem,
@@ -97,15 +98,15 @@ export function MonthPickerModal({
               <ThemedText
                 style={[
                   styles.optionText,
-                  selectedValue === option.value && { color: colors.primary },
+                  selectedValue === option.value && { color: colors.glassTint },
                 ]}
               >
                 {option.label}
               </ThemedText>
               {selectedValue === option.value && (
-                <CheckIcon size={20} color={colors.primary} />
+                <CheckIcon size={20} color={colors.glassTint} />
               )}
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </ScrollView>
       </Animated.View>

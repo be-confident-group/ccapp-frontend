@@ -442,7 +442,7 @@ export default function RateRouteScreen() {
           <Header showBack />
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.glassTint} />
           <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
             {t('rating.loadingRoute', { defaultValue: 'Loading route...' })}
           </ThemedText>

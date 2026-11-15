@@ -48,5 +48,12 @@
     "noActivityMessage": "Comienza tu primer viaje para ver tus estadísticas aquí",
     "noGoals": "No hay objetivos establecidos",
     "noGoalsMessage": "Establece tu primer objetivo para seguir tu progreso"
+  },
+  "trophies": {
+    "title": "Vitrina de trofeos",
+    "loading": "Cargando trofeos...",
+    "loadFailed": "No se pudieron cargar los trofeos",
+    "emptyTitle": "No hay trofeos disponibles",
+    "emptyMessage": "Los trofeos aparecerán aquí cuando estén configurados. ¡Empieza a pedalear y caminar para ganarlos!"
   }
 }

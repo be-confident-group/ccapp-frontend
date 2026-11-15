@@ -167,6 +167,11 @@ export default function SegmentPainter({
   const paintIndicatorX = useSharedValue(0);
   const paintIndicatorY = useSharedValue(0);
 
+  // Last point forwarded to the JS thread; used to throttle handleGestureUpdate calls
+  const lastForwardedX = useSharedValue(0);
+  const lastForwardedY = useSharedValue(0);
+  const hasForwarded = useSharedValue(false);
+
   const handlePaintStart = useCallback(
     (index: number) => {
       startIndexRef.current = index;
@@ -337,6 +342,7 @@ export default function SegmentPainter({
       'worklet';
       // Reset state for fresh gesture
       runOnJS(resetGestureState)();
+      hasForwarded.value = false;
       paintIndicatorX.value = event.x;
       paintIndicatorY.value = event.y;
     })
@@ -349,10 +355,22 @@ export default function SegmentPainter({
       'worklet';
       paintIndicatorX.value = event.x;
       paintIndicatorY.value = event.y;
-      runOnJS(handleGestureUpdate)(event.x, event.y);
+      const dx = event.x - lastForwardedX.value;
+      const dy = event.y - lastForwardedY.value;
+      // Forward the first point, then only moves of >= 4 px (keeps the JS thread free)
+      if (!hasForwarded.value || dx * dx + dy * dy >= 16) {
+        hasForwarded.value = true;
+        lastForwardedX.value = event.x;
+        lastForwardedY.value = event.y;
+        runOnJS(handleGestureUpdate)(event.x, event.y);
+      }
     })
-    .onEnd(() => {
+    .onEnd((event) => {
       'worklet';
+      // Flush the final position if the throttle skipped it
+      if (event.x !== lastForwardedX.value || event.y !== lastForwardedY.value) {
+        runOnJS(handleGestureUpdate)(event.x, event.y);
+      }
       paintIndicatorOpacity.value = withTiming(0, { duration: 200 });
       runOnJS(handlePaintEnd)();
     })

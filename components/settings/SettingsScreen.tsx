@@ -37,7 +37,7 @@ export function SettingsScreen({
 
   const body = loading ? (
     <View style={[styles.center, { paddingTop: insets.top + HEADER_HEIGHT }]}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size="large" color={colors.glassTint} />
       {loadingLabel ? (
         <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{loadingLabel}</Text>
       ) : null}

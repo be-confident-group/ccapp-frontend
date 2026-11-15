@@ -31,7 +31,7 @@ export function LocationPermissionPrompt({
             { backgroundColor: colors.primary + '1F' },
           ]}
         >
-          <MapPinIcon size={48} color={colors.primary} />
+          <MapPinIcon size={48} color={colors.glassTint} />
         </View>
 
         <Text style={[styles.title, { color: colors.text }]}>
@@ -52,7 +52,7 @@ export function LocationPermissionPrompt({
           />
 
           <Pressable onPress={openSettings} style={styles.settingsLink}>
-            <Text style={[styles.settingsLinkText, { color: colors.primary }]}>
+            <Text style={[styles.settingsLinkText, { color: colors.glassTint }]}>
               {t('locationPrompt.openSettings')}
             </Text>
           </Pressable>
