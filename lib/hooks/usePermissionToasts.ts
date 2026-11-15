@@ -120,9 +120,15 @@ export function usePermissionToasts() {
   }, [current, isRequesting, computeNext]);
 
   const handleOpenSettings = useCallback(() => {
-    openAppSettings();
+    // Android can open the location page (with "Allow all the time") directly;
+    // every other permission lives in the app's settings page.
+    if (current?.key === 'locationBackground' && Platform.OS === 'android') {
+      requestLocationBackground();
+    } else {
+      openAppSettings();
+    }
     // AppState listener will re-check when user returns
-  }, []);
+  }, [current]);
 
   const handleDismiss = useCallback(() => {
     if (!current) return;

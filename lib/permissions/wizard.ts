@@ -18,9 +18,16 @@ export async function requestLocationBackground(): Promise<PermissionResult> {
     if (fgStatus !== 'granted') {
       return { status: 'undetermined' };
     }
-    // Android 11+ requires the user to grant background location from Settings
-    await Linking.openSettings();
-    return { status: 'opened-settings' };
+    // Android 11+ only grants this from Settings. Requesting it opens the app's
+    // location permission page directly, where "Allow all the time" is one tap.
+    const { status, canAskAgain } = await Location.requestBackgroundPermissionsAsync();
+    if (status === 'granted') return { status: 'granted' };
+    if (!canAskAgain) {
+      // The system no longer shows that page after repeated denials.
+      await Linking.openSettings();
+      return { status: 'opened-settings' };
+    }
+    return { status: 'denied' };
   }
 
   // iOS

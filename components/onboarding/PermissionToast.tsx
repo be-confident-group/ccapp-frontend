@@ -1,6 +1,6 @@
 // components/onboarding/PermissionToast.tsx
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -20,16 +20,17 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import Button from '@/components/ui/Button';
 import { GlassSurface } from '@/components/ui/GlassSurface';
-import { TAB_BAR_HEIGHT, useTabBarBottomOffset } from '@/contexts/TabBarContext';
+import { useTabBarInset } from '@/contexts/TabBarContext';
 import { ThemedText } from '@/components/themed-text';
+import { Springs } from '@/constants/motion';
 import { FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   usePermissionToasts,
   type PermissionToastKey,
 } from '@/lib/hooks/usePermissionToasts';
+import { Touchable } from '@/components/ui/Touchable';
 
 const TOAST_RADIUS = 28;
-const SHOW_SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
 
 type IconComponent = React.ComponentType<{ size: number; color: string }>;
 
@@ -43,7 +44,7 @@ const ICONS: Record<PermissionToastKey, IconComponent> = {
 export function PermissionToast() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
-  const tabBarBottom = useTabBarBottomOffset();
+  const tabBarInset = useTabBarInset();
   const { current, isRequesting, handleAllow, handleOpenSettings, handleDismiss } =
     usePermissionToasts();
 
@@ -55,7 +56,7 @@ export function PermissionToast() {
   useEffect(() => {
     if (current) {
       setDisplayed(current);
-      progress.value = withSpring(1, SHOW_SPRING);
+      progress.value = withSpring(1, Springs.spatial);
     } else {
       progress.value = withTiming(
         0,
@@ -69,7 +70,7 @@ export function PermissionToast() {
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: (1 - progress.value) * 140 },
+      { translateY: (1 - progress.value) * 220 },
       { scale: 0.9 + 0.1 * progress.value },
     ],
   }));
@@ -78,7 +79,8 @@ export function PermissionToast() {
 
   const Icon = ICONS[displayed.key];
   const toastKey = displayed.key;
-  const bottomOffset = tabBarBottom + TAB_BAR_HEIGHT + 12;
+  // 12 above the tab bar, and above the FAB on Android so it stays tappable.
+  const bottomOffset = tabBarInset - 4;
 
   return (
     <Animated.View
@@ -92,27 +94,30 @@ export function PermissionToast() {
       ]}
     >
       <GlassSurface borderRadius={TOAST_RADIUS} />
-      {/* Icon box */}
-      <View
-        style={[
-          styles.iconBox,
-          { backgroundColor: colors.glassHighlight },
-        ]}
-      >
-        <Icon size={18} color={colors.glassTint} />
+
+      <View style={styles.header}>
+        <View style={[styles.iconBox, { backgroundColor: colors.glassHighlight }]}>
+          <Icon size={20} color={colors.glassTint} />
+        </View>
+
+        <View style={styles.textContainer}>
+          <ThemedText style={styles.title}>{t(`permissionToast.${toastKey}.title`)}</ThemedText>
+          <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t(`permissionToast.${toastKey}.subtitle`)}
+          </ThemedText>
+        </View>
+
+        <Touchable
+          onPress={handleDismiss}
+          accessibilityRole="button"
+          accessibilityLabel={t('permissionToast.dismiss')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.dismiss}
+        >
+          <XMarkIcon size={20} color={colors.glassInactive} />
+        </Touchable>
       </View>
 
-      {/* Text */}
-      <View style={styles.textContainer}>
-        <ThemedText style={styles.title}>
-          {t(`permissionToast.${toastKey}.title`)}
-        </ThemedText>
-        <ThemedText style={[styles.subtitle, { color: colors.textMuted }]}>
-          {t(`permissionToast.${toastKey}.subtitle`)}
-        </ThemedText>
-      </View>
-
-      {/* Action button */}
       <Button
         title={
           displayed.needsSettings
@@ -123,32 +128,21 @@ export function PermissionToast() {
         variant="primary"
         size="small"
         loading={isRequesting}
+        style={styles.action}
       />
-
-      {/* Dismiss */}
-      <TouchableOpacity
-        onPress={handleDismiss}
-        accessibilityRole="button"
-        accessibilityLabel={t('permissionToast.dismiss')}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={styles.dismiss}
-      >
-        <XMarkIcon size={16} color={colors.glassInactive} />
-      </TouchableOpacity>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Stacked so the message gets the full width; a side-by-side button used to
+  // squeeze the title onto two lines.
   container: {
     position: 'absolute',
     left: Spacing.md,
     right: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.sm,
-    padding: Spacing.sm,
-    paddingLeft: Spacing.md,
+    padding: Spacing.md,
     borderRadius: TOAST_RADIUS,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
@@ -156,10 +150,15 @@ const styles = StyleSheet.create({
     elevation: 8,
     zIndex: 100,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -168,14 +167,19 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: FontSizes.sm,
+    fontSize: FontSizes.md,
+    lineHeight: 22,
     fontWeight: FontWeights.semibold,
   },
   subtitle: {
-    fontSize: FontSizes.xs,
-    lineHeight: 16,
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
   },
   dismiss: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 16,
+  },
+  action: {
+    alignSelf: 'flex-end',
   },
 });

@@ -54,7 +54,8 @@
       "body": "Radzi notifies you when a trip is being recorded in the background. You can always check trip status in the app.",
       "allow": "Allow Notifications",
       "skip": "Skip for now"
-    }
+    },
+    "allowAll": "Allow all"
   },
   "allSet": {
     "title": "You're all set!",

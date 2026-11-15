@@ -54,7 +54,8 @@
       "body": "Radzi te notifica cuando se está grabando un trayecto en segundo plano. Siempre puedes ver el estado en la app.",
       "allow": "Permitir notificaciones",
       "skip": "Omitir por ahora"
-    }
+    },
+    "allowAll": "Permitir todo"
   },
   "allSet": {
     "title": "¡Todo listo!",

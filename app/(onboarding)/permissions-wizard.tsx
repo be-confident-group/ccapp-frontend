@@ -1,25 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  AppState,
-  AppStateStatus,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  BellIcon,
-  BoltIcon,
-  MapIcon,
-  MapPinIcon,
-} from 'react-native-heroicons/outline';
+import { BellIcon, BoltIcon, MapIcon, MapPinIcon } from 'react-native-heroicons/outline';
+import { CheckCircleIcon } from 'react-native-heroicons/solid';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
+import { Touchable } from '@/components/ui/Touchable';
 import { BorderRadius, FontSizes, FontWeights, Spacing } from '@/constants/theme';
 import {
   checkAll,
@@ -28,448 +16,238 @@ import {
   requestLocationForeground,
   requestMotion,
   requestNotifications,
+  type PermissionResult,
 } from '@/lib/permissions/wizard';
-import {
-  clearPermStep,
-  getPermStep,
-  markPermissionSkipped,
-  savePermStep,
-} from '@/lib/onboarding/state';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+type PermKey = 'locationForeground' | 'locationBackground' | 'motion' | 'notifications';
+type Statuses = Record<string, PermissionResult['status']>;
 
-type Step = 'fg-location' | 'bg-location' | 'motion' | 'notifications' | 'done';
+interface PermRow {
+  key: PermKey;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  /** Key under `permissionsScreen` holding this permission's name and description. */
+  copy: 'locationFg' | 'locationBg' | 'motion' | 'notifications';
+  required: boolean;
+  request: () => Promise<PermissionResult>;
+}
 
-const STEP_ORDER: Step[] = [
-  'fg-location',
-  'bg-location',
-  'motion',
-  'notifications',
-  'done',
+const ROWS: PermRow[] = [
+  { key: 'locationForeground', icon: MapPinIcon, copy: 'locationFg', required: true, request: requestLocationForeground },
+  { key: 'locationBackground', icon: MapIcon, copy: 'locationBg', required: true, request: requestLocationBackground },
+  { key: 'motion', icon: BoltIcon, copy: 'motion', required: true, request: requestMotion },
+  { key: 'notifications', icon: BellIcon, copy: 'notifications', required: false, request: requestNotifications },
 ];
 
-const CONTENT_STEPS: Step[] = ['fg-location', 'bg-location', 'motion', 'notifications'];
-
-// Maps onboarding step → key returned by checkAll()
-const STEP_PERM_KEY: Partial<Record<Step, string>> = {
-  'fg-location': 'locationForeground',
-  'bg-location': 'locationBackground',
-  'motion': 'motion',
-  'notifications': 'notifications',
-};
-
-function advanceStep(current: Step): Step {
-  const idx = STEP_ORDER.indexOf(current);
-  return STEP_ORDER[idx + 1] ?? 'done';
-}
-
-const ICON_SIZE = 64;
+// Background location is asked last: the system only offers it once foreground
+// access exists, and on Android it takes the user out to Settings.
+const REQUEST_ORDER: PermKey[] = ['locationForeground', 'motion', 'notifications', 'locationBackground'];
 
 // App Store guideline 5.1.1(iv): on iOS the pre-permission screen must lead
-// straight to the system prompt — neutral "Continue" wording, no way to defer.
+// straight to the system prompts — neutral "Continue" wording, no way to defer.
 const IS_IOS = Platform.OS === 'ios';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────────────────────────────────────
-
-function StepDots({ currentStep, colors }: { currentStep: Step; colors: ReturnType<typeof useTheme>['colors'] }) {
-  return (
-    <View style={dotStyles.row}>
-      {CONTENT_STEPS.map((s) => (
-        <View
-          key={s}
-          style={[
-            dotStyles.dot,
-            {
-              backgroundColor: s === currentStep ? colors.primary : 'transparent',
-              borderColor: s === currentStep ? colors.primary : colors.border,
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
+function requiredGranted(statuses: Statuses) {
+  return ROWS.every((row) => !row.required || statuses[row.key] === 'granted');
 }
 
-const dotStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-  },
-});
-
-function PermissionChip({
-  required,
-  colors,
-  t,
-}: {
-  required: boolean;
-  colors: ReturnType<typeof useTheme>['colors'];
-  t: (key: string) => string;
-}) {
-  return (
-    <View
-      style={[
-        chipStyles.chip,
-        {
-          backgroundColor: required
-            ? colors.primary + '20'
-            : colors.textMuted + '20',
-        },
-      ]}
-    >
-      <Text
-        style={[
-          chipStyles.label,
-          { color: required ? colors.primary : colors.textMuted },
-        ]}
-      >
-        {required ? t('permissions.required') : t('permissions.optional')}
-      </Text>
-    </View>
-  );
-}
-
-const chipStyles = StyleSheet.create({
-  chip: {
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    marginBottom: Spacing.sm,
-  },
-  label: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * One screen for every permission the app needs. The system still shows its
+ * own prompt per permission (apps cannot grant several at once), but a single
+ * tap here runs them back to back instead of a page and a button for each.
+ */
 export default function PermissionsWizardScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation('onboarding');
   const router = useRouter();
-  const { currentUserId } = useAuth();
 
-  const [step, setStep] = useState<Step>('fg-location');
-  const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-
+  const [statuses, setStatuses] = useState<Statuses | null>(null);
+  const [running, setRunning] = useState(false);
+  // True once the prompts have been through a full pass.
+  const [attempted, setAttempted] = useState(false);
   const prevAppState = useRef<AppStateStatus>(AppState.currentState);
-  // Ref so effects can read currentUserId without being in their deps arrays
-  const currentUserIdRef = useRef(currentUserId);
-  currentUserIdRef.current = currentUserId;
 
-  // ── Initialize: skip already-granted steps and resume any saved step ───────
+  const finish = useCallback(() => {
+    router.push('/(onboarding)/all-set');
+  }, [router]);
+
+  // Nothing to ask (returning user, reinstall with permissions kept): move on.
   useEffect(() => {
     let cancelled = false;
-    async function initStep() {
-      const uid = currentUserIdRef.current;
-      const [statuses, savedRaw] = await Promise.all([
-        checkAll(),
-        uid !== null ? getPermStep(uid) : Promise.resolve(null),
-      ]);
+    checkAll().then((current) => {
       if (cancelled) return;
+      if (ROWS.every((row) => current[row.key] === 'granted')) finish();
+      else setStatuses(current);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [finish]);
 
-      // First step in order that is not yet granted
-      const firstNeeded = (STEP_ORDER.find(
-        (s) => s !== 'done' && statuses[STEP_PERM_KEY[s] ?? ''] !== 'granted'
-      ) ?? 'done') as Step;
-
-      // Use a saved step if it's further along and its permission is still ungranted
-      // (handles app-kill during the wizard — e.g. killed while on bg-location Settings screen)
-      const saved = savedRaw as Step | null;
-      const savedIdx = saved ? STEP_ORDER.indexOf(saved) : -1;
-      const firstIdx = STEP_ORDER.indexOf(firstNeeded);
-      const savedPermKey = saved ? STEP_PERM_KEY[saved] : undefined;
-
-      if (
-        saved &&
-        savedIdx > firstIdx &&
-        saved !== 'done' &&
-        savedPermKey &&
-        statuses[savedPermKey] !== 'granted'
-      ) {
-        setStep(saved);
-      } else {
-        setStep(firstNeeded);
-      }
-      setInitialized(true);
-    }
-    initStep();
-    return () => { cancelled = true; };
-  }, []);
-
-  // ── Persist step so the wizard can resume after an app kill ───────────────
+  // Coming back from system Settings: refresh, and move on once nothing required is missing.
   useEffect(() => {
-    if (!initialized) return;
-    const uid = currentUserIdRef.current;
-    if (uid === null) return;
-    if (step === 'done') {
-      clearPermStep(uid);
-    } else {
-      savePermStep(uid, step);
-    }
-  }, [step, initialized]);
-
-  // ── AppState: re-check permission whenever the app returns from background ─
-  // Covers all steps (not just Android bg-location) so the wizard advances
-  // automatically after the user grants a permission in the system Settings.
-  useEffect(() => {
-    if (!initialized || step === 'done') return;
-
-    const subscription = AppState.addEventListener(
-      'change',
-      async (nextState: AppStateStatus) => {
-        if (prevAppState.current !== 'active' && nextState === 'active') {
-          const statuses = await checkAll();
-          const permKey = STEP_PERM_KEY[step];
-          if (permKey && statuses[permKey] === 'granted') {
-            setStep(advanceStep(step));
-          }
-        }
-        prevAppState.current = nextState;
-      },
-    );
-
+    const subscription = AppState.addEventListener('change', async (next: AppStateStatus) => {
+      const returning = prevAppState.current !== 'active' && next === 'active';
+      prevAppState.current = next;
+      if (!returning || running) return;
+      const current = await checkAll();
+      setStatuses(current);
+      if (attempted && requiredGranted(current)) finish();
+    });
     return () => subscription.remove();
-  }, [step, initialized]);
+  }, [attempted, running, finish]);
 
-  // ── Navigate when done ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (step === 'done') {
-      router.push('/(onboarding)/all-set');
-    }
-  }, [step, router]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Handlers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  async function handleAllow() {
-    setLoading(true);
+  async function handleAllowAll() {
+    setRunning(true);
     try {
-      switch (step) {
-        case 'fg-location':
-          await requestLocationForeground();
-          break;
-        case 'bg-location':
-          if (Platform.OS === 'android') {
-            // Android requires the user to enable "Allow all the time" in Settings.
-            // The AppState listener above will advance when they return with it granted.
-            openAppSettings();
-            return;
-          } else {
-            await requestLocationBackground();
-          }
-          break;
-        case 'motion':
-          await requestMotion();
-          break;
-        case 'notifications':
-          await requestNotifications();
-          break;
-        default:
-          break;
+      let current = await checkAll();
+      for (const key of REQUEST_ORDER) {
+        if (current[key] === 'granted') continue;
+        if (key === 'locationBackground' && current.locationForeground !== 'granted') continue;
+        await ROWS.find((row) => row.key === key)!.request();
+        current = await checkAll();
+        setStatuses(current);
       }
-      setStep(advanceStep(step));
+
+      if (IS_IOS || requiredGranted(current)) {
+        finish();
+      } else if (attempted) {
+        // The system stops showing prompts after repeated denials; Settings is the only way left.
+        openAppSettings();
+      }
+      setAttempted(true);
     } finally {
-      setLoading(false);
+      setRunning(false);
     }
   }
 
-  async function handleSkip() {
-    if (currentUserId !== null) {
-      await markPermissionSkipped(currentUserId, step);
-    }
-    setStep(advanceStep(step));
-  }
+  if (!statuses) return null;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Step config (platform-specific copy for bg-location and motion)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  type StepConfig = {
-    icon: React.ReactElement;
-    title: string;
-    body: string;
-    buttonLabel: string;
-    required: boolean;
-    skipLabel: string;
-  };
-
-  function getStepConfig(s: Step): StepConfig {
-    switch (s) {
-      case 'fg-location':
-        return {
-          icon: <MapPinIcon size={ICON_SIZE} color={colors.primary} />,
-          title: t('permissions.fgLocation.title'),
-          body: t('permissions.fgLocation.body'),
-          buttonLabel: IS_IOS ? t('permissions.continue') : t('permissions.fgLocation.allow'),
-          required: true,
-          skipLabel: t('permissions.fgLocation.skip'),
-        };
-      case 'bg-location':
-        return {
-          icon: <MapIcon size={ICON_SIZE} color={colors.primary} />,
-          title: t('permissions.bgLocation.title'),
-          body: Platform.OS === 'ios'
-            ? t('permissions.bgLocation.bodyIos')
-            : t('permissions.bgLocation.bodyAndroid'),
-          buttonLabel: IS_IOS
-            ? t('permissions.continue')
-            : t('permissions.bgLocation.openSettings'),
-          required: true,
-          skipLabel: t('permissions.bgLocation.notNow'),
-        };
-      case 'motion':
-        return {
-          icon: <BoltIcon size={ICON_SIZE} color={colors.primary} />,
-          title: t('permissions.motion.title'),
-          body: Platform.OS === 'ios'
-            ? t('permissions.motion.bodyIos')
-            : t('permissions.motion.bodyAndroid'),
-          buttonLabel: IS_IOS
-            ? t('permissions.continue')
-            : t('permissions.motion.allowAndroid'),
-          required: true,
-          skipLabel: t('permissions.motion.skip'),
-        };
-      case 'notifications':
-        return {
-          icon: <BellIcon size={ICON_SIZE} color={colors.primary} />,
-          title: t('permissions.notifications.title'),
-          body: t('permissions.notifications.body'),
-          buttonLabel: IS_IOS ? t('permissions.continue') : t('permissions.notifications.allow'),
-          required: false,
-          skipLabel: t('permissions.notifications.skip'),
-        };
-      default:
-        return {
-          icon: <BellIcon size={ICON_SIZE} color={colors.primary} />,
-          title: '',
-          body: '',
-          buttonLabel: '',
-          required: false,
-          skipLabel: '',
-        };
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────
-
-  if (!initialized || step === 'done') return null;
-
-  const config = getStepConfig(step);
+  // Android grants background location only from Settings; say so on the button once that's all that's left.
+  const onlySettingsLeft =
+    !IS_IOS &&
+    ROWS.every((row) => !row.required || row.key === 'locationBackground' || statuses[row.key] === 'granted');
+  const buttonLabel = IS_IOS
+    ? t('permissions.continue')
+    : onlySettingsLeft || attempted
+      ? t('permissions.bgLocation.openSettings')
+      : t('permissions.allowAll');
 
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
-      {/* Step indicator */}
-      <StepDots currentStep={step} colors={colors} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('permissions.bgLocation.title')}</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>{t('permissionsScreen.subtitle')}</Text>
 
-      {/* Icon + text */}
-      <View style={styles.content}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: colors.primary + '1F' },
-          ]}
-        >
-          {config.icon}
+        <View style={[styles.list, { backgroundColor: colors.card }]}>
+          {ROWS.map((row, index) => {
+            const granted = statuses[row.key] === 'granted';
+            const Icon = row.icon;
+            return (
+              <View
+                key={row.key}
+                style={[styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+              >
+                <View style={[styles.iconTile, { backgroundColor: colors.glassHighlight }]}>
+                  <Icon size={22} color={colors.glassTint} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={[styles.rowName, { color: colors.text }]}>
+                    {t(`permissionsScreen.${row.copy}.name`)}
+                  </Text>
+                  <Text style={[styles.rowDescription, { color: colors.textSecondary }]}>
+                    {t(`permissionsScreen.${row.copy}.description`)}
+                  </Text>
+                  <Text style={[styles.rowStatus, { color: colors.textMuted }]}>
+                    {granted
+                      ? t('permissionsScreen.granted')
+                      : row.required
+                        ? t('permissions.required')
+                        : t('permissions.optional')}
+                  </Text>
+                </View>
+                {granted && (
+                  <CheckCircleIcon size={24} color={colors.success} accessibilityLabel={t('permissionsScreen.granted')} />
+                )}
+              </View>
+            );
+          })}
         </View>
+      </ScrollView>
 
-        <PermissionChip required={config.required} colors={colors} t={t} />
-
-        <Text style={[styles.title, { color: colors.text }]}>
-          {config.title}
-        </Text>
-
-        <Text style={[styles.body, { color: colors.textSecondary }]}>
-          {config.body}
-        </Text>
-      </View>
-
-      {/* Actions */}
       <View style={styles.actions}>
         <Button
-          title={config.buttonLabel}
-          onPress={handleAllow}
+          title={buttonLabel}
+          onPress={handleAllowAll}
           variant="primary"
           size="large"
           fullWidth
-          loading={loading}
+          loading={running}
         />
-
         {!IS_IOS && (
-          <TouchableOpacity
-            onPress={handleSkip}
-            activeOpacity={0.7}
-            style={styles.skipButton}
-          >
-            <Text style={[styles.skipText, { color: colors.textMuted }]}>
-              {config.skipLabel}
-            </Text>
-          </TouchableOpacity>
+          <Touchable onPress={finish} activeOpacity={0.7} accessibilityRole="button" style={styles.skipButton}>
+            <Text style={[styles.skipText, { color: colors.textSecondary }]}>{t('permissions.notNow')}</Text>
+          </Touchable>
         )}
       </View>
     </SafeAreaView>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
   content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: BorderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
   },
   title: {
     fontSize: FontSizes.xxl,
+    lineHeight: 40,
     fontWeight: FontWeights.bold,
-    textAlign: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   body: {
     fontSize: FontSizes.md,
-    textAlign: 'center',
     lineHeight: 24,
+    marginBottom: Spacing.lg,
+  },
+  list: {
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: Spacing.md,
+  },
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowName: {
+    fontSize: FontSizes.md,
+    lineHeight: 22,
+    fontWeight: FontWeights.semibold,
+  },
+  rowDescription: {
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+  },
+  rowStatus: {
+    fontSize: FontSizes.xs,
+    lineHeight: 16,
+    fontWeight: FontWeights.semibold,
+    marginTop: 2,
   },
   actions: {
     paddingHorizontal: Spacing.lg,
@@ -478,7 +256,8 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.full,
   },
   skipText: {
     fontSize: FontSizes.sm,

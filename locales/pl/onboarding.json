@@ -50,7 +50,8 @@
       "body": "Otrzymuj podsumowania tras, powiadomienia o osiągnięciach i przypomnienia o tygodniowych celach.",
       "allow": "Zezwól na powiadomienia",
       "skip": "Pomiń na razie"
-    }
+    },
+    "allowAll": "Zezwól na wszystko"
   },
   "allSet": {
     "title": "Wszystko gotowe!",
