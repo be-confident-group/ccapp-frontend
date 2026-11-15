@@ -1,10 +1,18 @@
 import { MotionActivitySegmenter } from '../MotionActivitySegmenter';
 import { database } from '../../database';
 
+// TrackingConfig (read for the segment thresholds) imports react-native, which
+// cannot load under Jest; stub the one API it touches so the real defaults apply.
+jest.mock('react-native', () => ({
+  AppState: { addEventListener: jest.fn().mockReturnValue({ remove: jest.fn() }) },
+}));
+
 jest.mock('../../database', () => ({
   database: {
     getMotionSegmentsByTrip: jest.fn(),
     getLocationsByTrip: jest.fn(),
+    // Route fallback used when a trip has no stored locations.
+    getTripById: jest.fn().mockResolvedValue(null),
   },
 }));
 
